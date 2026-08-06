@@ -1,0 +1,28 @@
+{
+    "manifestVersion": 1,
+    "id": "com.example.midnight-theme",
+    "name": "Midnight",
+    "version": "1.0.0",
+    "author": "Example Author",
+    "description": "A darker, cooler take on the default dark theme.",
+
+    "permissions": {},
+
+    "theme": {
+        "label": "Midnight",
+        "base": "dark",
+        "tokens": {
+            "--background": "oklch(0.16 0.02 264.7)",
+            "--surface": "oklch(0.2 0.022 264.7)",
+            "--surface-secondary": "oklch(0.24 0.024 264.7)",
+            "--surface-tertiary": "oklch(0.28 0.026 264.7)",
+            "--surface-hover": "oklch(0.3 0.028 264.7)",
+            "--border": "oklch(0.33 0.02 264.7)",
+            "--foreground": "oklch(0.96 0.005 264.7)",
+            "--muted": "oklch(0.68 0.015 264.7)",
+            "--accent": "#5b8dff",
+            "--accent-hover": "#7aa3ff",
+            "--accent-foreground": "#0b1020"
+        }
+    }
+}

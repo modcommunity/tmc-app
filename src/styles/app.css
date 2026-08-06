@@ -1,0 +1,120 @@
+@import 'tailwindcss';
+
+/*
+ * The design tokens come from @modcommunity/shared, which is the same file
+ * website-city and website-processing use. Importing it rather than redefining
+ * the palette is what keeps the app looking like TMC without a second source of
+ * truth to drift.
+ *
+ * The @source line is essential: Tailwind ignores node_modules by default, so
+ * without it none of the shared components' utility classes are generated.
+ */
+@import '@modcommunity/shared/theme.css';
+@source "../../node_modules/@modcommunity/shared/dist";
+
+/*
+ * App-only tokens. Everything here describes chrome the WEBSITE does not have —
+ * a bottom tab bar, safe-area insets, a titlebar drag region — so it belongs
+ * to this app rather than in the shared theme.
+ */
+@theme inline {
+    --color-app-chrome: var(--app-chrome);
+    --color-app-chrome-border: var(--app-chrome-border);
+}
+
+:root {
+    --app-chrome: var(--surface);
+    --app-chrome-border: var(--border);
+
+    /* Filled in by the OS on iOS/Android; 0 elsewhere. */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+
+    /* Driven by the `uiScale` app setting. */
+    --app-scale: 1;
+}
+
+html {
+    font-size: calc(16px * var(--app-scale));
+}
+
+body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+
+    /*
+     * A native app does not rubber-band its whole document, and on Android a
+     * scrollable body under a fixed tab bar produces a scrollbar that never
+     * settles. Panes scroll; the shell does not.
+     */
+    overflow: hidden;
+    overscroll-behavior: none;
+
+    /* Text selection is a desktop affordance. On a touch device a long-press
+     * that selects a card's title instead of opening it feels broken. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Opt back in wherever reading and copying is the point. */
+.selectable,
+input,
+textarea,
+[contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+h1,
+h2,
+h3,
+h4 {
+    font-family: var(--font-pjs), var(--font-dm-sans), system-ui, sans-serif;
+}
+
+/*
+ * Thin scrollbars that match the theme. Chromium (Windows/Android/Linux) and
+ * WebKit (macOS/iOS) need different properties; both are set rather than picked
+ * at runtime, since each is simply ignored by the other engine.
+ */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* The desktop titlebar drag strip. `no-drag` is what lets buttons inside it
+ * still be clickable. */
+.drag-region {
+    -webkit-app-region: drag;
+}
+
+.no-drag {
+    -webkit-app-region: no-drag;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

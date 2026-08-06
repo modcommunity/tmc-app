@@ -1,26 +1,63 @@
 {
-  "name": "tmc-app",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "tauri": "tauri"
-  },
-  "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2"
-  },
-  "devDependencies": {
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^6.0.2",
-    "typescript": "~6.0.3",
-    "vite": "^8.0.16",
-    "@tauri-apps/cli": "^2"
-  }
+    "name": "tmc-app",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build",
+        "preview": "vite preview",
+        "check": "npm run check:web && npm run check:rust",
+        "check:web": "tsc --noEmit && eslint .",
+        "check:rust": "bash scripts/cargo.sh clippy --workspace --all-targets -- -D warnings",
+        "lint": "eslint .",
+        "fmt": "prettier --write \"src/**/*.{ts,tsx,css}\" && cargo fmt --manifest-path src-tauri/Cargo.toml --all",
+        "test": "npm run test:rust",
+        "test:rust": "bash scripts/cargo.sh test --workspace",
+        "test:core": "cargo test --manifest-path src-tauri/core/Cargo.toml",
+        "sysroot": "bash scripts/linux-sysroot.sh",
+        "contract:sync": "bash scripts/sync-contract.sh",
+        "tauri": "tauri",
+        "desktop": "tauri dev",
+        "desktop:build": "tauri build",
+        "android:init": "tauri android init",
+        "android": "tauri android dev",
+        "android:build": "tauri android build",
+        "ios:init": "tauri ios init",
+        "ios": "tauri ios dev",
+        "ios:build": "tauri ios build",
+        "shared:local": "bash scripts/sync-shared.sh",
+        "shared:build": "npm --prefix ../tmc-global/shared run build"
+    },
+    "dependencies": {
+        "@modcommunity/shared": "^4.2.0",
+        "@tanstack/react-query": "^5.69.0",
+        "@tauri-apps/api": "^2",
+        "@tauri-apps/plugin-deep-link": "^2",
+        "@tauri-apps/plugin-dialog": "^2.7.2",
+        "@tauri-apps/plugin-opener": "^2",
+        "@tauri-apps/plugin-os": "^2",
+        "lucide-react": "0.468.0",
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0",
+        "react-icons": "^5.4.0",
+        "react-router-dom": "^7.1.1",
+        "zod": "^3.24.2"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.17.0",
+        "@tailwindcss/vite": "^4.1.11",
+        "@tauri-apps/cli": "^2",
+        "@types/react": "^19.1.8",
+        "@types/react-dom": "^19.1.6",
+        "@vitejs/plugin-react": "^6.0.2",
+        "eslint": "^9.17.0",
+        "eslint-plugin-react-hooks": "^5.1.0",
+        "globals": "^17.9.0",
+        "prettier": "^3.4.2",
+        "tailwindcss": "^4.1.11",
+        "typescript": "~5.7.2",
+        "typescript-eslint": "^8.19.0",
+        "vite": "^8.0.16"
+    }
 }

@@ -1,35 +1,82 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tmc-app",
-  "version": "0.1.0",
-  "identifier": "com.moddingcommunity.app",
-  "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
-  },
-  "app": {
-    "windows": [
-      {
-        "title": "tmc-app",
-        "width": 800,
-        "height": 600
-      }
-    ],
-    "security": {
-      "csp": null
+    "$schema": "https://schema.tauri.app/config/2",
+    "productName": "TMC",
+    "version": "0.1.0",
+    "identifier": "com.moddingcommunity.app",
+    "build": {
+        "beforeDevCommand": "npm run dev",
+        "devUrl": "http://localhost:1420",
+        "beforeBuildCommand": "npm run build",
+        "frontendDist": "../dist"
+    },
+    "app": {
+        "windows": [
+            {
+                "label": "main",
+                "title": "The Modding Community",
+                "width": 1280,
+                "height": 820,
+                "minWidth": 380,
+                "minHeight": 560,
+                "resizable": true,
+                "center": true,
+                "dragDropEnabled": false
+            }
+        ],
+        "security": {
+            "capabilities": ["default"],
+            "assetProtocol": {
+                "enable": false,
+                "scope": []
+            },
+            "csp": {
+                "default-src": "'self'",
+                "script-src": "'self'",
+                "style-src": "'self' 'unsafe-inline'",
+                "font-src": "'self' data:",
+                "img-src": "'self' data: blob: https:",
+                "media-src": "'self' https:",
+                "connect-src": "'self' ipc: http://ipc.localhost",
+                "frame-src": "'none'",
+                "object-src": "'none'",
+                "base-uri": "'self'",
+                "form-action": "'none'"
+            }
+        }
+    },
+    "plugins": {
+        "deep-link": {
+            "desktop": {
+                "schemes": ["tmc"]
+            }
+        }
+    },
+    "bundle": {
+        "active": true,
+        "targets": "all",
+        "category": "Utility",
+        "shortDescription": "Browse, install and manage mods, assets and servers.",
+        "publisher": "The Modding Community",
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
+            "icons/icon.ico"
+        ],
+        "linux": {
+            "deb": {
+                "depends": []
+            }
+        },
+        "macOS": {
+            "minimumSystemVersion": "10.15"
+        },
+        "android": {
+            "minSdkVersion": 24
+        },
+        "iOS": {
+            "minimumSystemVersion": "13.0"
+        }
     }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
-  }
 }

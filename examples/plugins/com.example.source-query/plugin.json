@@ -1,0 +1,35 @@
+{
+    "manifestVersion": 1,
+    "id": "com.example.source-query",
+    "name": "Source engine (A2S) query",
+    "version": "1.0.0",
+    "author": "Example Author",
+    "description": "Reads live player counts and the current map from Source-engine servers.",
+    "apps": [],
+
+    "permissions": {
+        "query": true
+    },
+
+    "serverQuery": {
+        "protocol": "udp",
+        "port": "query",
+        "timeoutMs": 1500,
+
+        "requestHex": "ffffffff54536f7572636520456e67696e6520517565727900",
+
+        "parse": [
+            { "type": "magic", "hex": "ffffffff" },
+            { "type": "skip", "bytes": 1 },
+            { "type": "u8", "name": "protocol" },
+            { "type": "cString", "name": "name" },
+            { "type": "cString", "name": "map" },
+            { "type": "cString", "name": "folder" },
+            { "type": "cString", "name": "game" },
+            { "type": "u16Le", "name": "appId" },
+            { "type": "u8", "name": "players" },
+            { "type": "u8", "name": "maxPlayers" },
+            { "type": "u8", "name": "bots" }
+        ]
+    }
+}

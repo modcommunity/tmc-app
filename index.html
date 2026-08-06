@@ -1,14 +1,20 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + React + Typescript</title>
-  </head>
+<html lang="en" class="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/png" href="/icon.png" />
+        <!-- `viewport-fit=cover` + the safe-area padding in app.css is what
+             keeps the shell clear of a notch and the iOS home indicator. -->
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+        />
+        <meta name="color-scheme" content="light dark" />
+        <title>The Modding Community</title>
+    </head>
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
 </html>

@@ -1,0 +1,70 @@
+[package]
+name = "tmc-core"
+version = "0.1.0"
+description = "Platform-independent core for the TMC app: API client, auth, plugin sandbox and game-server query protocols"
+authors = ["The Modding Community"]
+edition = "2021"
+# 1.82 for `Option::is_none_or`, used in the log filter and the query parsers'
+# bounds checks.
+rust-version = "1.82"
+license = "GPL-3.0-only"
+
+[features]
+# The OS credential store. ON in the app; OFF for `cargo test -p tmc-core`,
+# because `keyring` pulls `libdbus-sys` on Linux and that needs a dev package
+# the security tests have no business requiring. Without it `SecureStore` uses
+# its private-directory fallback, which is the same code path mobile takes.
+default = []
+os-keyring = ["dep:keyring"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+# rustls rather than the platform TLS stack: one certificate verifier on every
+# target, including Android, where native-tls drags in the NDK's OpenSSL.
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+    "stream",
+    "gzip",
+] }
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "time",
+    "fs",
+    "io-util",
+    "sync",
+] }
+futures-util = "0.3"
+
+# PKCE, download checksums, plugin manifest pinning.
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+hex = "0.4"
+
+url = "2"
+time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
+
+# Archive readers for installer plugins. Both are pure Rust; neither is allowed
+# to write outside a jail (see `plugins::sandbox`).
+zip = { version = "2", default-features = false, features = ["deflate", "bzip2"] }
+tar = "0.4"
+flate2 = "1"
+
+tracing = "0.1"
+
+[target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
+keyring = { version = "3", features = [
+    "apple-native",
+    "windows-native",
+    "sync-secret-service",
+], optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["rt", "macros", "test-util"] }

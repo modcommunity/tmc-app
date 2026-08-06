@@ -1,16 +1,21 @@
+# The Tauri shell. Everything that is not "being a window" lives in `core/`,
+# which has no Tauri dependency and can therefore be compiled and tested on a
+# machine with no GTK/WebKit stack — see `core/src/lib.rs`.
+[workspace]
+members = ["core"]
+
 [package]
 name = "tmc-app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "The official Modding Community app"
+authors = ["The Modding Community"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+rust-version = "1.82"
+license = "GPL-3.0-only"
 
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+# The `_lib` suffix keeps the lib name distinct from the bin name, which
+# otherwise collides on Windows (rust-lang/cargo#8519).
 name = "tmc_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
@@ -18,16 +23,35 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+tmc-core = { path = "core", features = ["os-keyring"] }
+
+# No `protocol-asset`: `tauri.conf.json` disables the asset protocol, and the
+# feature and the config have to agree or the build script refuses. Nothing in
+# the app serves local files to the webview — images come from the CDN over
+# https, and a local-file protocol would be one more thing a rendered mod
+# description could try to reach.
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+tauri-plugin-os = "2"
+# Native folder picker, so a game directory is chosen by the OS rather than
+# typed into the webview. See the capability file for why that matters.
+tauri-plugin-dialog = "2"
+
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+futures-util = "0.3"
 
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
+tauri-plugin-deep-link = "2"
+
+# See https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
 codegen-units = 1
 lto = true
-opt-level = 3
+opt-level = "s"
 panic = "abort"
 strip = true
