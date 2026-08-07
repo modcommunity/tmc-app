@@ -1,0 +1,42 @@
+{
+    "manifestVersion": 1,
+    "label": "Minecraft mod (.jar)",
+    "description": "Places a Forge/Fabric/NeoForge mod jar into the profile's mods folder. Works for every loader, because every one of them reads the same directory.",
+
+    "match": {
+        "extensions": ["jar"]
+    },
+
+    "permissions": {
+        "fs": [
+            { "root": "pluginData", "path": "", "write": true },
+            { "root": "gameDir", "path": "mods", "write": true }
+        ],
+        "net": ["moddingcommunity.com", "*.moddingcommunity.com"]
+    },
+
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": { "root": "pluginData", "path": "staging/{itemId}/{fileName}" }
+            },
+            {
+                "action": "mkdir",
+                "path": { "root": "gameDir", "path": "mods" }
+            },
+            {
+                "action": "move",
+                "from": { "root": "pluginData", "path": "staging/{itemId}/{fileName}" },
+                "to": { "root": "gameDir", "path": "mods/{fileName}" }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": { "root": "gameDir", "path": "mods/{fileName}" }
+            }
+        ]
+    }
+}

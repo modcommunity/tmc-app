@@ -6,10 +6,15 @@ import {
     BrowseResponseSchema,
     ContentDetailSchema,
     FacetsResponseSchema,
+    InstallListResponse,
+    InstallSchema,
     MeResponseSchema,
+    SubscriptionSyncResponse,
     UserSettingsSchema,
     type BrowseQueryT,
     type ContentKindT,
+    type InstallOptionsT,
+    type SubKindT,
     type UserSettingsT,
 } from './contract'
 
@@ -121,4 +126,113 @@ export const api = {
         ),
 
     facets: (kind: ContentKindT) => get('/facets', FacetsResponseSchema, { kind }),
+
+    // -------------------------------------------------------- Subscriptions
+    /**
+     * The sync endpoint, called DIRECTLY only by screens that want a fresh
+     * answer without side effects.
+     *
+     * The device's own sync loop does not come through here — it runs in Rust
+     * (`library_sync`), because the pass that follows it writes to the user's
+     * game folders and the webview must not be the thing that decides to.
+     */
+    subscriptions: (since?: string) =>
+        get(
+            '/subscriptions',
+            SubscriptionSyncResponse,
+            { since, limit: 200 },
+            true
+        ),
+
+    /** Subscribe or unsubscribe from the app. Omit `subscribed` to toggle. */
+    subscribe: (kind: SubKindT, itemId: number, subscribed?: boolean) =>
+        send(
+            'POST',
+            '/subscriptions',
+            z.object({
+                subscribed: z.boolean(),
+                propagated: z.number(),
+                skipped: z.number(),
+            }),
+            { kind, itemId, subscribed }
+        ),
+
+    /** Auto-update / notify / pause, as a partial. */
+    subscriptionPrefs: (
+        kind: SubKindT,
+        itemId: number,
+        prefs: {
+            autoUpdate?: boolean
+            notifyUpdates?: boolean
+            paused?: boolean
+        }
+    ) =>
+        send('POST', '/subscriptions/prefs', z.object({ ok: z.boolean() }), {
+            kind,
+            itemId,
+            ...prefs,
+        }),
+
+    // --------------------------------------------------------------- Installs
+    installs: (appId?: number) =>
+        get('/installs', InstallListResponse, { appId }, true),
+
+    installCreate: (input: {
+        appId: number
+        name: string
+        description?: string
+        gameVersion?: string
+        loader?: string
+        isDefault?: boolean
+        launch?: {
+            args?: string[]
+            env?: Record<string, string>
+            options?: InstallOptionsT
+        }
+    }) => send('POST', '/installs', InstallSchema, input),
+
+    installUpdate: (input: {
+        id: number
+        name?: string
+        description?: string | null
+        gameVersion?: string | null
+        loader?: string | null
+        isDefault?: boolean
+        launch?: {
+            args?: string[]
+            env?: Record<string, string>
+            options?: InstallOptionsT
+        }
+        playedSeconds?: number
+    }) => send('PATCH', '/installs', InstallSchema, input),
+
+    installDelete: (id: number) =>
+        send('DELETE', '/installs', z.object({ deleted: z.boolean() }), { id }),
+
+    installAddItem: (installId: number, kind: SubKindT, itemId: number) =>
+        send('POST', '/installs/items', InstallSchema, {
+            installId,
+            kind,
+            itemId,
+        }),
+
+    installRemoveItem: (installId: number, kind: SubKindT, itemId: number) =>
+        send('DELETE', '/installs/items', InstallSchema, {
+            installId,
+            kind,
+            itemId,
+        }),
+
+    installPatchItem: (
+        installId: number,
+        kind: SubKindT,
+        itemId: number,
+        patch: { enabled?: boolean; order?: number }
+    ) =>
+        send('PATCH', '/installs/items', InstallSchema, {
+            installId,
+            kind,
+            itemId,
+            ...patch,
+        }),
 }

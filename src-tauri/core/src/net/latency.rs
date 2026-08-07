@@ -53,6 +53,137 @@ pub struct LatencySeries {
     pub jitter: Option<u32>,
     /// Successful probes as a percentage, 0–100.
     pub reliability: u8,
+
+    /// Middle successful sample. Reported alongside `avg` because a bimodal
+    /// series has a mean that describes neither mode — which is precisely the
+    /// series {@link CacheSignal} is about.
+    pub median: Option<u32>,
+
+    /// Evidence that something is answering this query from a cache. `None`
+    /// until there are enough samples to say anything.
+    pub cache: Option<CacheSignal>,
+}
+
+/// "A cache is answering some of these probes."
+///
+/// WHY THIS IS DETECTABLE AT ALL
+/// -----------------------------
+/// A cache in front of a game's query port is not fast on every probe. It is
+/// fast on every probe that HITS, and a TTL shorter than the probe interval
+/// guarantees the rest miss and pay the full round trip. So the series goes
+/// BIMODAL — a tight cluster of very fast replies and a second cluster at the
+/// real network latency — in a way that ordinary jitter does not.
+///
+/// THE MISTAKE THIS AVOIDS
+/// -----------------------
+/// The obvious test is "are these samples consistent?", and it is exactly
+/// backwards: the slow samples ARE the cache's signature, so requiring their
+/// absence vetoes the servers where the effect is strongest. (The website hit
+/// this on its own info-vs-userlist detector; see `latency_cache.ts` there.)
+/// So this asks the opposite question — *are there two populations?* — and both
+/// modes have to be genuinely populated for it to fire.
+///
+/// WHAT IT IS NOT
+/// --------------
+/// Not an accusation. A CDN, a proxy and a game that genuinely answers some
+/// requests from memory all produce this, and none of them is wrongdoing. It is
+/// shown so a player reads "12ms" with the right amount of trust.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheSignal {
+    /// Median of the slow cluster ÷ median of the fast one. The bigger this is,
+    /// the less the fast number is telling you about the network.
+    pub ratio: f32,
+    /// Share of probes that landed in the fast cluster, 0–1. A cache with a
+    /// long TTL is near 1; one expiring between probes is near 0.5.
+    pub fast_share: f32,
+    /// The fast cluster's median, in ms — what the server appears to answer in.
+    pub fast_ms: u32,
+    /// The slow cluster's median — the round trip when the cache misses, which
+    /// is the number a player's connection will actually experience.
+    pub slow_ms: u32,
+}
+
+/// Samples needed before a split is worth reading. Below this a single unlucky
+/// probe is half the "slow cluster".
+const CACHE_MIN_SAMPLES: usize = 8;
+
+/// Each cluster has to hold at least this share of the samples. This is the
+/// bound that separates a cache from one outlier: a lone 400ms spike among
+/// nineteen 12ms replies is jitter, and it lands at 5%.
+const CACHE_MIN_CLUSTER_SHARE: f32 = 0.15;
+
+/// How much slower the slow cluster has to be. Chosen well above the ~2x a
+/// merely larger reply costs — the same band the website's detector treats as
+/// "a bigger response, not a cache".
+const CACHE_MIN_RATIO: f32 = 4.0;
+
+fn median_of(sorted: &[u32]) -> Option<u32> {
+    if sorted.is_empty() {
+        return None;
+    }
+
+    Some(sorted[sorted.len() / 2])
+}
+
+/// Split a sorted series at its widest internal gap and judge the two halves.
+///
+/// The widest gap rather than the mean or the median: a bimodal series has one
+/// large step between its clusters and small steps inside them, which is the
+/// thing being looked for. Splitting at the mean would put a boundary through
+/// the middle of a unimodal series and then measure the halves against each
+/// other, which always finds *something*.
+fn detect_cache(successful: &[u32]) -> Option<CacheSignal> {
+    if successful.len() < CACHE_MIN_SAMPLES {
+        return None;
+    }
+
+    let mut sorted = successful.to_vec();
+    sorted.sort_unstable();
+
+    let mut best_at = 0usize;
+    let mut best_gap = 0u32;
+
+    for i in 1..sorted.len() {
+        let gap = sorted[i].saturating_sub(sorted[i - 1]);
+
+        if gap > best_gap {
+            best_gap = gap;
+            best_at = i;
+        }
+    }
+
+    if best_at == 0 {
+        return None;
+    }
+
+    let (fast, slow) = sorted.split_at(best_at);
+
+    let total = sorted.len() as f32;
+    let fast_share = fast.len() as f32 / total;
+    let slow_share = slow.len() as f32 / total;
+
+    if fast_share < CACHE_MIN_CLUSTER_SHARE || slow_share < CACHE_MIN_CLUSTER_SHARE {
+        return None;
+    }
+
+    let fast_ms = median_of(fast)?;
+    let slow_ms = median_of(slow)?;
+
+    // A fast cluster at literally 0ms would divide by zero; clamp to 1, which
+    // also stops a sub-millisecond LAN reply producing an absurd ratio.
+    let ratio = slow_ms as f32 / fast_ms.max(1) as f32;
+
+    if ratio < CACHE_MIN_RATIO {
+        return None;
+    }
+
+    Some(CacheSignal {
+        ratio,
+        fast_share,
+        fast_ms,
+        slow_ms,
+    })
 }
 
 #[derive(Default)]
@@ -193,6 +324,9 @@ fn summarise(key: &str, samples: Vec<LatencySample>) -> LatencySeries {
         )
     };
 
+    let mut sorted = successful.clone();
+    sorted.sort_unstable();
+
     LatencySeries {
         key: key.to_string(),
         last: samples.iter().rev().find_map(|s| s.rtt_ms),
@@ -201,6 +335,8 @@ fn summarise(key: &str, samples: Vec<LatencySample>) -> LatencySeries {
         avg,
         jitter,
         reliability,
+        median: median_of(&sorted),
+        cache: detect_cache(&successful),
         samples,
     }
 }
@@ -208,6 +344,95 @@ fn summarise(key: &str, samples: Vec<LatencySample>) -> LatencySeries {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The whole point of the detector, stated as a test.
+    ///
+    /// A cache in front of a query port is fast on every HIT and pays the full
+    /// round trip on every miss. The series below is a real shape: fourteen
+    /// ~12ms replies and six ~540ms ones. A consistency test would call that
+    /// unstable and say nothing; this has to call it a cache.
+    #[test]
+    fn a_bimodal_series_is_read_as_a_cache_not_as_jitter() {
+        let mut samples: Vec<u32> = vec![11, 12, 12, 13, 12, 11, 14, 12, 12, 13, 11, 12, 13, 12];
+        samples.extend([540, 552, 536, 549, 541, 558]);
+
+        let signal = detect_cache(&samples).expect("a cache should be detected");
+
+        assert!(signal.ratio > 30.0, "ratio was {}", signal.ratio);
+        assert!(signal.fast_ms < 20);
+        assert!(signal.slow_ms > 500);
+        assert!(
+            (signal.fast_share - 0.7).abs() < 0.05,
+            "share was {}",
+            signal.fast_share
+        );
+    }
+
+    /// The inverse, and the reason the cluster-share bound exists: one unlucky
+    /// probe among nineteen good ones is jitter, and must not fire.
+    #[test]
+    fn a_single_outlier_is_not_a_cache() {
+        let mut samples: Vec<u32> = vec![12; 19];
+        samples.push(600);
+
+        assert!(detect_cache(&samples).is_none());
+    }
+
+    /// A merely LARGER reply costs about twice as long, not five times. That
+    /// band is the one the website's own detector treats as "a bigger response,
+    /// not a cache", and the ratio floor here has to agree.
+    #[test]
+    fn a_two_times_gap_is_a_bigger_reply_not_a_cache() {
+        let mut samples: Vec<u32> = vec![40, 42, 41, 43, 40, 42, 41, 40, 42, 41];
+        samples.extend([80, 84, 82, 81, 83, 80, 82, 84, 81, 80]);
+
+        assert!(detect_cache(&samples).is_none());
+    }
+
+    /// An ordinary noisy connection — a spread, but one population.
+    #[test]
+    fn ordinary_jitter_does_not_fire() {
+        let samples: Vec<u32> = vec![40, 55, 47, 62, 51, 44, 58, 49, 66, 53, 45, 60];
+
+        assert!(detect_cache(&samples).is_none());
+    }
+
+    /// Below the sample floor nothing is claimed, however suggestive the shape.
+    #[test]
+    fn a_short_series_says_nothing() {
+        assert!(detect_cache(&[10, 11, 500, 520]).is_none());
+    }
+
+    /// A sub-millisecond LAN reply must not divide by zero or produce an
+    /// absurd ratio off a rounding artefact.
+    #[test]
+    fn a_zero_millisecond_cluster_does_not_divide_by_zero() {
+        let mut samples: Vec<u32> = vec![0; 10];
+        samples.extend([120; 10]);
+
+        let signal = detect_cache(&samples).expect("still bimodal");
+
+        assert!(signal.ratio.is_finite());
+        assert_eq!(signal.fast_ms, 0);
+    }
+
+    #[test]
+    fn the_summary_carries_the_signal_and_a_median() {
+        let store = LatencyStore::new();
+        let key = LatencyStore::key("cached.test", 1);
+
+        for (i, rtt) in [10, 11, 10, 12, 11, 10, 11, 12, 500, 510, 505, 520]
+            .into_iter()
+            .enumerate()
+        {
+            store.record(&key, i as i64, Some(rtt));
+        }
+
+        let series = store.series(&key).expect("series");
+
+        assert!(series.median.is_some());
+        assert!(series.cache.is_some(), "expected a cache signal");
+    }
 
     #[test]
     fn keys_are_case_insensitive() {

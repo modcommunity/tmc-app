@@ -50,6 +50,19 @@ hex = "0.4"
 url = "2"
 time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
 
+# The device-local library: which subscriptions are materialised, at which
+# version, where. SQLite rather than a JSON file because the sync loop reads and
+# writes it on a timer while the UI reads it on every render, and a whole-file
+# rewrite loses one of those to the other. `bundled` so there is no libsqlite3
+# on the target — Android in particular ships one we may not link against.
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# YAML for app-scoped plugins, alongside JSON. Both are supported because a
+# plugin is hand-authored and YAML is what people reach for when a manifest has
+# more than a handful of steps. `serde_yaml_ng` is the maintained fork of the
+# now-archived `serde_yaml`, with the same API.
+serde_yaml_ng = "0.10"
+
 # Archive readers for installer plugins. Both are pure Rust; neither is allowed
 # to write outside a jail (see `plugins::sandbox`).
 zip = { version = "2", default-features = false, features = ["deflate", "bzip2"] }

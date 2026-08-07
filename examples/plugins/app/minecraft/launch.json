@@ -1,0 +1,29 @@
+{
+    "manifestVersion": 1,
+    "label": "Minecraft (bundled launcher)",
+    "description": "Starts the launcher that ships inside the game folder, pointed at this install's own directory so two profiles never share a saves folder.",
+
+    "permissions": {},
+
+    "launch": {
+        "exec": "minecraft-launcher",
+        "execPlatform": {
+            "windows": "MinecraftLauncher.exe",
+            "macos": "Minecraft.app/Contents/MacOS/launcher",
+            "linux": "minecraft-launcher"
+        },
+
+        "args": ["--workDir", "{installDir}", "--version", "{gameVersion}"],
+
+        "optionArgs": {
+            "width": ["--width", "{width}"],
+            "height": ["--height", "{height}"],
+            "windowMode": ["--{windowMode}"],
+            "memoryMb": ["--jvmArgs", "-Xmx{memoryMb}M"]
+        },
+
+        "env": {
+            "TMC_INSTALL": "{installName}"
+        }
+    }
+}

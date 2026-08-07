@@ -1,3 +1,4 @@
+pub mod apps;
 pub mod manifest;
 pub mod query;
 pub mod registry;

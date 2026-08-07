@@ -1,0 +1,73 @@
+# The archive form of a GTA V script mod: a .zip holding several files that all
+# have to land in `scripts/` together.
+#
+# The only rule in the examples that EXTRACTS. Worth reading for what it does
+# not do: nothing is unpacked outside the sandbox, entry paths are re-checked
+# after the zip's own name is decoded (zip-slip), and both a byte budget and an
+# entry count bound the result — a 40 KB archive that expands to 5 GB is refused
+# rather than filling the disk.
+manifestVersion: 1
+label: GTA V script archive (.zip)
+description: >-
+  Extracts a script mod's archive into scripts/. `strip: 1` drops the wrapper
+  folder almost every archive ships with, so the scripts land where the loader
+  looks rather than one directory too deep.
+
+match:
+  extensions:
+    - zip
+    - 7z
+    - rar
+
+permissions:
+  fs:
+    - root: pluginData
+      path: ""
+      write: true
+    - root: gameDir
+      path: scripts
+      write: true
+  net:
+    - moddingcommunity.com
+    - "*.moddingcommunity.com"
+
+manage:
+  install:
+    - action: download
+      url: "{fileUrl}"
+      to:
+        root: pluginData
+        path: "staging/{itemId}/{fileName}"
+
+    - action: mkdir
+      path:
+        root: gameDir
+        path: scripts
+
+    - action: extract
+      from:
+        root: pluginData
+        path: "staging/{itemId}/{fileName}"
+      to:
+        root: gameDir
+        path: scripts
+      # Most archives wrap everything in one folder named after the mod.
+      strip: 1
+
+    # The staged archive is scratch. Removing it here rather than leaving it for
+    # the cache sweep keeps a large library from holding a second copy of every
+    # mod it installed.
+    - action: remove
+      path:
+        root: pluginData
+        path: "staging/{itemId}/{fileName}"
+
+  uninstall:
+    # An extracted archive has no single file to remove, so this rule relies on
+    # the executor's JOURNAL — the list of paths the install actually wrote,
+    # recorded on the library row and swept by `run_uninstall`. That is the case
+    # the journal exists for.
+    - action: remove
+      path:
+        root: pluginData
+        path: "staging/{itemId}"

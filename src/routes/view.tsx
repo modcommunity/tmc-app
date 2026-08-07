@@ -15,6 +15,7 @@ import { ContentKindSchema } from '~/lib/api/contract'
 import Markdown from '~/components/markdown'
 import ServerPanel from '~/components/server-panel'
 import InstallButton from '~/components/install-button'
+import SubscribeButton from '~/components/subscribe-button'
 
 /**
  * A content item's page — assets, mods, servers, maps, articles, communities,
@@ -44,8 +45,7 @@ export default function ViewRoute() {
 
     if (detail.isPending) return <Centered>Loading…</Centered>
 
-    if (detail.isError)
-        return <Centered>{(detail.error).message}</Centered>
+    if (detail.isError) return <Centered>{detail.error.message}</Centered>
 
     const { summary, content, rules, releases, media, links } = detail.data
     const banner = summary.images.banner ?? summary.images.card
@@ -97,7 +97,9 @@ export default function ViewRoute() {
                         )}
                     </div>
 
-                    <h1 className="selectable text-2xl font-bold">{summary.name}</h1>
+                    <h1 className="selectable text-2xl font-bold">
+                        {summary.name}
+                    </h1>
 
                     {summary.description && (
                         <p className="selectable text-sm text-muted">
@@ -135,6 +137,19 @@ export default function ViewRoute() {
                                 <FiPlay className="size-4" /> Join server
                             </span>
                         </Button>
+                    )}
+
+                    {/*
+                        Subscribe first: it is what the app is FOR, and it is
+                        the one that keeps working after the release this page
+                        is showing has been superseded. The plugin-bundle
+                        installer stays beside it for the games covered by a
+                        user-installed plugin rather than a shipped rule.
+                    */}
+                    {(summary.kind === 'mod' ||
+                        summary.kind === 'asset' ||
+                        summary.kind === 'collection') && (
+                        <SubscribeButton summary={summary} />
                     )}
 
                     {(summary.kind === 'mod' || summary.kind === 'asset') && (
@@ -281,7 +296,6 @@ export default function ViewRoute() {
         </article>
     )
 }
-
 
 function Centered({ children }: { children: React.ReactNode }) {
     return (

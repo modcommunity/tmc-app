@@ -55,14 +55,7 @@ export function ApiOk<S extends z.ZodTypeAny>(schema: S) {
 /** Self-reported client identity. Untrusted — a label for the approval screen. */
 export const ClientInfoSchema = z.object({
     name: z.string().min(1).max(64),
-    platform: z.enum([
-        'windows',
-        'macos',
-        'linux',
-        'android',
-        'ios',
-        'unknown',
-    ]),
+    platform: z.enum(['windows', 'macos', 'linux', 'android', 'ios', 'unknown']),
     version: z.string().min(1).max(32),
 })
 
@@ -478,3 +471,272 @@ export const MeResponseSchema = z.object({
 })
 
 export type MeResponseT = z.infer<typeof MeResponseSchema>
+
+// ----------------------------------------------------------- Subscriptions
+
+/**
+ * What can be subscribed to — "keep this on my devices".
+ *
+ * Three of the eight content kinds, and the closed list is load-bearing: a
+ * server is not something you install, an article is not something a device
+ * holds a copy of. Mirrors `SubKindVals` in `~/types/subscription/type`.
+ */
+export const SubKindVals = ['asset', 'mod', 'collection'] as const
+
+export const SubKindSchema = z.enum(SubKindVals)
+export type SubKindT = (typeof SubKindVals)[number]
+
+/**
+ * One subscribed item, as the app's library renders it and its installer acts
+ * on it.
+ *
+ * `file` is the thing the app actually downloads. It is nullable rather than
+ * required because a subscription outlives the release it was made against: an
+ * item whose only release is later hidden still has a live subscription, and
+ * the app has to render it as "nothing to install yet" rather than fail to
+ * parse the whole list.
+ */
+export const SubscriptionFileSchema = z.object({
+    id: z.string(),
+    /** Absolute download URL. Bearer-authenticated downloads resolve here. */
+    url: z.string(),
+    size: z.number().int().nonnegative().nullable(),
+    /**
+     * Lower-case hex SHA-256 of the file, when we have one.
+     *
+     * The app verifies against this after downloading and DELETES the file on a
+     * mismatch — see the plugin sandbox's `download` step. Null means "we do not
+     * have a digest", which the app treats as "install it but say so", not as
+     * "verified".
+     */
+    sha256: z.string().nullable(),
+    /** Original filename, so the installer can honour an extension rule. */
+    name: z.string().nullable(),
+})
+
+export type SubscriptionFileT = z.infer<typeof SubscriptionFileSchema>
+
+export const SubscriptionSchema = z.object({
+    id: z.string(),
+    kind: SubKindSchema,
+    /** The content item's own id. */
+    itemId: z.number().int(),
+    name: z.string(),
+    description: z.string().nullable(),
+    image: z.string().nullable(),
+    /** The item's page on the website — "Open on the website". */
+    webUrl: z.string(),
+
+    /**
+     * The app this item installs into, and the URL SEGMENT its plugins live
+     * under (`plugins/app/<slug>/…`). Null for a collection, which is not
+     * app-scoped in the schema.
+     */
+    app: z
+        .object({
+            id: z.number().int(),
+            name: z.string(),
+            slug: z.string().nullable(),
+        })
+        .nullable(),
+
+    createdAt: z.string(),
+    updatedAt: z.string(),
+
+    autoUpdate: z.boolean(),
+    notifyUpdates: z.boolean(),
+    paused: z.boolean(),
+
+    /** Set when a collection subscription created this row. */
+    viaCollectionId: z.number().int().nullable(),
+
+    /**
+     * Still installable? False once the item's team opts out or its game loses
+     * app support. The app leaves such an item alone rather than uninstalling
+     * it — a user who has it working should not lose it because of a flag.
+     */
+    installable: z.boolean(),
+
+    release: z
+        .object({
+            id: z.number().int(),
+            version: z.string().nullable(),
+            createdAt: z.string(),
+            file: SubscriptionFileSchema.nullable(),
+        })
+        .nullable(),
+})
+
+export type SubscriptionT = z.infer<typeof SubscriptionSchema>
+
+/**
+ * The sync response.
+ *
+ * `revision` is a monotonic watermark the app sends back on its next poll. The
+ * server answers with everything changed since — which is what lets a device
+ * poll every minute without transferring the whole library each time, and what
+ * makes a subscription created in the BROWSER show up on the desktop within one
+ * poll. `full` tells the app the answer is a complete list rather than a delta,
+ * so it can drop anything it holds that is not in it.
+ */
+export const SubscriptionSyncResponse = z.object({
+    items: z.array(SubscriptionSchema),
+    /** Ids removed since `since`. Empty on a full sync. */
+    removed: z.array(z.string()),
+    revision: z.string(),
+    full: z.boolean(),
+})
+
+export type SubscriptionSyncResponseT = z.infer<typeof SubscriptionSyncResponse>
+
+export const SubscriptionQuerySchema = z.object({
+    /**
+     * The `revision` from the previous response. Omitted means "give me
+     * everything" — which is what a fresh install and a re-login both do.
+     */
+    since: z.coerce.string().max(64).optional(),
+    limit: z.coerce.number().int().min(1).max(200).default(200),
+})
+
+export const SubscriptionWriteRequest = z.object({
+    kind: SubKindSchema,
+    itemId: z.coerce.number().int().positive(),
+    /** Absent flips it; present forces a state. */
+    subscribed: z.boolean().optional(),
+})
+
+export const SubscriptionPrefsRequest = z.object({
+    kind: SubKindSchema,
+    itemId: z.coerce.number().int().positive(),
+    autoUpdate: z.boolean().optional(),
+    notifyUpdates: z.boolean().optional(),
+    paused: z.boolean().optional(),
+})
+
+// ----------------------------------------------------------------- Installs
+
+export const GraphicsPresetVals = [
+    'default',
+    'low',
+    'medium',
+    'high',
+    'ultra',
+] as const
+
+export const WindowModeVals = [
+    'default',
+    'windowed',
+    'borderless',
+    'fullscreen',
+] as const
+
+/**
+ * An install's declarative launch options.
+ *
+ * Every field optional, every one with a "leave it alone" meaning: the
+ * overwhelmingly common install overrides nothing, and a launcher that silently
+ * forces 1920×1080 on somebody who never asked is worse than one with no
+ * settings at all. What each key MEANS for a given game is decided by that
+ * game's launch plugin, not here.
+ */
+export const InstallOptionsSchema = z.object({
+    graphics: z.enum(GraphicsPresetVals).optional(),
+    windowMode: z.enum(WindowModeVals).optional(),
+    width: z.number().int().min(320).max(16384).optional(),
+    height: z.number().int().min(240).max(16384).optional(),
+    monitor: z.number().int().min(0).max(15).optional(),
+    fpsLimit: z.number().int().min(0).max(1000).optional(),
+    vsync: z.boolean().optional(),
+    memoryMb: z.number().int().min(256).max(65536).optional(),
+    hideOnLaunch: z.boolean().optional(),
+    confirmUpdates: z.boolean().optional(),
+})
+
+export type InstallOptionsT = z.infer<typeof InstallOptionsSchema>
+
+export const InstallItemSchema = z.object({
+    id: z.number().int(),
+    kind: SubKindSchema,
+    itemId: z.number().int(),
+    name: z.string(),
+    webUrl: z.string(),
+    image: z.string().nullable(),
+    enabled: z.boolean(),
+    order: z.number().int(),
+    /** False when the user is not subscribed — the app must not materialise it. */
+    subscribed: z.boolean(),
+})
+
+export const InstallSchema = z.object({
+    id: z.number().int(),
+    appId: z.number().int(),
+    app: z.object({
+        id: z.number().int(),
+        name: z.string(),
+        slug: z.string().nullable(),
+        icon: z.string().nullable(),
+    }),
+    name: z.string(),
+    description: z.string().nullable(),
+    gameVersion: z.string().nullable(),
+    loader: z.string().nullable(),
+    isDefault: z.boolean(),
+    launchArgs: z.array(z.string()),
+    launchEnv: z.record(z.string(), z.string()),
+    options: InstallOptionsSchema,
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    lastPlayedAt: z.string().nullable(),
+    playSeconds: z.number().int().nonnegative(),
+    items: z.array(InstallItemSchema),
+})
+
+export type InstallT = z.infer<typeof InstallSchema>
+
+export const InstallListResponse = z.object({
+    installs: z.array(InstallSchema),
+})
+
+export const InstallLaunchSchema = z.object({
+    args: z.array(z.string().min(1).max(256)).max(64).optional(),
+    env: z.record(z.string().max(64), z.string().max(512)).optional(),
+    options: InstallOptionsSchema.optional(),
+})
+
+export const InstallCreateRequest = z.object({
+    appId: z.coerce.number().int().positive(),
+    name: z.string().min(1).max(64),
+    description: z.string().max(500).optional(),
+    gameVersion: z.string().max(64).optional(),
+    loader: z.string().max(64).optional(),
+    isDefault: z.boolean().optional(),
+    launch: InstallLaunchSchema.optional(),
+})
+
+export const InstallUpdateRequest = z.object({
+    id: z.coerce.number().int().positive(),
+    name: z.string().min(1).max(64).optional(),
+    description: z.string().max(500).nullable().optional(),
+    gameVersion: z.string().max(64).nullable().optional(),
+    loader: z.string().max(64).nullable().optional(),
+    isDefault: z.boolean().optional(),
+    launch: InstallLaunchSchema.optional(),
+    /**
+     * Playtime the app is reporting for this install, in seconds since the last
+     * report. Clamped server-side — it is a number a client chose.
+     */
+    playedSeconds: z.number().int().min(0).max(86400).optional(),
+})
+
+export const InstallDeleteRequest = z.object({
+    id: z.coerce.number().int().positive(),
+})
+
+export const InstallItemRequest = z.object({
+    installId: z.coerce.number().int().positive(),
+    kind: SubKindSchema,
+    itemId: z.coerce.number().int().positive(),
+    /** Present on a patch; absent on add/remove. */
+    enabled: z.boolean().optional(),
+    order: z.number().int().min(0).max(10000).optional(),
+})

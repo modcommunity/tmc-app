@@ -1,0 +1,54 @@
+# GTA V script mods.
+#
+# The `.asi`/`.dll` case: ScriptHookV-style plugins that sit loose in the game
+# root, and Lua/.NET scripts that go into `scripts/`. Two rules rather than one
+# because the destination differs — and this file demonstrates the SELECTION
+# half of the app-plugin system, which is the part a single-rule game never
+# exercises.
+manifestVersion: 1
+label: GTA V native plugin (.asi / .dll)
+description: >-
+  Places an ASI or ScriptHookVDotNet plugin in the game root, where the loader
+  scans for it. Nothing is extracted: these ship as single files.
+
+match:
+  extensions:
+    - asi
+    - dll
+
+permissions:
+  fs:
+    - root: pluginData
+      path: ""
+      write: true
+    # The game ROOT, not a subdirectory: ASI plugins are loaded from beside the
+    # executable and there is no folder to narrow this to. That is why this rule
+    # is worth reading before approving — it is the widest grant in the examples.
+    - root: gameDir
+      path: ""
+      write: true
+  net:
+    - moddingcommunity.com
+    - "*.moddingcommunity.com"
+
+manage:
+  install:
+    - action: download
+      url: "{fileUrl}"
+      to:
+        root: pluginData
+        path: "staging/{itemId}/{fileName}"
+
+    - action: move
+      from:
+        root: pluginData
+        path: "staging/{itemId}/{fileName}"
+      to:
+        root: gameDir
+        path: "{fileName}"
+
+  uninstall:
+    - action: remove
+      path:
+        root: gameDir
+        path: "{fileName}"

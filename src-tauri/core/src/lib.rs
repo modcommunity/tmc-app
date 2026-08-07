@@ -16,6 +16,8 @@
 pub mod api;
 pub mod auth;
 pub mod error;
+pub mod launch;
+pub mod library;
 pub mod logging;
 pub mod net;
 pub mod plugins;

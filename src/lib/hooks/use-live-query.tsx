@@ -272,7 +272,8 @@ export function LiveQueryProvider({ children }: { children: ReactNode }) {
 export function useLiveQuery(): LiveQueryContextT {
     const ctx = useContext(LiveQueryContext)
 
-    if (!ctx) throw new Error('useLiveQuery must be used inside <LiveQueryProvider>')
+    if (!ctx)
+        throw new Error('useLiveQuery must be used inside <LiveQueryProvider>')
 
     return ctx
 }
@@ -296,6 +297,10 @@ export function requestFor(
 
     return {
         id: `${item.kind}:${item.id}`,
+        // Carried so Rust can match a Server Live Query PLUGIN to this game
+        // when no built-in protocol applies — which is what makes the browser
+        // work for every app rather than only the nine with a native parser.
+        appId: item.app?.id ?? null,
         host: server.host,
         port: server.port,
         queryPort: server.queryPort,

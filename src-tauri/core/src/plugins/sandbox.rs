@@ -191,6 +191,51 @@ impl Sandbox {
     pub fn root_path(&self, root: FsRoot) -> Option<&Path> {
         self.roots.get(root_key(root)).map(|g| g.base.as_path())
     }
+
+    /// Is an ALREADY-RESOLVED absolute path inside a writable subtree of this
+    /// sandbox?
+    ///
+    /// The narrow companion to [`Self::resolve`], and the only other way a path
+    /// is admitted. `resolve` takes a manifest-supplied *relative* path and
+    /// builds the real one; this takes a real one back — specifically, one the
+    /// executor recorded in its journal on a previous run — and asks whether it
+    /// is still ours to delete.
+    ///
+    /// It exists because that journal lives in a user-writable database on
+    /// disk. It is our own record and it is still not trusted: without this
+    /// check, an edited row would turn the uninstall path into a
+    /// delete-anything primitive, which is precisely what the jail is for.
+    ///
+    /// Write access is required, not optional. Nothing calls this to READ.
+    pub fn contains(&self, path: &Path) -> bool {
+        if !path.is_absolute() {
+            return false;
+        }
+
+        // Refuse a path carrying `..` or `.` outright rather than normalising
+        // it: `a/../../b` can be lexically inside a base and really outside it,
+        // and a journal entry should never have contained one in the first
+        // place — the executor writes fully-resolved paths.
+        if path.components().any(|c| {
+            matches!(
+                c,
+                std::path::Component::ParentDir | std::path::Component::CurDir
+            )
+        }) {
+            return false;
+        }
+
+        self.roots.values().any(|grant| {
+            path.starts_with(&grant.base)
+                && grant
+                    .allowed
+                    .iter()
+                    .any(|a| a.write && path.starts_with(&a.prefix))
+                // The same symlink check `resolve` ends with: a link planted
+                // since the install must not redirect the delete out of the jail.
+                && assert_real_ancestor_inside(path, &grant.base).is_ok()
+        })
+    }
 }
 
 /// Join a *relative* path onto a base, rejecting everything that is not one.

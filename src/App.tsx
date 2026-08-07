@@ -1,16 +1,15 @@
 import { Component, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-    createHashRouter,
-    Navigate,
-    RouterProvider,
-} from 'react-router-dom'
+import { createHashRouter, Navigate, RouterProvider } from 'react-router-dom'
 
 import { AuthProvider } from '~/lib/auth/provider'
 import { SettingsProvider } from '~/lib/settings/provider'
 import { LiveQueryProvider } from '~/lib/hooks/use-live-query'
+import { LibraryProvider } from '~/lib/library/provider'
 import Shell from '~/components/shell'
 import BrowseRoute from '~/routes/browse'
+import LibraryRoute from '~/routes/library'
+import InstallsRoute from '~/routes/installs'
 import ViewRoute from '~/routes/view'
 import AccountRoute from '~/routes/account'
 import SettingsLayout from '~/routes/settings'
@@ -36,6 +35,8 @@ const router = createHashRouter([
             { index: true, element: <Navigate to="/browse/mod" replace /> },
             { path: 'browse/:kind', element: <BrowseRoute /> },
             { path: 'view/:kind/:id', element: <ViewRoute /> },
+            { path: 'library', element: <LibraryRoute /> },
+            { path: 'installs', element: <InstallsRoute /> },
             { path: 'account', element: <AccountRoute /> },
             {
                 path: 'settings',
@@ -121,7 +122,13 @@ export default function App() {
                             change, so scrolling back to the browser keeps the
                             latency history it already gathered. */}
                         <LiveQueryProvider>
-                            <RouterProvider router={router} />
+                            {/* Above the router too: the sync loop has to run
+                                whether or not a library screen is mounted —
+                                that is the whole point of a subscription made
+                                in a browser reaching this device. */}
+                            <LibraryProvider>
+                                <RouterProvider router={router} />
+                            </LibraryProvider>
                         </LiveQueryProvider>
                     </SettingsProvider>
                 </AuthProvider>

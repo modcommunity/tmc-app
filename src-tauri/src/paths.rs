@@ -62,4 +62,14 @@ impl AppPaths {
     pub fn registry_file(&self) -> PathBuf {
         self.data.join("plugins.json")
     }
+
+    /// The device's library database.
+    ///
+    /// In the DATA directory, not the cache: it records what is on disk in the
+    /// user's game folders, and losing it would leave those files orphaned with
+    /// nothing left that knows how to remove them. A cache directory is one the
+    /// OS may clear whenever it likes.
+    pub fn library_file(&self) -> PathBuf {
+        self.data.join("library.sqlite3")
+    }
 }

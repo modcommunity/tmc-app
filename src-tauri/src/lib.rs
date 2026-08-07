@@ -118,6 +118,20 @@ pub fn run() {
             commands::plugins::plugin_theme,
             commands::plugins::plugin_run,
             commands::plugins::plugin_query_server,
+            commands::library::library_list,
+            commands::library::library_sync,
+            commands::library::library_install,
+            commands::library::library_uninstall,
+            commands::library::library_installs,
+            commands::library::library_install_dirs,
+            commands::library::library_set_install_dir,
+            commands::library::library_supported_apps,
+            commands::library::library_plugin_errors,
+            commands::library::library_reload_plugins,
+            commands::library::library_rules_for,
+            commands::library::launch_preview,
+            commands::library::launch_install,
+            commands::library::launch_available,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

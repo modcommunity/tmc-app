@@ -17,6 +17,7 @@
 
 pub mod api;
 pub mod auth;
+pub mod library;
 pub mod logs;
 pub mod plugins;
 pub mod servers;

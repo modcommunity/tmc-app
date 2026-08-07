@@ -7,6 +7,7 @@ import {
     FiGrid,
     FiSettings,
     FiUser,
+    FiDownloadCloud,
 } from 'react-icons/fi'
 import type { IconType } from 'react-icons'
 
@@ -65,6 +66,15 @@ const TABS: Tab[] = [
             '/view/user',
         ],
     },
+    {
+        // The device's own half of the app: what is subscribed, what is
+        // installed, and the sandboxes it is installed into. Sits before
+        // Settings because it is a place a user goes to DO something.
+        to: '/library',
+        label: 'Library',
+        icon: FiDownloadCloud,
+        match: ['/installs'],
+    },
     { to: '/settings', label: 'Settings', icon: FiSettings },
 ]
 
@@ -116,7 +126,9 @@ export default function Shell() {
                     <NavLink
                         to="/account"
                         className="no-drag m-2 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-                        style={{ marginBottom: 'calc(0.5rem + var(--safe-bottom))' }}
+                        style={{
+                            marginBottom: 'calc(0.5rem + var(--safe-bottom))',
+                        }}
                     >
                         {user?.avatar ? (
                             <img

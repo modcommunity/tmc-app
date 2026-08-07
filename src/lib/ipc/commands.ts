@@ -3,6 +3,11 @@ import { z } from 'zod'
 import { call } from './index'
 import {
     AppSettingsSchema,
+    InstallOutcomeSchema,
+    LaunchPreviewSchema,
+    LibraryRowSchema,
+    RuleInfoSchema,
+    SyncReportSchema,
     LatencySeriesSchema,
     LogEntrySchema,
     LogLevelSchema,
@@ -30,6 +35,14 @@ import {
  */
 export type QueryRequestT = {
     id: string
+    /**
+     * Which game this server belongs to.
+     *
+     * Only used to select a Server Live Query plugin — the built-in protocols
+     * come from `protocols` below. Nullable because the view page's
+     * single-server call does not always have one to hand.
+     */
+    appId?: number | null
     host: string
     port: number
     queryPort?: number | null
@@ -89,14 +102,16 @@ export const ipc = {
 
     // --------------------------------------------------------------- Plugins
     pluginList: () => call('plugin_list', z.array(PluginRecordSchema)),
-    pluginInspect: (dir: string) => call('plugin_inspect', PluginPreviewSchema, { dir }),
+    pluginInspect: (dir: string) =>
+        call('plugin_inspect', PluginPreviewSchema, { dir }),
     /** `fingerprint` must be the one `pluginInspect` returned — see the Rust side. */
     pluginApprove: (dir: string, fingerprint: string) =>
         call('plugin_approve', PluginRecordSchema, { dir, fingerprint }),
     pluginSetEnabled: (id: string, enabled: boolean) =>
         call('plugin_set_enabled', z.void(), { id, enabled }),
     pluginRemove: (id: string) => call('plugin_remove', z.void(), { id }),
-    pluginTheme: (id: string) => call('plugin_theme', ThemeSchema.nullable(), { id }),
+    pluginTheme: (id: string) =>
+        call('plugin_theme', ThemeSchema.nullable(), { id }),
 
     pluginRun: (request: {
         plugin: string
@@ -117,4 +132,59 @@ export const ipc = {
             port,
             queryPort,
         }),
+
+    // --------------------------------------------------------------- Library
+    libraryList: () => call('library_list', z.array(LibraryRowSchema)),
+
+    /**
+     * One sync pass, which also ACTS on its plan.
+     *
+     * The installs it queues are run in Rust, not here. A frontend that decided
+     * what to install would be a frontend an injected script could talk into
+     * installing something — and the whole architecture rests on the webview
+     * being unable to reach the filesystem.
+     */
+    librarySync: (forceFull?: boolean) =>
+        call('library_sync', SyncReportSchema, { forceFull }),
+
+    libraryInstall: (id: string) =>
+        call('library_install', InstallOutcomeSchema, { id }),
+    libraryUninstall: (id: string) =>
+        call('library_uninstall', InstallOutcomeSchema, { id }),
+    /**
+     * The cloud installs this device has mirrored, as raw payloads.
+     *
+     * Parsed with the API contract's own `InstallSchema` by the caller rather
+     * than re-declared here: the shape is the contract's, and a third copy in
+     * `schemas.ts` would be the one most likely to drift.
+     */
+    libraryInstalls: () =>
+        call('library_installs', z.array(z.record(z.string(), z.unknown()))),
+
+    /** Every install's folder on this machine, as `[id, dir]` pairs. */
+    libraryInstallDirs: () =>
+        call(
+            'library_install_dirs',
+            z.array(z.tuple([z.number(), z.string().nullable()]))
+        ),
+
+    /** The folder on THIS machine an install materialises into. */
+    librarySetInstallDir: (id: number, dir: string | null) =>
+        call('library_set_install_dir', z.void(), { id, dir }),
+
+    librarySupportedApps: () => call('library_supported_apps', z.array(z.string())),
+    libraryPluginErrors: () =>
+        call('library_plugin_errors', z.array(z.tuple([z.string(), z.string()]))),
+    libraryReloadPlugins: () => call('library_reload_plugins', z.number()),
+    libraryRulesFor: (slug: string) =>
+        call('library_rules_for', z.array(RuleInfoSchema), { slug }),
+
+    // ---------------------------------------------------------------- Launch
+    /** Resolve what launching would run, without running it. */
+    launchPreview: (installId: number) =>
+        call('launch_preview', LaunchPreviewSchema, { installId }),
+    launchInstall: (installId: number) =>
+        call('launch_install', LaunchPreviewSchema, { installId }),
+    launchAvailable: (slug: string) =>
+        call('launch_available', z.boolean(), { slug }),
 }

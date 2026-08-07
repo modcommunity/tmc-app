@@ -228,13 +228,23 @@ export function LatencyChart({
                     className="size-full"
                     role="img"
                     aria-label={`Latency over the last ${series.samples.length} checks. Currently ${
-                        series.last == null ? 'no response' : `${series.last} milliseconds`
+                        series.last == null
+                            ? 'no response'
+                            : `${series.last} milliseconds`
                     }.`}
                 >
                     <defs>
                         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={tone.fill} stopOpacity="0.25" />
-                            <stop offset="100%" stopColor={tone.fill} stopOpacity="0" />
+                            <stop
+                                offset="0%"
+                                stopColor={tone.fill}
+                                stopOpacity="0.25"
+                            />
+                            <stop
+                                offset="100%"
+                                stopColor={tone.fill}
+                                stopOpacity="0"
+                            />
                         </linearGradient>
                     </defs>
 
@@ -303,6 +313,28 @@ export function LatencyChart({
             {series.reliability < 100 && (
                 <p className="text-center text-xs text-muted">
                     Answered {series.reliability}% of {series.samples.length} checks
+                </p>
+            )}
+
+            {/*
+                The cache notice.
+
+                Two clusters in one series — a tight fast one and a second at
+                the real round trip — is what a cache in front of the query port
+                produces: fast on every hit, full price on every miss. The SLOW
+                number is the one a player's connection will experience, so it
+                is the one the sentence ends on; the fast one is what the server
+                claims.
+
+                Worded as an observation rather than an accusation. A CDN, a
+                proxy and a game that answers from memory look identical here.
+            */}
+            {series.cache && (
+                <p className="text-center text-xs text-warning">
+                    Replies look cached: {series.cache.fastMs}ms on{' '}
+                    {Math.round(series.cache.fastShare * 100)}% of checks and{' '}
+                    {series.cache.slowMs}ms on the rest — expect closer to{' '}
+                    {series.cache.slowMs}ms in game.
                 </p>
             )}
         </figure>

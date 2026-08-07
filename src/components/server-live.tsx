@@ -23,7 +23,17 @@ export function LivePlayers({
     item: ContentSummaryT
     result: ServerQueryResultT | undefined
 }) {
-    const live = result?.online ? result : undefined
+    /*
+     * `players != null`, not `online`.
+     *
+     * Most of our ~80 server games have no protocol this build speaks, so their
+     * probe resolves to `TCP_ONLY`: the connect succeeds — the server IS online
+     * and the latency is real — but no player count came back. Treating that as
+     * a live count would put the "measured just now" dot next to the website's
+     * minutes-old figure, which is the one claim this component exists to avoid
+     * making.
+     */
+    const live = result?.online && result.players != null ? result : undefined
 
     const current = live?.players ?? item.server?.curUsers ?? 0
     const max = live?.maxPlayers ?? item.server?.maxUsers ?? 0
@@ -80,12 +90,33 @@ export function LiveLatency({
 
     const tone = latencyTone(result.rttMs)
 
+    /*
+     * A bimodal series means something is answering some probes from a cache,
+     * so the fast number is not the round trip a player will get. The row has
+     * no space for the explanation — the full sentence is on the view page's
+     * graph — so it carries a marker and the tooltip.
+     */
+    const cached = series?.cache ?? null
+
     return (
         <span className="flex shrink-0 items-center gap-1">
             <LatencySparkline series={series} />
             <span className={`text-[0.7rem] tabular-nums ${tone.text}`}>
                 {result.rttMs}ms
             </span>
+            {cached && (
+                <span
+                    className="text-[0.7rem] text-warning"
+                    aria-label="Replies look cached"
+                    title={`Replies look cached — ${cached.fastMs}ms on ${Math.round(
+                        cached.fastShare * 100
+                    )}% of checks and ${cached.slowMs}ms on the rest. Expect closer to ${
+                        cached.slowMs
+                    }ms in game.`}
+                >
+                    ~
+                </span>
+            )}
         </span>
     )
 }
