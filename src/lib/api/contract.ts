@@ -55,7 +55,14 @@ export function ApiOk<S extends z.ZodTypeAny>(schema: S) {
 /** Self-reported client identity. Untrusted — a label for the approval screen. */
 export const ClientInfoSchema = z.object({
     name: z.string().min(1).max(64),
-    platform: z.enum(['windows', 'macos', 'linux', 'android', 'ios', 'unknown']),
+    platform: z.enum([
+        'windows',
+        'macos',
+        'linux',
+        'android',
+        'ios',
+        'unknown',
+    ]),
     version: z.string().min(1).max(32),
 })
 
