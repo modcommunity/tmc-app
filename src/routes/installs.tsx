@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { open } from '@tauri-apps/plugin-dialog'
 import {
     FiAlertTriangle,
     FiFolder,
@@ -18,7 +17,9 @@ import { isIpcError } from '~/lib/ipc'
 import { useAuth } from '~/lib/auth/provider'
 import { useLibrary } from '~/lib/library/provider'
 import { InstallSchema, type InstallT } from '~/lib/api/contract'
+import { appLabel } from '~/lib/api/labels'
 import type { LaunchPreviewT } from '~/lib/ipc/schemas'
+import { useFolderPicker } from '~/components/folder-picker'
 
 /**
  * **Installs** — the sandboxes a game is played in.
@@ -55,6 +56,8 @@ function InstallCard({
     const [busy, setBusy] = useState(false)
     const [launchable, setLaunchable] = useState(false)
 
+    const { pick, element: picker } = useFolderPicker()
+
     useEffect(() => {
         let live = true
 
@@ -75,13 +78,13 @@ function InstallCard({
     }, [install.app.slug])
 
     const chooseDir = async () => {
-        const dir = await open({
-            directory: true,
-            multiple: false,
+        const dir = await pick({
             title: `Choose the folder for “${install.name}”`,
+            hint: 'Files for this install are written here and nowhere else.',
+            initial: localDir,
         })
 
-        if (typeof dir !== 'string') return
+        if (dir === null) return
 
         setBusy(true)
 
@@ -151,7 +154,7 @@ function InstallCard({
                         ) : null}
 
                         <span className="text-[11px] text-muted">
-                            {install.app.name}
+                            {appLabel(install.app)}
                         </span>
                     </div>
 
@@ -271,6 +274,8 @@ function InstallCard({
                     subscribed, so nothing will be installed for them.
                 </p>
             ) : null}
+
+            {picker}
         </div>
     )
 }
@@ -317,7 +322,7 @@ function NewInstallDialog({
                 setApps(
                     facets.apps
                         .filter((a) => a.url && slugs.has(a.url.toLowerCase()))
-                        .map((a) => ({ id: a.id, name: a.name }))
+                        .map((a) => ({ id: a.id, name: appLabel(a) }))
                 )
             } catch (err) {
                 if (live) setError(messageOf(err))
@@ -364,8 +369,8 @@ function NewInstallDialog({
 
                 {apps.length === 0 && !error ? (
                     <p className="mt-3 text-xs text-muted">
-                        No game on this device has install rules yet. Add one
-                        under Settings → Plugins.
+                        No game on this device has install rules yet. Add one under
+                        Settings → Plugins.
                     </p>
                 ) : null}
 
@@ -423,9 +428,8 @@ function NewInstallDialog({
                 </div>
 
                 <p className="mt-2 text-[11px] text-muted">
-                    The version and loader are hints a launch rule may use. You
-                    can pick this install&rsquo;s folder on this device once it
-                    exists.
+                    The version and loader are hints a launch rule may use. You can
+                    pick this install&rsquo;s folder on this device once it exists.
                 </p>
 
                 <div className="mt-4 flex justify-end gap-2">
@@ -535,7 +539,7 @@ export default function InstallsRoute() {
         const map = new Map<string, InstallT[]>()
 
         for (const install of installs) {
-            const key = install.app.name
+            const key = appLabel(install.app)
 
             map.set(key, [...(map.get(key) ?? []), install])
         }

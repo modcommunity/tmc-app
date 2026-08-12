@@ -82,7 +82,10 @@ export default function LoggingRoute() {
                         </Button>
                     </div>
                 ) : (
-                    <Button btnType="secondary" onClick={() => setConfirmClear(true)}>
+                    <Button
+                        btnType="secondary"
+                        onClick={() => setConfirmClear(true)}
+                    >
                         Clear log
                     </Button>
                 )}

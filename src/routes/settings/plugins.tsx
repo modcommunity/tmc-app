@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { open } from '@tauri-apps/plugin-dialog'
 import { FiAlertTriangle, FiShield } from 'react-icons/fi'
 import { Button } from '@modcommunity/shared'
 
@@ -8,6 +7,7 @@ import { ipc } from '~/lib/ipc/commands'
 import { isIpcError } from '~/lib/ipc'
 import type { PluginPreviewT, PluginRecordT } from '~/lib/ipc/schemas'
 import { Toggle } from '~/components/form'
+import { useFolderPicker } from '~/components/folder-picker'
 
 /**
  * The plugin manager, and the consent screen in front of it.
@@ -28,28 +28,30 @@ export default function PluginsRoute() {
     const [preview, setPreview] = useState<PluginPreviewT | null>(null)
     const [error, setError] = useState<string | null>(null)
 
-    const plugins = useQuery({ queryKey: ['plugins'], queryFn: () => ipc.pluginList() })
+    const { pick, element: picker } = useFolderPicker()
+
+    const plugins = useQuery({
+        queryKey: ['plugins'],
+        queryFn: () => ipc.pluginList(),
+    })
 
     const refresh = () =>
         void queryClient.invalidateQueries({ queryKey: ['plugins'] })
 
-    const pick = async () => {
+    const choose = async () => {
         setError(null)
 
-        const dir = await open({
-            directory: true,
-            multiple: false,
+        const dir = await pick({
             title: 'Choose a plugin folder',
+            hint: 'The folder containing the plugin’s manifest.',
         })
 
-        if (typeof dir !== 'string') return
+        if (dir === null) return
 
         try {
             setPreview(await ipc.pluginInspect(dir))
         } catch (err) {
-            setError(
-                isIpcError(err) ? err.message : 'That folder is not a plugin.'
-            )
+            setError(isIpcError(err) ? err.message : 'That folder is not a plugin.')
         }
     }
 
@@ -70,10 +72,10 @@ export default function PluginsRoute() {
             <div className="flex items-start justify-between gap-3">
                 <p className="text-xs text-muted">
                     Plugins add game support, server queries and themes. They are
-                    declarative — a plugin describes steps this app carries out,
-                    it never runs code of its own.
+                    declarative — a plugin describes steps this app carries out, it
+                    never runs code of its own.
                 </p>
-                <Button btnType="primary" onClick={() => void pick()}>
+                <Button btnType="primary" onClick={() => void choose()}>
                     Add plugin
                 </Button>
             </div>
@@ -124,7 +126,10 @@ export default function PluginsRoute() {
                         <Button btnType="primary" onClick={() => void approve()}>
                             Approve and install
                         </Button>
-                        <Button btnType="secondary" onClick={() => setPreview(null)}>
+                        <Button
+                            btnType="secondary"
+                            onClick={() => setPreview(null)}
+                        >
                             Cancel
                         </Button>
                     </div>
@@ -148,6 +153,8 @@ export default function PluginsRoute() {
                     ))}
                 </ul>
             )}
+
+            {picker}
         </div>
     )
 }
@@ -191,8 +198,8 @@ function PluginRow({
             {plugin.needsReapproval && (
                 <p className="flex items-start gap-1.5 rounded-lg border border-warning p-2 text-xs text-warning">
                     <FiAlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                    This plugin changed since you approved it and has been
-                    disabled. Add it again to review the new permissions.
+                    This plugin changed since you approved it and has been disabled.
+                    Add it again to review the new permissions.
                 </p>
             )}
 

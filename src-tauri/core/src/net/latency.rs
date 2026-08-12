@@ -18,9 +18,15 @@ use std::sync::RwLock;
 
 use serde::{Deserialize, Serialize};
 
-/// Samples kept per server. At the browser's ~10s cadence this is about ten
-/// minutes of history, which is the useful window for "is this stable?".
-pub const MAX_SAMPLES: usize = 60;
+/// Samples kept per server.
+///
+/// A COUNT, not a duration, and the browser's cadence is now the user's
+/// (`AppSettings::latency_interval_ms`, a second by default) — so this is two
+/// minutes of history at the default and proportionally more at a slower one.
+/// Two minutes is enough to answer "is this stable?", which is the only
+/// question the graph is asked; at 512 servers the whole store is on the order
+/// of a megabyte, which is the reason it is not larger.
+pub const MAX_SAMPLES: usize = 120;
 
 /// Servers tracked at once. Eviction is oldest-touched-first.
 pub const MAX_SERVERS: usize = 512;

@@ -28,10 +28,18 @@ pub fn run() {
         )
         .init();
 
+    /*
+     * `tauri-plugin-dialog` is deliberately NOT registered.
+     *
+     * Its folder picker is the platform's, which on Linux is a GTK file chooser
+     * — themed by whatever desktop the user is running and matching neither the
+     * app nor the other four targets. Folder choosing is `components/
+     * folder-picker` over `commands::fs`, which looks the same everywhere; see
+     * that module's header for what listing directories from the webview costs.
+     */
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_dialog::init());
+        .plugin(tauri_plugin_os::init());
 
     /*
      * Deep links accelerate the login: the browser bounces to `tmc://auth`
@@ -70,6 +78,23 @@ pub fn run() {
                 format!("TMC {} started", state.version)
             );
 
+            /*
+             * A build aimed at anything but the real site says so in the audit
+             * trail, at Security level so turning logging off cannot hide it.
+             * Where an account's credentials are being sent is exactly the kind
+             * of fact the log exists to hold, and "which site was this?" is the
+             * first question about any screenshot from a dev build.
+             */
+            if !tmc_core::api::api_base_is_prod() {
+                audit!(
+                    state.audit,
+                    Security,
+                    App,
+                    "app.api_base",
+                    format!("Talking to {} — NOT production", tmc_core::api::api_base())
+                );
+            }
+
             #[cfg(desktop)]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
@@ -99,9 +124,14 @@ pub fn run() {
             commands::auth::auth_sign_out,
             commands::api::api_get,
             commands::api::api_send,
+            commands::api::api_env,
             commands::settings::settings_get,
             commands::settings::settings_patch,
+            commands::settings::settings_set_game_dir,
+            commands::settings::settings_set_download_dir,
             commands::settings::settings_reset,
+            commands::fs::fs_roots,
+            commands::fs::fs_list_dirs,
             commands::logs::log_read,
             commands::logs::log_clear,
             commands::logs::log_path,

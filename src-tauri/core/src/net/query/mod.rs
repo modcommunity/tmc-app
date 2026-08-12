@@ -36,6 +36,16 @@ use crate::net::transport::{clamp_timeout, tcp_exchange, MAX_TIMEOUT_MS};
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum QueryProtocol {
     /// Valve's A2S — Source and GoldSrc. CS2, TF2, Rust, ARK, Garry's Mod…
+    ///
+    /// **The explicit rename is load-bearing.** `SCREAMING_SNAKE_CASE` splits on
+    /// the boundary between a digit and a following letter, so serde derives
+    /// `A2_S` from this variant — a name nothing on the wire ever uses. Every
+    /// A2S row then failed to deserialise, and because the command takes a
+    /// `Vec<QueryRequest>`, ONE such row rejected the whole batch: an entire
+    /// screenful of servers showed as timed out because one of them ran a
+    /// Source game. It is the only variant the derive gets wrong, which is
+    /// exactly why it survived a reading of the enum.
+    #[serde(rename = "A2S")]
     A2S,
     /// Modern Minecraft: handshake + status over TCP.
     Minecraft,
@@ -222,11 +232,40 @@ impl QueryTarget {
 
     /// Resolve the port to actually query.
     ///
-    /// Order: an explicit query port wins; then `swap_game_port` pins it to the
-    /// game port; otherwise the offset applies. The offset is applied with
-    /// saturating arithmetic and re-checked against the valid range, because a
-    /// misconfigured app row (offset -30000 on a port-80 server) must produce a
-    /// refusal rather than wrapping into some unrelated port.
+    /// THE RULE, AND WHERE IT COMES FROM
+    /// ---------------------------------
+    /// An explicit `query_port` wins; otherwise the GAME port is queried. That
+    /// is it. It is copied from the scanner that populates these rows —
+    /// `spy/internal/scanners/server.go`:
+    ///
+    /// ```text
+    /// qPort := port
+    /// if srv.PortQuery != nil && *srv.PortQuery > 0 {
+    ///     qPort = *srv.PortQuery
+    /// }
+    /// ```
+    ///
+    /// **`port_offset` is deliberately NOT applied**, and that is the fix for
+    /// "Source servers never answer". `App.srvGamePortQueryOffset` reaches the
+    /// app as `portOffset`, but grepping the scanner for it finds exactly one
+    /// hit — the struct field it is deserialised into. Nothing ever reads it.
+    /// So a game whose App row carries a stale non-zero offset is scanned by the
+    /// site on its game port and was probed by this app on `game + offset`,
+    /// which for a UDP game protocol is silence and renders as a timeout.
+    ///
+    /// **`swap_game_port` is not a port-selection input either.** In the scanner
+    /// (`spy/internal/protocols/a2s.go`) it means "after A2S_INFO comes back,
+    /// read the true game port out of the extended-info block and swap the
+    /// stored `port`/`portQuery`". It is post-scan bookkeeping about which port
+    /// is the GAME port; reading it as "query the game port" happened to give
+    /// the right number about half the time, which is worse than being wrong
+    /// consistently.
+    ///
+    /// Both fields stay on [`QueryTarget`] because the contract sends them and
+    /// dropping them would be a wire change. They are simply not consulted here.
+    ///
+    /// The per-protocol exceptions below are the scanner's own hardcoded ones,
+    /// and they apply only when the row carries no explicit query port.
     pub fn resolve_port(&self) -> AppResult<u16> {
         if let Some(port) = self.query_port.filter(|p| *p > 0) {
             return Ok(port);
@@ -236,16 +275,14 @@ impl QueryTarget {
             return Err(AppError::invalid("This server has no port to query."));
         }
 
-        if self.swap_game_port || self.port_offset == 0 {
-            return Ok(self.game_port);
-        }
-
-        let candidate = i64::from(self.game_port) + i64::from(self.port_offset);
-
-        u16::try_from(candidate)
-            .ok()
-            .filter(|p| *p > 0)
-            .ok_or_else(|| AppError::invalid("The query port for this game is misconfigured."))
+        Ok(match self.protocol() {
+            // `spy/internal/protocols/fivem.go`: the CitizenFX HTTP endpoint is
+            // on 30120 unless the row says otherwise.
+            QueryProtocol::Fivem => 30120,
+            // `spy/internal/protocols/scum.go`: game port + 2.
+            QueryProtocol::Scum => self.game_port.saturating_add(2),
+            _ => self.game_port,
+        })
     }
 }
 
@@ -366,28 +403,43 @@ mod tests {
         );
     }
 
+    /// The regression this rule exists for. `App.srvGamePortQueryOffset` is
+    /// dead config in the scanner — one hit, the struct field, never read — so
+    /// applying it here probed a port the site never scans. On a UDP game
+    /// protocol that is silence, and every Source server rendered as a timeout.
     #[test]
-    fn swap_pins_to_the_game_port() {
-        assert_eq!(target(None, 5, true).resolve_port().expect("port"), 27015);
+    fn the_offset_is_never_applied() {
+        for offset in [-30000, -1, 1, 5, 60000] {
+            assert_eq!(
+                target(None, offset, false).resolve_port().expect("port"),
+                27015,
+                "offset {offset} must not move the query port"
+            );
+        }
+    }
+
+    /// `swapGamePort` is post-scan bookkeeping in the scanner, not a port
+    /// rule. Either way the answer is the game port, and it must be the game
+    /// port for the same reason in both cases.
+    #[test]
+    fn swap_game_port_does_not_change_the_answer() {
+        assert_eq!(target(None, 7, true).resolve_port().expect("port"), 27015);
+        assert_eq!(target(None, 7, false).resolve_port().expect("port"), 27015);
     }
 
     #[test]
-    fn the_offset_applies_when_nothing_else_does() {
-        assert_eq!(target(None, 1, false).resolve_port().expect("port"), 27016);
-        assert_eq!(target(None, -1, false).resolve_port().expect("port"), 27014);
-    }
+    fn the_scanners_per_protocol_defaults_are_matched() {
+        let mut t = target(None, 0, false);
 
-    #[test]
-    fn an_out_of_range_offset_is_refused_not_wrapped() {
-        let mut t = target(None, -30000, false);
-        t.game_port = 80;
+        t.protocol = Some(QueryProtocol::Fivem);
+        assert_eq!(t.resolve_port().expect("port"), 30120);
 
-        assert!(t.resolve_port().is_err());
+        t.protocol = Some(QueryProtocol::Scum);
+        assert_eq!(t.resolve_port().expect("port"), 27017);
 
-        let mut t = target(None, 60000, false);
-        t.game_port = 60000;
-
-        assert!(t.resolve_port().is_err());
+        // …and an explicit query port still overrides them.
+        t.query_port = Some(40120);
+        assert_eq!(t.resolve_port().expect("port"), 40120);
     }
 
     #[test]
@@ -414,6 +466,68 @@ mod tests {
 
         t.timeout_ms = Some(0);
         assert!(t.timeout() >= Duration::from_millis(100));
+    }
+
+    /// Every protocol name, exactly as `SpyQueryProtocols` spells it on the
+    /// wire, plus this crate's own fallback.
+    ///
+    /// Hardcoded rather than derived from the enum: deriving it from the same
+    /// `Serialize` impl under test would agree with any rename, correct or not,
+    /// which is precisely the bug this exists to catch.
+    const WIRE_NAMES: &[(&str, QueryProtocol)] = &[
+        ("A2S", QueryProtocol::A2S),
+        ("MINECRAFT", QueryProtocol::Minecraft),
+        ("MINECRAFT_SLP", QueryProtocol::MinecraftSlp),
+        ("QUAKE3", QueryProtocol::Quake3),
+        ("DISCORD", QueryProtocol::Discord),
+        ("TEAMSPEAK3", QueryProtocol::Teamspeak3),
+        ("HYTALE_NITRADO", QueryProtocol::HytaleNitrado),
+        ("FIVEM", QueryProtocol::Fivem),
+        ("FROSTBITE", QueryProtocol::Frostbite),
+        ("GAMESPY1", QueryProtocol::Gamespy1),
+        ("GAMESPY2", QueryProtocol::Gamespy2),
+        ("GAMESPY3", QueryProtocol::Gamespy3),
+        ("GAMESPY4", QueryProtocol::Gamespy4),
+        ("GTA_NETWORK", QueryProtocol::GtaNetwork),
+        ("GTA_RAGE", QueryProtocol::GtaRage),
+        ("SAMP", QueryProtocol::Samp),
+        ("SCUM", QueryProtocol::Scum),
+        ("TCP_ONLY", QueryProtocol::TcpOnly),
+    ];
+
+    /// The regression that took every Source server offline.
+    ///
+    /// `SCREAMING_SNAKE_CASE` derives `A2_S` from the `A2S` variant, because it
+    /// splits between a digit and the letter after it. Nothing on the wire uses
+    /// that name, so every A2S row failed to deserialise — and one bad row in a
+    /// `Vec<QueryRequest>` fails the whole batch.
+    #[test]
+    fn every_protocol_round_trips_under_its_wire_name() {
+        for (name, protocol) in WIRE_NAMES {
+            let json = format!("\"{name}\"");
+
+            let parsed: QueryProtocol = serde_json::from_str(&json)
+                .unwrap_or_else(|e| panic!("`{name}` must deserialise: {e}"));
+
+            assert_eq!(parsed, *protocol, "`{name}` parsed to the wrong variant");
+
+            assert_eq!(
+                serde_json::to_string(protocol).expect("serialise"),
+                json,
+                "`{protocol:?}` must serialise back as `{name}`"
+            );
+        }
+    }
+
+    /// One A2S row must not be able to take the rest of a batch down with it.
+    #[test]
+    fn a_batch_of_mixed_protocols_deserialises_whole() {
+        let raw = r#"["A2S","MINECRAFT","A2S","TCP_ONLY"]"#;
+
+        let parsed: Vec<QueryProtocol> = serde_json::from_str(raw).expect("batch");
+
+        assert_eq!(parsed.len(), 4);
+        assert_eq!(parsed[0], QueryProtocol::A2S);
     }
 
     #[test]

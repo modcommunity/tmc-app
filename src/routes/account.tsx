@@ -4,6 +4,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 
+import { useApiEnv } from '~/lib/api/env'
 import { useAuth } from '~/lib/auth/provider'
 
 /**
@@ -18,11 +19,16 @@ import { useAuth } from '~/lib/auth/provider'
 export default function AccountRoute() {
     const { status, pending, error, signIn, cancel } = useAuth()
     const [copied, setCopied] = useState(false)
+    const env = useApiEnv()
+
+    const site = (env?.base ?? 'https://moddingcommunity.com').replace(
+        /^https?:\/\//,
+        ''
+    )
 
     if (status === 'signedIn') return <Navigate to="/settings/account" replace />
 
-    if (status === 'loading')
-        return <Centered>Checking your session…</Centered>
+    if (status === 'loading') return <Centered>Checking your session…</Centered>
 
     if (status === 'awaitingApproval' && pending)
         return (
@@ -31,8 +37,8 @@ export default function AccountRoute() {
                     <h1 className="text-lg font-bold">Approve this device</h1>
 
                     <p className="text-sm text-muted">
-                        Your browser should have opened. Confirm the code below
-                        to finish signing in.
+                        Your browser should have opened. Confirm the code below to
+                        finish signing in.
                     </p>
 
                     <button
@@ -57,12 +63,26 @@ export default function AccountRoute() {
 
                     <button
                         type="button"
-                        onClick={() => void openUrl(pending.verificationUriComplete)}
+                        onClick={() =>
+                            void openUrl(pending.verificationUriComplete)
+                        }
                         className="flex items-center gap-1.5 text-xs text-accent underline"
                     >
                         <FiExternalLink className="size-3" />
                         Open the page again
                     </button>
+
+                    {/*
+                     * The address in full, because "open the page" is not
+                     * always something the app can do: a locked-down machine
+                     * may refuse to launch a browser, and the hand-off is
+                     * scoped to https — so a dev build pointed at a plain-http
+                     * local site cannot open it either. A code with no address
+                     * to type it into is a dead end.
+                     */}
+                    <p className="selectable break-all text-center font-mono text-[10px] text-muted">
+                        {pending.verificationUri}
+                    </p>
 
                     <p className="text-center text-xs text-muted">
                         Waiting for approval… This code expires in about{' '}
@@ -81,9 +101,16 @@ export default function AccountRoute() {
             <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
                 <h1 className="text-lg font-bold">Sign in to TMC</h1>
 
+                {/*
+                 * The host is named from the base this build actually talks to
+                 * rather than written into the sentence. Telling someone they
+                 * are about to sign in on moddingcommunity.com while the button
+                 * opens a dev instance teaches them not to read the line —
+                 * which is the one habit this whole flow depends on.
+                 */}
                 <p className="text-sm text-muted">
-                    You will finish signing in on moddingcommunity.com in your
-                    own browser. The app never sees your password.
+                    You will finish signing in on {site} in your own browser. The
+                    app never sees your password.
                 </p>
 
                 {error && <p className="text-sm text-danger">{error}</p>}

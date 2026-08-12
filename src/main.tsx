@@ -17,7 +17,8 @@ if (!import.meta.env.DEV) {
         const blocked =
             e.key === 'F5' ||
             (e.key === 'F7' && !e.ctrlKey) ||
-            ((e.ctrlKey || e.metaKey) && ['r', 'p', 'f', 'g', 'u'].includes(e.key.toLowerCase()))
+            ((e.ctrlKey || e.metaKey) &&
+                ['r', 'p', 'f', 'g', 'u'].includes(e.key.toLowerCase()))
 
         if (blocked) e.preventDefault()
     })

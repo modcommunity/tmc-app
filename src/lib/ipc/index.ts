@@ -71,7 +71,11 @@ export async function call<S extends z.ZodTypeAny>(
     const parsed = schema.safeParse(raw)
 
     if (!parsed.success) {
-        console.error(`[ipc] ${command} returned an unexpected shape`, parsed.error, raw)
+        console.error(
+            `[ipc] ${command} returned an unexpected shape`,
+            parsed.error,
+            raw
+        )
 
         throw new IpcError({
             code: 'internal',

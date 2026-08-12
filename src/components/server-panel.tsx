@@ -4,22 +4,21 @@ import { FiRefreshCw, FiUsers } from 'react-icons/fi'
 import type { ContentSummaryT } from '~/lib/api/contract'
 import { requestFor, useLiveQuery } from '~/lib/hooks/use-live-query'
 import type { ServerQueryResultT } from '~/lib/ipc/schemas'
-import { LatencyChart, latencyTone } from './latency-graph'
+import { LatencyChart, LatencyValue } from './latency-graph'
 
 /**
  * A server's live panel: current state, the latency graph, and who is playing.
  *
- * Unlike the card strip this polls on its own short interval and asks for the
- * player roster, because the user is looking at exactly one server and that is
- * the moment the extra round trip is worth making.
+ * Unlike the card strip this polls outside the batching registry and asks for
+ * the player roster, because the user is looking at exactly one server and that
+ * is the moment the extra round trip is worth making. The CADENCE is still the
+ * user's — `intervalMs` from the registry — rather than a second constant that
+ * would quietly out-poll or under-poll the setting they chose.
  *
  * The protocol is named in the footer. That is not decoration — when the
  * numbers here disagree with the website's, "queried over A2S from this device"
  * is the explanation, and without it a discrepancy just looks like a bug.
  */
-
-/** Fast enough to feel live on a page the user is watching. */
-const REFRESH_MS = 8_000
 
 const PROTOCOL_LABELS: Record<string, string> = {
     A2S: 'Source (A2S)',
@@ -35,7 +34,7 @@ const PROTOCOL_LABELS: Record<string, string> = {
 }
 
 export default function ServerPanel({ item }: { item: ContentSummaryT }) {
-    const { queryNow, series: seriesFor, enabled } = useLiveQuery()
+    const { queryNow, series: seriesFor, enabled, intervalMs } = useLiveQuery()
 
     const [result, setResult] = useState<ServerQueryResultT | undefined>()
     const [seriesKey, setSeriesKey] = useState<string | undefined>()
@@ -64,7 +63,7 @@ export default function ServerPanel({ item }: { item: ContentSummaryT }) {
 
         void run()
 
-        const interval = window.setInterval(() => void run(), REFRESH_MS)
+        const interval = window.setInterval(() => void run(), intervalMs)
 
         return () => {
             cancelled = true
@@ -77,7 +76,14 @@ export default function ServerPanel({ item }: { item: ContentSummaryT }) {
          * result and re-query without limit.
          */
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, request?.host, request?.port, request?.queryPort, queryNow])
+    }, [
+        enabled,
+        request?.host,
+        request?.port,
+        request?.queryPort,
+        queryNow,
+        intervalMs,
+    ])
 
     // Read during render rather than mirrored into state: the provider bumps
     // `version` when history lands, which re-renders this component anyway.
@@ -100,7 +106,6 @@ export default function ServerPanel({ item }: { item: ContentSummaryT }) {
         )
 
     const online = result?.online ?? false
-    const tone = latencyTone(result?.rttMs)
 
     return (
         <section className="flex flex-col gap-3">
@@ -153,9 +158,7 @@ export default function ServerPanel({ item }: { item: ContentSummaryT }) {
                     <Detail
                         label="Latency"
                         value={
-                            <span className={`tabular-nums ${tone.text}`}>
-                                {result.rttMs}ms
-                            </span>
+                            <LatencyValue rttMs={result.rttMs} state="measured" />
                         }
                     />
                     {result.password != null && (
@@ -179,14 +182,18 @@ export default function ServerPanel({ item }: { item: ContentSummaryT }) {
                                 key={`${player.name}-${index}`}
                                 className="selectable flex items-center justify-between gap-3 px-3 py-1.5 text-xs"
                             >
-                                <span className="min-w-0 truncate">{player.name}</span>
+                                <span className="min-w-0 truncate">
+                                    {player.name}
+                                </span>
 
                                 <span className="flex shrink-0 gap-3 tabular-nums text-muted">
                                     {player.score != null && (
                                         <span title="Score">{player.score}</span>
                                     )}
                                     {player.ping != null && (
-                                        <span title="Their ping">{player.ping}ms</span>
+                                        <span title="Their ping">
+                                            {player.ping}ms
+                                        </span>
                                     )}
                                     {player.duration != null && (
                                         <span title="Time connected">

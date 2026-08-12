@@ -36,9 +36,23 @@ type SettingsContextT = {
     user: UserSettingsT | null
     /** True while the account's settings are being fetched or are unavailable. */
     userPending: boolean
-    setApp: (patch: Partial<AppSettingsT>) => Promise<void>
+    setApp: (
+        patch: Partial<Omit<AppSettingsT, 'gameDirs' | 'downloadDir'>>
+    ) => Promise<void>
     setUser: (patch: Partial<UserSettingsT>) => Promise<void>
     resetApp: () => Promise<void>
+
+    /**
+     * The two sandbox roots, which are NOT part of `setApp`.
+     *
+     * They anchor the plugin jail rather than describing a preference, so Rust
+     * refuses them in a settings patch and validates them here instead. Kept on
+     * this context anyway so a screen still has one place to reach for
+     * settings — the separation is in what each writer will accept, not in
+     * where the caller has to look for it.
+     */
+    setGameDir: (appId: number | string, dir: string | null) => Promise<void>
+    setDownloadDir: (dir: string | null) => Promise<void>
 }
 
 const SettingsContext = createContext<SettingsContextT | null>(null)
@@ -50,7 +64,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const [app, setAppState] = useState<AppSettingsT | null>(null)
 
     useEffect(() => {
-        void ipc.settingsGet().then(setAppState).catch(() => setAppState(null))
+        void ipc
+            .settingsGet()
+            .then(setAppState)
+            .catch(() => setAppState(null))
     }, [])
 
     const me = useQuery({
@@ -60,8 +77,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         staleTime: 5 * 60 * 1000,
     })
 
-    const setApp = useCallback(async (patch: Partial<AppSettingsT>) => {
-        setAppState(await ipc.settingsPatch(patch))
+    const setApp = useCallback(
+        async (patch: Partial<Omit<AppSettingsT, 'gameDirs' | 'downloadDir'>>) => {
+            setAppState(await ipc.settingsPatch(patch))
+        },
+        []
+    )
+
+    const setGameDir = useCallback(
+        async (appId: number | string, dir: string | null) => {
+            setAppState(await ipc.settingsSetGameDir(appId, dir))
+        },
+        []
+    )
+
+    const setDownloadDir = useCallback(async (dir: string | null) => {
+        setAppState(await ipc.settingsSetDownloadDir(dir))
     }, [])
 
     const resetApp = useCallback(async () => {
@@ -76,9 +107,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             // the server clamps and normalises, and showing the unclamped value
             // would leave the UI disagreeing with the account until a refetch.
             queryClient.setQueryData(['me'], (old: unknown) =>
-                old && typeof old === 'object'
-                    ? { ...(old), settings: next }
-                    : old
+                old && typeof old === 'object' ? { ...old, settings: next } : old
             )
         },
         [queryClient]
@@ -161,8 +190,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setApp,
             setUser,
             resetApp,
+            setGameDir,
+            setDownloadDir,
         }),
-        [app, me.data, status, setApp, setUser, resetApp]
+        [
+            app,
+            me.data,
+            status,
+            setApp,
+            setUser,
+            resetApp,
+            setGameDir,
+            setDownloadDir,
+        ]
     )
 
     return (

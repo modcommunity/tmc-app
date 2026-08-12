@@ -55,14 +55,7 @@ export function ApiOk<S extends z.ZodTypeAny>(schema: S) {
 /** Self-reported client identity. Untrusted — a label for the approval screen. */
 export const ClientInfoSchema = z.object({
     name: z.string().min(1).max(64),
-    platform: z.enum([
-        'windows',
-        'macos',
-        'linux',
-        'android',
-        'ios',
-        'unknown',
-    ]),
+    platform: z.enum(['windows', 'macos', 'linux', 'android', 'ios', 'unknown']),
     version: z.string().min(1).max(32),
 })
 
@@ -236,6 +229,14 @@ export const ServerInfoSchema = z.object({
     curUsers: z.number().int().nonnegative(),
     maxUsers: z.number().int().nonnegative(),
     bots: z.number().int().nonnegative(),
+    /**
+     * Rolling average population, as the website's server table shows it.
+     *
+     * The number that separates "quiet right now" from "always empty", which
+     * `curUsers` alone cannot: a server at 0/32 on a Tuesday morning and one
+     * that has never had a player look identical until you see this.
+     */
+    avgUsers: z.number().int().nonnegative().default(0),
     password: z.boolean(),
     secure: z.boolean(),
     version: z.string().nullable(),
@@ -348,13 +349,60 @@ export const BrowseSortVals = [
     'views',
     'downloads',
     'rating',
+    'reviews',
     'favorites',
-    /** Servers only; ignored elsewhere rather than rejected. */
+
+    /*
+     * Server-only sorts, named exactly as `ServerSortVals` names them.
+     *
+     * `curUsers` replaces the app's old `players`, which was a name this
+     * contract invented. Every other sort here already matched the website's
+     * spelling, so the one that did not was the one nobody could grep for.
+     * A sort a kind does not support is IGNORED rather than rejected — the app
+     * changes kind without resetting the sort, and a 400 mid-browse would be a
+     * worse answer than "newest first".
+     */
+    'curUsers',
+    'maxUsers',
+    'avgUsers',
+    'bots',
+    'map',
+    'lastOnline',
+    'lastScanned',
+
+    /**
+     * @deprecated The old app-only spelling of `curUsers`.
+     *
+     * Kept in the enum because an installed build is not redeployed with the
+     * server and will go on sending it. Removing it would 400 every server
+     * browse from every shipped copy of the app, which is the exact failure a
+     * versioned wire format exists to prevent. Ordering treats it as `curUsers`.
+     */
     'players',
 ] as const
 
 export const BrowseSortSchema = z.enum(BrowseSortVals)
 export type BrowseSortT = (typeof BrowseSortVals)[number]
+
+/** Runtime environment for mods and assets. Mirrors `EnvironmentVals`. */
+export const BrowseEnvironmentVals = ['ALL', 'SERVER', 'CLIENT'] as const
+export const BrowseEnvironmentSchema = z.enum(BrowseEnvironmentVals)
+export type BrowseEnvironmentT = (typeof BrowseEnvironmentVals)[number]
+
+/** A server's operating system. Mirrors `ServerOsVals`. */
+export const ServerOsVals = ['WINDOWS', 'LINUX', 'MAC'] as const
+export const ServerOsSchema = z.enum(ServerOsVals)
+export type ServerOsT = (typeof ServerOsVals)[number]
+
+/**
+ * A community's stated minimum age. Mirrors `CommunityAgeVals`.
+ *
+ * A CLAIM by the community's owner, never an enforced gate — nothing verifies
+ * anybody's age. Any surface rendering it must read as "this community says".
+ */
+export const CommunityAgeVals = ['NONE', 'ADULT_18', 'ADULT_21'] as const
+export const CommunityAgeSchema = z.enum(CommunityAgeVals)
+export type CommunityAgeT = (typeof CommunityAgeVals)[number]
 
 export const TimeRangeVals = ['all', '24h', '7d', '30d'] as const
 export const TimeRangeSchema = z.enum(TimeRangeVals)
@@ -391,8 +439,66 @@ export const BrowseQuerySchema = z.object({
 
     nsfw: QueryBool.optional(),
     archived: QueryBool.optional(),
+
+    /**
+     * AND across tags by default; `tagsOr: true` switches to ANY.
+     *
+     * The website's browsers offer both. The app's chips read as "all of
+     * these", which is why AND stays the default here.
+     */
+    tagsOr: QueryBool.optional(),
+
+    /** Mods and assets. `ALL`/omitted filters nothing — see `EnvironmentWhere`. */
+    environment: BrowseEnvironmentSchema.optional(),
+
+    // ------------------------------------------------------------- Servers
+    //
+    // Everything below mirrors `ServerBrowserPublicGetsInput`, which is the
+    // exact filter set the website's own server browser exposes. All optional,
+    // all ignored by the kinds that cannot express them — a filter panel that
+    // survives a kind switch is worth more than a 400.
+
     /** Servers only. */
     onlineOnly: QueryBool.optional(),
+    /** Substring match on the server's current map name. */
+    mapName: z.coerce.string().max(128).optional(),
+    /** Country ids, from `/facets`. */
+    countries: z.array(QueryInt).max(50).optional(),
+    os: ServerOsSchema.optional(),
+    password: QueryBool.optional(),
+    secure: QueryBool.optional(),
+    isOfficial: QueryBool.optional(),
+
+    hideEmpty: QueryBool.optional(),
+    hideFull: QueryBool.optional(),
+
+    /** Current population (`Server.curUsers`). */
+    minUsers: QueryInt.min(0).optional(),
+    maxUsers: QueryInt.min(0).optional(),
+    /** Capacity (`Server.maxUsers`). Named "slots" to keep the two apart. */
+    minSlots: QueryInt.min(0).optional(),
+    maxSlots: QueryInt.min(0).optional(),
+
+    /**
+     * Only servers seen online inside the inactivity-removal window.
+     *
+     * NOT "has ever been online" — that only excluded servers a nightly job had
+     * already cleared, which is why the website's own field carries the same
+     * warning.
+     */
+    wasOnline: QueryBool.optional(),
+
+    /**
+     * Restrict to servers whose COMMUNITY states one of these minimum ages.
+     *
+     * Include-only, never a mute list: an empty or absent array applies no
+     * restriction. Nothing here verifies anybody's age — it honours what a
+     * community says about itself.
+     */
+    adultAges: z.array(CommunityAgeSchema).max(8).optional(),
+
+    /** The signed-in user's own items. Resolved server-side from the token. */
+    mine: QueryBool.optional(),
 
     sort: BrowseSortSchema.default('createdAt'),
     sortDir: z.enum(['asc', 'desc']).default('desc'),
@@ -429,7 +535,19 @@ export const FacetsResponseSchema = z.object({
             parentId: z.number().int().nullable(),
         })
     ),
+    /**
+     * Countries that actually host servers, for the server browser's region
+     * filter. Empty for every other kind — nothing else has a location.
+     *
+     * Counted from the servers themselves rather than listing the country
+     * table: the app would otherwise offer ~200 countries, most of which select
+     * nothing, and a filter that can only ever return an empty list is worse
+     * than no filter.
+     */
+    countries: z.array(RefSchema.extend({ count: z.number().int() })).default([]),
 })
+
+export type FacetsResponseT = z.infer<typeof FacetsResponseSchema>
 
 // -------------------------------------------------------------- Settings
 

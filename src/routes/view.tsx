@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { openUrl } from '@tauri-apps/plugin-opener'
@@ -12,6 +13,8 @@ import { Button } from '@modcommunity/shared'
 
 import { api } from '~/lib/api/client'
 import { ContentKindSchema } from '~/lib/api/contract'
+import { appLabel } from '~/lib/api/labels'
+import { opensExternally } from '~/lib/external'
 import Markdown from '~/components/markdown'
 import ServerPanel from '~/components/server-panel'
 import InstallButton from '~/components/install-button'
@@ -50,6 +53,15 @@ export default function ViewRoute() {
     const { summary, content, rules, releases, media, links } = detail.data
     const banner = summary.images.banner ?? summary.images.card
 
+    /*
+     * An article's BODY belongs to the website — see `lib/external` for why.
+     *
+     * The rest of this page still applies: the banner, the author, the tags and
+     * the stats are all things the app renders well, so only the markdown
+     * section is withheld and replaced with the way out.
+     */
+    const external = opensExternally(summary.kind)
+
     const latest = releases[0]
     const download = latest?.files[0]
 
@@ -82,7 +94,7 @@ export default function ViewRoute() {
                     <div className="flex flex-wrap items-center gap-2">
                         {summary.app && (
                             <span className="text-xs font-medium text-accent">
-                                {summary.app.name}
+                                {appLabel(summary.app)}
                             </span>
                         )}
                         {summary.isOfficial && (
@@ -170,11 +182,12 @@ export default function ViewRoute() {
                     )}
 
                     <Button
-                        btnType="secondary"
+                        btnType={external ? 'primary' : 'secondary'}
                         onClick={() => void openUrl(summary.webUrl)}
                     >
                         <span className="flex items-center gap-2">
-                            <FiExternalLink className="size-4" /> Open on the web
+                            <FiExternalLink className="size-4" />
+                            {external ? 'Read the article' : 'Open on the web'}
                         </span>
                     </Button>
                 </div>
@@ -221,10 +234,14 @@ export default function ViewRoute() {
                     </div>
                 )}
 
-                {content && (
-                    <section className="selectable">
-                        <Markdown source={content} />
-                    </section>
+                {external ? (
+                    <ExternalBody summary={summary} />
+                ) : (
+                    content && (
+                        <section className="selectable">
+                            <Markdown source={content} />
+                        </section>
+                    )
                 )}
 
                 {rules && (
@@ -294,6 +311,49 @@ export default function ViewRoute() {
                 )}
             </div>
         </article>
+    )
+}
+
+/**
+ * What stands in for an article's body.
+ *
+ * The browser is opened ONCE per article, on arrival, because reaching this
+ * route means the user asked to read the thing. It is guarded on the id rather
+ * than on mount so that going back and forward between two articles opens each
+ * of them, and re-rendering opens neither — an effect that fired on every paint
+ * would spawn a browser tab per render.
+ *
+ * The page stays behind it rather than navigating away: closing the browser
+ * should leave the app where the user left it, with a button to open it again
+ * if the launch was swallowed by a window manager.
+ */
+function ExternalBody({ summary }: { summary: { id: string; webUrl: string } }) {
+    const openedFor = useRef<string | null>(null)
+
+    useEffect(() => {
+        if (openedFor.current === summary.id) return
+
+        openedFor.current = summary.id
+
+        void openUrl(summary.webUrl)
+    }, [summary.id, summary.webUrl])
+
+    return (
+        <section className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-6 text-center">
+            <FiExternalLink className="size-5 text-muted" />
+            <p className="text-sm font-medium">Opened in your browser</p>
+            <p className="max-w-sm text-xs text-muted">
+                Articles are laid out for the website — media, callouts and all — so
+                the app hands them to your browser rather than flattening them.
+            </p>
+            <button
+                type="button"
+                onClick={() => void openUrl(summary.webUrl)}
+                className="mt-1 text-xs text-accent hover:underline"
+            >
+                Open it again
+            </button>
+        </section>
     )
 }
 

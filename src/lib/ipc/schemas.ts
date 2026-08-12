@@ -42,6 +42,23 @@ export const PollOutcomeSchema = z.object({
     user: SessionUserSchema.nullable(),
 })
 
+/**
+ * Which site this build talks to.
+ *
+ * Reported by Rust, never chosen here: the base is fixed at build time and, in
+ * a debug build only, overridable through `TMC_API_BASE` in the environment.
+ * There is no command that sets it, and adding one would hand any script in a
+ * rendered mod description the ability to aim the next bearer token at a host
+ * of its choosing.
+ */
+export const ApiEnvSchema = z.object({
+    base: z.string(),
+    isProd: z.boolean(),
+    version: z.string(),
+})
+
+export type ApiEnvT = z.infer<typeof ApiEnvSchema>
+
 // ----------------------------------------------------------------- Settings
 
 export const AppSettingsSchema = z.object({
@@ -59,6 +76,7 @@ export const AppSettingsSchema = z.object({
     gameDirs: z.record(z.string(), z.string()),
     autoUpdateCheck: z.boolean(),
     liveLatency: z.boolean(),
+    latencyIntervalMs: z.number(),
     latencyConcurrency: z.number(),
     minimiseToTray: z.boolean(),
 
@@ -414,3 +432,33 @@ export const LaunchPreviewSchema = z.object({
 })
 
 export type LaunchPreviewT = z.infer<typeof LaunchPreviewSchema>
+
+// ------------------------------------------------------------- Folder picker
+
+export const DirEntrySchema = z.object({
+    name: z.string(),
+    path: z.string(),
+})
+
+export type DirEntryT = z.infer<typeof DirEntrySchema>
+
+export const DirListingSchema = z.object({
+    path: z.string(),
+    name: z.string(),
+    parent: z.string().nullable(),
+    entries: z.array(DirEntrySchema),
+    /** The listing was cut short by the Rust-side cap. */
+    truncated: z.boolean(),
+    /** The OS refused the listing. Not an error: the picker still shows the
+     *  crumb so the user can go back up. */
+    denied: z.string().optional(),
+})
+
+export type DirListingT = z.infer<typeof DirListingSchema>
+
+export const DirRootSchema = z.object({
+    label: z.string(),
+    path: z.string(),
+})
+
+export type DirRootT = z.infer<typeof DirRootSchema>

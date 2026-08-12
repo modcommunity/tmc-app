@@ -1,3 +1,4 @@
+use serde::Serialize;
 use serde_json::Value;
 use tauri::State;
 
@@ -55,6 +56,31 @@ pub async fn api_send(
     };
 
     state.api.request(method, &path, body, true).await
+}
+
+/// Which site this build talks to, and whether that is the real one.
+///
+/// Read-only and carries no credential — the base is not a secret, and the
+/// webview cannot set it: there is no matching `api_set_base`, and there must
+/// never be one. It exists so the app can SAY on screen that it is pointed at a
+/// dev instance, which is the difference between "this build is talking to
+/// staging" and a bug report about data that was never there.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiEnv {
+    /// Origin only — `https://tmcdev.net:3002`, never a path.
+    pub base: String,
+    pub is_prod: bool,
+    pub version: String,
+}
+
+#[tauri::command]
+pub fn api_env(state: State<'_, AppState>) -> ApiEnv {
+    ApiEnv {
+        base: tmc_core::api::api_base().to_string(),
+        is_prod: tmc_core::api::api_base_is_prod(),
+        version: state.version.clone(),
+    }
 }
 
 /// Percent-encode everything outside the unreserved set.

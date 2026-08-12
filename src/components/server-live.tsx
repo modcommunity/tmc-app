@@ -2,7 +2,7 @@ import { FiUsers, FiWifiOff } from 'react-icons/fi'
 
 import type { ContentSummaryT } from '~/lib/api/contract'
 import type { LatencySeriesT, ServerQueryResultT } from '~/lib/ipc/schemas'
-import { LatencySparkline, latencyTone } from './latency-graph'
+import { LatencySparkline, LatencyValue } from './latency-graph'
 
 /**
  * The live strip on a server card: latency, a sparkline, and the player count
@@ -57,38 +57,51 @@ export function LivePlayers({
     )
 }
 
+/**
+ * Which of the four things a row can be saying about its latency.
+ *
+ * Derived in one place because the inputs are easy to combine wrongly: a row
+ * with `probeable: false` has no error and no result, and so is indistinguishable
+ * from a row whose first probe is still in flight unless the caller is told
+ * which it is.
+ */
+export function latencyState({
+    result,
+    error,
+    probeable,
+    settled,
+}: {
+    result: ServerQueryResultT | undefined
+    error: string | undefined
+    /** There is an address to probe at all. */
+    probeable: boolean
+    /** A probe has resolved for this row, one way or the other. */
+    settled: boolean
+}): 'measured' | 'timeout' | 'waiting' | 'none' {
+    if (!probeable) return 'none'
+    if (error || (result && !result.online)) return 'timeout'
+    if (result) return 'measured'
+
+    return settled ? 'timeout' : 'waiting'
+}
+
 export function LiveLatency({
     result,
     series,
     error,
-    pending,
+    probeable = true,
+    settled,
+    className = '',
 }: {
     result: ServerQueryResultT | undefined
     series: LatencySeriesT | undefined
     error: string | undefined
-    /** No result yet and none refused — a probe is in flight. */
-    pending: boolean
+    probeable?: boolean
+    /** A probe has resolved for this row — see `latencyState`. */
+    settled: boolean
+    className?: string
 }) {
-    if (error || (result && !result.online)) {
-        return (
-            <span
-                className="flex shrink-0 items-center gap-1 text-[0.7rem] text-danger"
-                title={error ?? 'The server did not answer.'}
-            >
-                <FiWifiOff className="size-3" />
-            </span>
-        )
-    }
-
-    if (!result) {
-        return (
-            <span className="shrink-0 text-[0.7rem] text-muted">
-                {pending ? '…' : '—'}
-            </span>
-        )
-    }
-
-    const tone = latencyTone(result.rttMs)
+    const state = latencyState({ result, error, probeable, settled })
 
     /*
      * A bimodal series means something is answering some probes from a cache,
@@ -99,14 +112,22 @@ export function LiveLatency({
     const cached = series?.cache ?? null
 
     return (
-        <span className="flex shrink-0 items-center gap-1">
-            <LatencySparkline series={series} />
-            <span className={`text-[0.7rem] tabular-nums ${tone.text}`}>
-                {result.rttMs}ms
-            </span>
+        <span
+            className={`flex shrink-0 items-center gap-1 text-[0.7rem] ${className}`}
+        >
+            {state === 'timeout' && (
+                <FiWifiOff className="size-3 shrink-0 text-lat-dead" />
+            )}
+
+            <LatencyValue
+                rttMs={result?.rttMs}
+                state={state}
+                title={state === 'timeout' ? (error ?? undefined) : undefined}
+            />
+
             {cached && (
                 <span
-                    className="text-[0.7rem] text-warning"
+                    className="text-lat-fair"
                     aria-label="Replies look cached"
                     title={`Replies look cached — ${cached.fastMs}ms on ${Math.round(
                         cached.fastShare * 100
@@ -118,5 +139,27 @@ export function LiveLatency({
                 </span>
             )}
         </span>
+    )
+}
+
+/**
+ * The card's latency history, sat along the bottom edge.
+ *
+ * Full-bleed and short: it is a texture, not a chart. Anything worth reading a
+ * value off is on the server's own page, where there is room for axes and the
+ * summary statistics. Renders nothing until there are two samples, so a card
+ * does not reserve space for a line that cannot exist yet.
+ */
+export function LiveLatencyStrip({
+    series,
+}: {
+    series: LatencySeriesT | undefined
+}) {
+    if ((series?.samples.length ?? 0) < 2) return null
+
+    return (
+        <div className="mt-2 -mb-3 -mx-3 border-t border-border/60 bg-surface-secondary/40 px-3 pb-1 pt-1">
+            <LatencySparkline series={series} className="h-6 w-full" />
+        </div>
     )
 }

@@ -1,6 +1,7 @@
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { Button } from '@modcommunity/shared'
 
+import { useApiEnv, webUrl } from '~/lib/api/env'
 import { useAuth } from '~/lib/auth/provider'
 import { useSettings } from '~/lib/settings/provider'
 import { Row, Section, Toggle } from '~/components/form'
@@ -36,13 +37,13 @@ const NOTIFY_ROWS: { key: keyof UserSettingsT; label: string; hint?: string }[] 
 export default function AccountSettingsRoute() {
     const { status, user, signIn, signOut } = useAuth()
     const { user: synced, userPending, setUser } = useSettings()
+    const env = useApiEnv()
 
     if (status !== 'signedIn')
         return (
             <div className="flex flex-col items-start gap-3">
                 <p className="text-sm text-muted">
-                    Sign in to see and change the settings that follow your
-                    account.
+                    Sign in to see and change the settings that follow your account.
                 </p>
                 <Button btnType="primary" onClick={() => void signIn()}>
                     Sign in
@@ -72,9 +73,7 @@ export default function AccountSettingsRoute() {
                         <Button
                             btnType="secondary"
                             onClick={() =>
-                                void openUrl(
-                                    'https://moddingcommunity.com/account/security'
-                                )
+                                void openUrl(webUrl(env, '/account/security'))
                             }
                         >
                             Manage

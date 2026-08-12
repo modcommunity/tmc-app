@@ -120,10 +120,7 @@ impl LibraryEntry {
     /// library would sit permanently at "No install rule for this game" — an
     /// error about something that was never going to happen.
     pub fn should_install(&self) -> bool {
-        self.installable
-            && !self.paused
-            && !self.is_container()
-            && self.file_url.is_some()
+        self.installable && !self.paused && !self.is_container() && self.file_url.is_some()
     }
 
     /// Is this a grouping rather than something with files?

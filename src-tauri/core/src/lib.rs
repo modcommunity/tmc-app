@@ -13,6 +13,7 @@
 //!
 //! [`AppState`]: ../tmc_app_lib/state/struct.AppState.html
 
+pub mod anchor;
 pub mod api;
 pub mod auth;
 pub mod error;

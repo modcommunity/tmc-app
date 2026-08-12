@@ -17,6 +17,21 @@ import type { LatencySeriesT } from '~/lib/ipc/schemas'
  * first two.
  */
 
+/**
+ * The five rungs of the ladder, in one place.
+ *
+ * `rtt == null` means the probe did not come back — a different fact from "slow",
+ * and the only rung that is not a number. It is drawn as `TO` rather than a
+ * dash so an outage cannot be misread as "not measured yet", which is what a
+ * dash means everywhere else in the browser.
+ */
+export const LATENCY_TIERS = [
+    { limit: 90, text: 'text-lat-good', color: 'var(--lat-good)' },
+    { limit: 150, text: 'text-lat-fair', color: 'var(--lat-fair)' },
+    { limit: 200, text: 'text-lat-poor', color: 'var(--lat-poor)' },
+    { limit: Infinity, text: 'text-lat-bad', color: 'var(--lat-bad)' },
+] as const
+
 export function latencyTone(rtt: number | null | undefined): {
     text: string
     stroke: string
@@ -24,33 +39,76 @@ export function latencyTone(rtt: number | null | undefined): {
 } {
     if (rtt == null) {
         return {
-            text: 'text-muted',
-            stroke: 'var(--muted)',
-            fill: 'var(--muted)',
+            text: 'text-lat-dead',
+            stroke: 'var(--lat-dead)',
+            fill: 'var(--lat-dead)',
         }
     }
 
-    if (rtt < 60) {
-        return {
-            text: 'text-success',
-            stroke: 'var(--success)',
-            fill: 'var(--success)',
-        }
-    }
+    const tier =
+        LATENCY_TIERS.find((t) => rtt < t.limit) ??
+        LATENCY_TIERS[LATENCY_TIERS.length - 1]!
 
-    if (rtt < 150) {
-        return {
-            text: 'text-warning',
-            stroke: 'var(--warning)',
-            fill: 'var(--warning)',
-        }
-    }
+    return { text: tier.text, stroke: tier.color, fill: tier.color }
+}
 
-    return {
-        text: 'text-danger',
-        stroke: 'var(--danger)',
-        fill: 'var(--danger)',
-    }
+/**
+ * The number itself, coloured by its rung.
+ *
+ * One component for the card, the table and the server panel, so the three can
+ * never disagree about what 149ms looks like. `state` separates the three
+ * things a row can be in, which the number alone cannot express:
+ *
+ *   * `measured` — a round trip came back. Print it.
+ *   * `timeout`  — a probe went out and nothing came back. Print `TO`, in red.
+ *   * `waiting`  — no probe has resolved yet. Print an ellipsis.
+ *   * `none`     — there is nothing to probe (the owner hid the address).
+ *                  Print a dash, and say why on hover.
+ */
+export function LatencyValue({
+    rttMs,
+    state,
+    title,
+    className = '',
+}: {
+    rttMs: number | null | undefined
+    state: 'measured' | 'timeout' | 'waiting' | 'none'
+    title?: string
+    className?: string
+}) {
+    if (state === 'timeout')
+        return (
+            <span
+                className={`font-semibold tabular-nums text-lat-dead ${className}`}
+                title={title ?? 'The server did not answer.'}
+            >
+                TO
+            </span>
+        )
+
+    if (state !== 'measured' || rttMs == null)
+        return (
+            <span
+                className={`tabular-nums text-muted ${className}`}
+                title={
+                    title ??
+                    (state === 'waiting'
+                        ? 'Measuring…'
+                        : 'This server’s owner has hidden its address.')
+                }
+            >
+                {state === 'waiting' ? '…' : '—'}
+            </span>
+        )
+
+    return (
+        <span
+            className={`font-semibold tabular-nums ${latencyTone(rttMs).text} ${className}`}
+            title={title ?? 'Measured from this device just now.'}
+        >
+            {rttMs}ms
+        </span>
+    )
 }
 
 type Point = { x: number; y: number; rtt: number | null }
@@ -137,9 +195,15 @@ function toPath(run: Point[]): string {
 /** The compact form, for a browser card. */
 export function LatencySparkline({
     series,
-    className = '',
+    className = 'h-4 w-12',
 }: {
     series: LatencySeriesT | undefined
+    /**
+     * The box to stretch into. It REPLACES the default rather than adding to
+     * it: `preserveAspectRatio="none"` means the caller owns both dimensions,
+     * and appending `w-full` to a baked-in `w-12` would leave which one wins to
+     * stylesheet order rather than to the caller.
+     */
     className?: string
 }) {
     const { points } = useMemo(
@@ -158,7 +222,7 @@ export function LatencySparkline({
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
             aria-hidden="true"
-            className={`h-4 w-12 shrink-0 ${className}`}
+            className={`shrink-0 ${className}`}
         >
             {runs(points).map((run, i) => (
                 <path

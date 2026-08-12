@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { FiFilter, FiSearch, FiX } from 'react-icons/fi'
+import { FiFilter, FiGrid, FiList, FiSearch, FiX } from 'react-icons/fi'
 
 import { api } from '~/lib/api/client'
 import {
@@ -11,10 +11,13 @@ import {
     type ContentKindT,
     type ContentSummaryT,
 } from '~/lib/api/contract'
+import { useAuth } from '~/lib/auth/provider'
 import { useIsWide } from '~/lib/hooks/use-breakpoint'
 import { useLiveQuery } from '~/lib/hooks/use-live-query'
 import { useSettings } from '~/lib/settings/provider'
+import BrowseFilters from '~/components/browse-filters'
 import ContentCard from '~/components/content-card'
+import ServerTable from '~/components/server-table'
 
 /**
  * The browser, for every content kind.
@@ -51,15 +54,57 @@ const SORT_LABELS: Record<BrowseSortT, string> = {
     views: 'Most viewed',
     downloads: 'Most downloaded',
     rating: 'Highest rated',
+    reviews: 'Most reviewed',
     favorites: 'Most favourited',
+
+    curUsers: 'Most players',
+    maxUsers: 'Most slots',
+    avgUsers: 'Busiest on average',
+    bots: 'Most bots',
+    map: 'Map name',
+    lastOnline: 'Recently online',
+    lastScanned: 'Recently scanned',
+
+    // The contract keeps this as a deprecated alias of `curUsers` so shipped
+    // builds do not 400. Never offered in the dropdown.
     players: 'Most players',
 }
 
-/** Sorts that only make sense for a given kind. */
+/** Sorts the API can actually order this kind by. */
+const SERVER_ONLY: BrowseSortT[] = [
+    'curUsers',
+    'maxUsers',
+    'avgUsers',
+    'bots',
+    'map',
+    'lastOnline',
+    'lastScanned',
+]
+
+/**
+ * The value the sort dropdown should show for a given wire value.
+ *
+ * `players` and `curUsers` are the same ordering under two spellings, and the
+ * server default sends the older one so it works against any deployed server.
+ * Without this the dropdown could not find `players` among its options and fell
+ * back to displaying the first one — so the browser said "Newest" while it was
+ * very obviously sorted by player count.
+ */
+function displaySort(sort: BrowseSortT): BrowseSortT {
+    return sort === 'players' ? 'curUsers' : sort
+}
+
 function sortsFor(kind: ContentKindT): BrowseSortT[] {
     return BrowseSortVals.filter((sort) => {
-        if (sort === 'players') return kind === 'server'
+        // The deprecated alias is honoured on the wire, never offered.
+        if (sort === 'players') return false
+
+        if (SERVER_ONLY.includes(sort)) return kind === 'server'
         if (sort === 'downloads') return kind === 'mod' || kind === 'asset'
+
+        // `Collection` has no ratings relation, so the API falls this back to
+        // "newest" — offering it would be a control that silently does nothing.
+        if (sort === 'rating') return kind !== 'collection'
 
         return true
     })
@@ -70,6 +115,7 @@ export default function BrowseRoute() {
     const [search, setSearch] = useSearchParams()
     const wide = useIsWide()
     const { app } = useSettings()
+    const { status } = useAuth()
 
     const kind = ContentKindSchema.catch('mod').parse(params.kind)
     const group = KIND_GROUPS[params.kind ?? ''] ?? [kind]
@@ -77,10 +123,94 @@ export default function BrowseRoute() {
     const [query, setQuery] = useState(search.get('q') ?? '')
     const [showFilters, setShowFilters] = useState(false)
 
-    const sort = (search.get('sort') as BrowseSortT | null) ?? 'createdAt'
-    const appId = search.get('app')
-    const onlineOnly = search.get('online') === '1'
+    /*
+     * Per-kind defaults, copied from the website's own
+     * (`lib/user/settings/default.ts`).
+     *
+     * A server browser sorted by "newest" is the single worst default this app
+     * had: the catalogue holds 2.6 million servers, most freshly imported and
+     * never once seen online, so the first screen was a wall of dead rows all
+     * reading `TO`. The website sorts by `curUsers` desc and pins
+     * `onlineOnly` — "the busiest servers I can actually join" — and that is
+     * what a server browser is FOR.
+     *
+     * `onlineOnly` is a default, not a pin: the Server group can turn it off.
+     *
+     * THE DEFAULT DELIBERATELY SENDS `players`, NOT `curUsers`.
+     *
+     * They are the same ordering — the contract keeps `players` as a deprecated
+     * alias and maps both to `Server.curUsers`. The difference is that a server
+     * older than this build has never heard of `curUsers` and rejects the whole
+     * query, which blanks the browser on the app's most important screen. The
+     * alias is understood by every deployed version, so the DEFAULT view keeps
+     * working across a deploy window in either direction. The newer sorts are
+     * opt-in clicks, where a failure is traceable to the click that caused it.
+     */
+    const defaultSort: BrowseSortT = kind === 'server' ? 'players' : 'createdAt'
+
+    const sort = (search.get('sort') as BrowseSortT | null) ?? defaultSort
+    const sortDir: 'asc' | 'desc' = search.get('dir') === 'asc' ? 'asc' : 'desc'
     const byPing = kind === 'server' && search.get('ping') === '1'
+
+    /*
+     * The URL is the single source of truth for every filter.
+     *
+     * Not component state: a filtered browse has to survive a reload, a deep
+     * link and the back button, and the app's router is a HashRouter over a
+     * static bundle — there is nowhere else durable to put it. The readers
+     * below are the only place the URL's string encoding is decoded.
+     */
+    const param = useCallback((key: string) => search.get(key), [search])
+
+    const flag = useCallback(
+        (key: string) => (search.get(key) === '1' ? true : undefined),
+        [search]
+    )
+
+    const num = useCallback(
+        (key: string) => {
+            const raw = search.get(key)
+
+            if (raw === null || raw === '') return undefined
+
+            const value = Number(raw)
+
+            // A non-numeric value in a hand-edited URL drops the filter rather
+            // than sending NaN, which the contract would reject and take the
+            // whole listing with it.
+            return Number.isFinite(value) && value >= 0 ? value : undefined
+        },
+        [search]
+    )
+
+    const idList = useCallback(
+        (key: string) => {
+            const raw = search.get(key)
+
+            if (!raw) return undefined
+
+            const out = raw
+                .split(',')
+                .map((v) => Number(v))
+                .filter((v) => Number.isFinite(v) && v > 0)
+
+            return out.length > 0 ? out : undefined
+        },
+        [search]
+    )
+
+    /*
+     * Servers default to the TABLE, everything else to the grid.
+     *
+     * A server is a row of comparable numbers — ping, players, map — and the
+     * question the browser answers about it is "which of these should I join?",
+     * which is a comparison. A mod's card answers "what is this?", which is a
+     * picture and a sentence. `?view=` overrides either way, so the choice
+     * survives a reload and can be shared.
+     */
+    const canTable = kind === 'server'
+    const view: 'grid' | 'table' =
+        canTable && search.get('view') !== 'grid' ? 'table' : 'grid'
 
     // `version` advances when a batch of measurements lands; the accessor
     // itself is stable, so it is the version the sort below keys on.
@@ -105,19 +235,108 @@ export default function BrowseRoute() {
         return () => window.clearTimeout(timer)
     }, [query])
 
+    const isServer = kind === 'server'
+
+    /*
+     * The URL, decoded into the contract's shape.
+     *
+     * Server-only filters are sent as `undefined` for every other kind rather
+     * than dropped from the object: the API ignores what a kind cannot express,
+     * but leaving a stale `hideEmpty` in the query key would split the cache
+     * between two listings that are actually identical.
+     */
     const filters = useMemo(
         () => ({
             kind,
             search: debounced || undefined,
-            apps: appId ? [Number(appId)] : undefined,
+            apps: idList('app'),
+            categories: idList('cats'),
+            tags: idList('tags'),
+            tagsOr: flag('tagsOr'),
+            environment:
+                kind === 'mod' || kind === 'asset'
+                    ? ((param('env') as 'SERVER' | 'CLIENT' | null) ?? undefined)
+                    : undefined,
+
             sort,
-            sortDir: 'desc' as const,
+            sortDir,
+
+            // NSFW is an APP setting, not a browse filter — it is a standing
+            // preference about this install, not something to re-pick per
+            // search. See the settings split in CLAUDE.md.
             nsfw: app?.showNsfw ?? false,
-            onlineOnly: kind === 'server' ? onlineOnly : undefined,
+            archived: flag('archived'),
+            mine: flag('mine'),
+
+            // Default ON for servers, matching the website. `online=0` in the
+            // URL is how the checkbox turns it off, so the default and the
+            // explicit choice stay distinguishable.
+            onlineOnly: isServer ? search.get('online') !== '0' : undefined,
+            wasOnline: isServer ? flag('wasOnline') : undefined,
+            password: isServer ? flag('password') : undefined,
+            secure: isServer ? flag('secure') : undefined,
+            isOfficial: isServer ? flag('official') : undefined,
+            os: isServer
+                ? ((param('os') as 'WINDOWS' | 'LINUX' | 'MAC' | null) ?? undefined)
+                : undefined,
+            mapName: isServer ? (param('map') ?? undefined) : undefined,
+            countries: isServer ? idList('countries') : undefined,
+            hideEmpty: isServer ? flag('empty') : undefined,
+            hideFull: isServer ? flag('full') : undefined,
+            minUsers: isServer ? num('minUsers') : undefined,
+            maxUsers: isServer ? num('maxUsers') : undefined,
+            minSlots: isServer ? num('minSlots') : undefined,
+            maxSlots: isServer ? num('maxSlots') : undefined,
+
             limit: 30,
         }),
-        [kind, debounced, appId, sort, app?.showNsfw, onlineOnly]
+        [
+            kind,
+            isServer,
+            debounced,
+            sort,
+            sortDir,
+            search,
+            app?.showNsfw,
+            param,
+            flag,
+            num,
+            idList,
+        ]
     )
+
+    /** Filters currently narrowing the listing, for the panel's Clear button. */
+    const activeCount = useMemo(() => {
+        const keys = [
+            'app',
+            'cats',
+            'tags',
+            'tagsOr',
+            'env',
+            'archived',
+            'mine',
+            'online',
+            'wasOnline',
+            'password',
+            'secure',
+            'official',
+            'os',
+            'map',
+            'countries',
+            'empty',
+            'full',
+            'minUsers',
+            'maxUsers',
+            'minSlots',
+            'maxSlots',
+        ]
+
+        return keys.filter((k) => {
+            const v = search.get(k)
+
+            return v !== null && v !== ''
+        }).length
+    }, [search])
 
     const listing = useInfiniteQuery({
         queryKey: ['browse', filters],
@@ -145,6 +364,25 @@ export default function BrowseRoute() {
         },
         [search, setSearch]
     )
+
+    /**
+     * Drop every filter, keeping the things that are not filters.
+     *
+     * The search text, the sort, the grid/table choice and the ping ordering
+     * all survive: they describe how the user is LOOKING at the list, not which
+     * rows it contains, and clearing them would undo work nobody asked to undo.
+     */
+    const clearFilters = useCallback(() => {
+        const next = new URLSearchParams()
+
+        for (const key of ['q', 'sort', 'view', 'ping']) {
+            const value = search.get(key)
+
+            if (value !== null) next.set(key, value)
+        }
+
+        setSearch(next, { replace: true })
+    }, [search, setSearch])
 
     // Sentinel-driven paging, so the list loads before the user hits the end.
     const sentinel = useRef<HTMLDivElement>(null)
@@ -203,13 +441,13 @@ export default function BrowseRoute() {
     }, [byPing, fetched.length, listing.dataUpdatedAt, liveVersion, latencyOf])
 
     const filterPanel = (
-        <div className="flex flex-col gap-4 text-sm">
+        <div className="flex flex-col gap-3 text-sm">
             <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-muted">
                     Sort
                 </span>
                 <select
-                    value={sort}
+                    value={displaySort(sort)}
                     onChange={(e) => setParam('sort', e.target.value)}
                     className="rounded-lg border border-border bg-surface px-2 py-1.5"
                 >
@@ -221,56 +459,36 @@ export default function BrowseRoute() {
                 </select>
             </div>
 
-            {kind === 'server' && (
-                <>
-                    <label className="flex items-center gap-2">
+            {/* Sort by ping sits with Sort, not with the filters: it reorders
+                what is already on screen rather than changing what the API
+                returns, and it is the only control here that never refetches. */}
+            {isServer && (
+                <label className="flex flex-col gap-1">
+                    <span className="flex items-center gap-2">
                         <input
                             type="checkbox"
-                            checked={onlineOnly}
+                            checked={byPing}
                             onChange={(e) =>
-                                setParam('online', e.target.checked ? '1' : null)
+                                setParam('ping', e.target.checked ? '1' : null)
                             }
                         />
-                        Online only
-                    </label>
-
-                    <label className="flex flex-col gap-1">
-                        <span className="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                checked={byPing}
-                                onChange={(e) =>
-                                    setParam('ping', e.target.checked ? '1' : null)
-                                }
-                            />
-                            Sort by ping
-                        </span>
-                        <span className="pl-6 text-xs text-muted">
-                            Orders the servers already measured on this device.
-                        </span>
-                    </label>
-                </>
-            )}
-
-            {(facets.data?.apps.length ?? 0) > 0 && (
-                <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted">
-                        Game
+                        Sort by ping
                     </span>
-                    <select
-                        value={appId ?? ''}
-                        onChange={(e) => setParam('app', e.target.value || null)}
-                        className="rounded-lg border border-border bg-surface px-2 py-1.5"
-                    >
-                        <option value="">All games</option>
-                        {facets.data?.apps.map((game) => (
-                            <option key={game.id} value={game.id}>
-                                {game.name} ({game.count})
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                    <span className="pl-6 text-xs text-muted">
+                        Orders the servers already measured on this device.
+                    </span>
+                </label>
             )}
+
+            <BrowseFilters
+                kind={kind}
+                get={param}
+                set={setParam}
+                facets={facets.data}
+                signedIn={status === 'signedIn'}
+                activeCount={activeCount}
+                onClear={clearFilters}
+            />
         </div>
     )
 
@@ -303,6 +521,33 @@ export default function BrowseRoute() {
                             </button>
                         )}
                     </div>
+
+                    {canTable && (
+                        <div className="flex shrink-0 overflow-hidden rounded-lg border border-border">
+                            {(
+                                [
+                                    ['table', FiList, 'Table'],
+                                    ['grid', FiGrid, 'Cards'],
+                                ] as const
+                            ).map(([value, Icon, label]) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => setParam('view', value)}
+                                    aria-label={label}
+                                    aria-pressed={view === value}
+                                    title={label}
+                                    className={`p-2 transition-colors ${
+                                        view === value
+                                            ? 'bg-accent text-accent-foreground'
+                                            : 'text-muted hover:bg-surface-hover'
+                                    }`}
+                                >
+                                    <Icon className="size-4" />
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
                     {!wide && (
                         <button
@@ -347,13 +592,14 @@ export default function BrowseRoute() {
                 <div className="min-w-0 flex-1 overflow-y-auto p-4">
                     {total !== null && (
                         <p className="mb-3 text-xs text-muted">
-                            {total.toLocaleString()} {KIND_LABELS[kind].toLowerCase()}
+                            {total.toLocaleString()}{' '}
+                            {KIND_LABELS[kind].toLowerCase()}
                         </p>
                     )}
 
                     {listing.isError && (
                         <p className="rounded-lg border border-danger p-4 text-sm text-danger">
-                            {(listing.error).message}
+                            {listing.error.message}
                         </p>
                     )}
 
@@ -363,6 +609,20 @@ export default function BrowseRoute() {
                         <p className="py-12 text-center text-sm text-muted">
                             Nothing matched.
                         </p>
+                    ) : view === 'table' ? (
+                        <ServerTable
+                            items={items}
+                            sort={sort}
+                            sortDir={sortDir}
+                            onSort={(key, dir) => {
+                                const next = new URLSearchParams(search)
+
+                                next.set('sort', key)
+                                next.set('dir', dir)
+
+                                setSearch(next, { replace: true })
+                            }}
+                        />
                     ) : (
                         <div className="grid grid-cols-1 gap-3 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                             {items.map((item) => (

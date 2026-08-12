@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@modcommunity/shared'
 
 import { ipc } from '~/lib/ipc/commands'
+import { useApiEnv } from '~/lib/api/env'
 import { useSettings } from '~/lib/settings/provider'
 import { Row, Section, Select, Toggle } from '~/components/form'
 
@@ -15,6 +17,7 @@ import { Row, Section, Select, Toggle } from '~/components/form'
  */
 export default function AppSettingsRoute() {
     const { app, setApp, resetApp } = useSettings()
+    const env = useApiEnv()
 
     // Theme plugins extend the theme picker, so the list has to be live.
     const plugins = useQuery({
@@ -72,7 +75,9 @@ export default function AppSettingsRoute() {
                         <Toggle
                             label="Compact cards"
                             checked={app.compactCards}
-                            onChange={(compactCards) => void setApp({ compactCards })}
+                            onChange={(compactCards) =>
+                                void setApp({ compactCards })
+                            }
                         />
                     }
                 />
@@ -101,6 +106,18 @@ export default function AppSettingsRoute() {
                             label="Measure latency"
                             checked={app.liveLatency}
                             onChange={(liveLatency) => void setApp({ liveLatency })}
+                        />
+                    }
+                />
+                <Row
+                    label="Refresh every"
+                    hint="How often the servers on screen are re-measured."
+                    control={
+                        <IntervalField
+                            valueMs={app.latencyIntervalMs}
+                            onChange={(latencyIntervalMs) =>
+                                void setApp({ latencyIntervalMs })
+                            }
                         />
                     }
                 />
@@ -164,7 +181,9 @@ export default function AppSettingsRoute() {
                         <Toggle
                             label="Send crash reports"
                             checked={app.crashReports}
-                            onChange={(crashReports) => void setApp({ crashReports })}
+                            onChange={(crashReports) =>
+                                void setApp({ crashReports })
+                            }
                         />
                     }
                 />
@@ -185,6 +204,36 @@ export default function AppSettingsRoute() {
                 />
             </Section>
 
+            {/*
+             * Shown only off production, and read-only wherever it is shown.
+             * The title bar carries the same fact on desktop, but a phone has
+             * no title bar to carry it — and a dev build on a device is exactly
+             * where "which site is this?" is hardest to answer from the screen.
+             */}
+            {env && !env.isProd && (
+                <Section
+                    title="Development"
+                    hint="This build is not talking to the live site. Set at build time, or through TMC_API_BASE in a debug build's environment — it cannot be changed from in here."
+                >
+                    <Row
+                        label="API"
+                        control={
+                            <span className="font-mono text-xs text-warning">
+                                {env.base}
+                            </span>
+                        }
+                    />
+                    <Row
+                        label="Version"
+                        control={
+                            <span className="font-mono text-xs text-muted">
+                                {env.version}
+                            </span>
+                        }
+                    />
+                </Section>
+            )}
+
             <div>
                 <Button btnType="danger" onClick={() => void resetApp()}>
                     Reset app settings
@@ -195,5 +244,123 @@ export default function AppSettingsRoute() {
                 </p>
             </div>
         </>
+    )
+}
+
+/**
+ * The bounds, mirroring `LATENCY_INTERVAL_MS_MIN`/`MAX` in Rust.
+ *
+ * Rust clamps whatever arrives, so these are the UI's manners rather than the
+ * enforcement: they keep the input from offering a value that would be silently
+ * changed on the way in.
+ */
+const MIN_MS = 250
+const MAX_MS = 300_000
+
+type Unit = 'ms' | 's'
+
+/** Show a whole number of seconds as seconds; anything finer as milliseconds. */
+function unitFor(ms: number): Unit {
+    return ms % 1000 === 0 ? 's' : 'ms'
+}
+
+function inUnit(ms: number, unit: Unit): number {
+    return unit === 's' ? ms / 1000 : ms
+}
+
+/**
+ * A duration, typed in whichever unit suits it.
+ *
+ * Two controls for one value, because the useful range spans three orders of
+ * magnitude: "every 2 seconds" and "every 500 milliseconds" are both ordinary
+ * answers here, and a single milliseconds box makes the first of them a
+ * four-digit number to read and re-read.
+ *
+ * The typed text is LOCAL until it is committed, on blur or on Enter. Writing
+ * every keystroke through to `settings.json` would make "1500" pass through 1
+ * and 15 — two settings the user never chose, each one clamped up to the floor
+ * and each one restarting every live query timer in the app.
+ */
+function IntervalField({
+    valueMs,
+    onChange,
+}: {
+    valueMs: number
+    onChange: (ms: number) => void
+}) {
+    const [unit, setUnit] = useState<Unit>(() => unitFor(valueMs))
+    const [draft, setDraft] = useState(() =>
+        String(inUnit(valueMs, unitFor(valueMs)))
+    )
+
+    // Re-sync when the stored value moves underneath us: a reset, or a value
+    // the clamp changed on the way in. Deriving it during render rather than in
+    // an effect means the clamped number is on screen in the same paint that
+    // the rest of the app starts using it.
+    const [seen, setSeen] = useState(valueMs)
+
+    if (seen !== valueMs) {
+        const next = unitFor(valueMs)
+
+        setSeen(valueMs)
+        setUnit(next)
+        setDraft(String(inUnit(valueMs, next)))
+    }
+
+    const commit = (raw: string, as: Unit) => {
+        const typed = Number(raw.trim())
+
+        // Not a number, or not a duration. Put the stored value back rather
+        // than storing something the user did not mean.
+        if (!Number.isFinite(typed) || typed <= 0) {
+            setDraft(String(inUnit(valueMs, as)))
+
+            return
+        }
+
+        const ms = Math.min(
+            MAX_MS,
+            Math.max(MIN_MS, Math.round(as === 's' ? typed * 1000 : typed))
+        )
+
+        if (ms === valueMs) setDraft(String(inUnit(ms, as)))
+        else onChange(ms)
+    }
+
+    return (
+        <div className="flex items-center gap-1.5">
+            <input
+                type="number"
+                inputMode="numeric"
+                aria-label="Refresh interval"
+                title={`Between ${MIN_MS}ms and ${MAX_MS / 1000} seconds.`}
+                min={inUnit(MIN_MS, unit)}
+                max={inUnit(MAX_MS, unit)}
+                step={unit === 's' ? 0.5 : 50}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={(e) => commit(e.target.value, unit)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') commit(e.currentTarget.value, unit)
+                }}
+                className="w-24 rounded-lg border border-border bg-background px-2 py-1.5 text-right text-sm tabular-nums"
+            />
+
+            <Select<Unit>
+                label="Refresh interval unit"
+                value={unit}
+                options={[
+                    { value: 's', label: 'seconds' },
+                    { value: 'ms', label: 'ms' },
+                ]}
+                onChange={(next) => {
+                    // The unit converts the value rather than reinterpreting
+                    // it: switching from "1 second" to milliseconds means 1000,
+                    // not a 1ms interval nobody asked for.
+                    setUnit(next)
+                    setDraft(String(inUnit(valueMs, next)))
+                }}
+            />
+        </div>
     )
 }

@@ -17,6 +17,13 @@
 //! returns a token to JavaScript — the HTTP client attaches it in Rust (see
 //! [`crate::api`]), so an XSS in a rendered mod description has nothing to
 //! steal.
+//!
+//! **The store is keyed on which site the build talks to.** A production token
+//! and a dev-server token are different credentials for different systems, and
+//! [`crate::api::api_base_scope`] keeps them in separate entries. Sharing one
+//! entry meant a developer pointing a signed-in app at a dev instance sent the
+//! REAL refresh token to it on the first refresh, and — since a rejected
+//! refresh is terminal — got signed out of the real site for their trouble.
 
 use std::path::PathBuf;
 
@@ -32,6 +39,17 @@ const SERVICE: &str = "com.moddingcommunity.app";
 #[cfg(feature = "os-keyring")]
 const ACCOUNT: &str = "refresh-token";
 
+/// The keychain entry for THIS build's API base.
+///
+/// Production keeps the bare name so an existing install's session survives.
+#[cfg(feature = "os-keyring")]
+fn account() -> String {
+    match crate::api::api_base_scope() {
+        Some(scope) => format!("{ACCOUNT}@{scope}"),
+        None => ACCOUNT.to_string(),
+    }
+}
+
 pub struct SecureStore {
     /// The whole store on mobile; the fallback on a desktop with no credential
     /// service running.
@@ -40,8 +58,15 @@ pub struct SecureStore {
 
 impl SecureStore {
     pub fn new(data_dir: &std::path::Path) -> Self {
+        // Same split as the keychain entry, for the same reason: a dev build's
+        // session must not overwrite — or be readable as — the real one.
+        let file = match crate::api::api_base_scope() {
+            Some(scope) => format!("credentials-{scope}.bin"),
+            None => "credentials.bin".to_string(),
+        };
+
         Self {
-            fallback: data_dir.join("credentials.bin"),
+            fallback: data_dir.join(file),
         }
     }
 
@@ -51,7 +76,7 @@ impl SecureStore {
             any(target_os = "windows", target_os = "macos", target_os = "linux")
         ))]
         {
-            match keyring::Entry::new(SERVICE, ACCOUNT) {
+            match keyring::Entry::new(SERVICE, &account()) {
                 Ok(entry) => {
                     return entry.set_password(token).map_err(|e| {
                         crate::error::AppError::internal(format!("keyring set: {e}"))
@@ -80,7 +105,7 @@ impl SecureStore {
             any(target_os = "windows", target_os = "macos", target_os = "linux")
         ))]
         {
-            if let Ok(entry) = keyring::Entry::new(SERVICE, ACCOUNT) {
+            if let Ok(entry) = keyring::Entry::new(SERVICE, &account()) {
                 match entry.get_password() {
                     Ok(token) => return Some(token),
                     // `NoEntry` is the ordinary "never signed in" case.
@@ -99,7 +124,7 @@ impl SecureStore {
             any(target_os = "windows", target_os = "macos", target_os = "linux")
         ))]
         {
-            if let Ok(entry) = keyring::Entry::new(SERVICE, ACCOUNT) {
+            if let Ok(entry) = keyring::Entry::new(SERVICE, &account()) {
                 let _ = entry.delete_credential();
             }
         }

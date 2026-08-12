@@ -70,7 +70,8 @@ function tokenise(source: string): Block[] {
         if (heading) {
             // Clamped to h2–h4: the page already owns h1, and a document
             // outline is not something a mod description gets to define.
-            const level = Math.min(4, Math.max(2, heading[1]!.length + 1)) as 2 | 3 | 4
+            const level = Math.min(4, Math.max(2, heading[1]!.length + 1)) as
+                2 | 3 | 4
 
             blocks.push({ kind: 'heading', level, text: heading[2]!.trim() })
             i += 1

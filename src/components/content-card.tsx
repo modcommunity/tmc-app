@@ -1,10 +1,13 @@
+import type { Ref } from 'react'
 import { Link } from 'react-router-dom'
-import { FiDownload, FiEye, FiHeart, FiStar } from 'react-icons/fi'
+import { FiDownload, FiExternalLink, FiEye, FiHeart, FiStar } from 'react-icons/fi'
 
 import type { ContentSummaryT } from '~/lib/api/contract'
+import { appLabel } from '~/lib/api/labels'
 import { requestFor, useLiveServer } from '~/lib/hooks/use-live-query'
+import { opensExternally, openExternally } from '~/lib/external'
 import { useSettings } from '~/lib/settings/provider'
-import { LiveLatency, LivePlayers } from './server-live'
+import { LiveLatency, LiveLatencyStrip, LivePlayers } from './server-live'
 
 /**
  * One row in any browser.
@@ -51,7 +54,7 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
     const dense = app?.compactCards ?? false
 
     const request = requestFor(item)
-    const live = useLiveServer<HTMLAnchorElement>(request)
+    const live = useLiveServer<HTMLElement>(request)
 
     const image = item.images.card ?? item.images.banner ?? item.images.icon
 
@@ -67,12 +70,25 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
         : (live.result?.online ?? item.server?.online ?? false)
     const heading = live.result?.name ?? item.name
 
-    return (
-        <Link
-            ref={live.ref}
-            to={`/view/${item.kind}/${item.id}`}
-            className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface transition-colors hover:border-accent"
-        >
+    /*
+     * An article's card opens the browser rather than an in-app page — see
+     * `lib/external`. It stays a card, and it keeps the live-query ref binding,
+     * so nothing below this line has to know which of the two it is.
+     */
+    const external = opensExternally(item.kind)
+
+    const shell =
+        'group flex flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition-colors hover:border-accent'
+
+    /*
+     * The body is built ONCE and handed to whichever wrapper applies. Writing
+     * the branch as an inline `<Frame>` component instead would give React a
+     * new component type on every render, remounting the whole subtree — which
+     * for this card means tearing down and rebuilding its IntersectionObserver,
+     * and so re-registering with the live registry, several times a second.
+     */
+    const body = (
+        <>
             <div
                 className={`relative w-full shrink-0 overflow-hidden bg-surface-secondary ${
                     dense ? 'aspect-[3/1]' : 'aspect-[16/9]'
@@ -116,19 +132,27 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
                         {heading}
                     </h3>
 
-                    {request && live.enabled && (
+                    {external && (
+                        <FiExternalLink
+                            className="mt-0.5 size-3.5 shrink-0 text-muted"
+                            aria-label="Opens in your browser"
+                        />
+                    )}
+
+                    {item.server && live.enabled && (
                         <LiveLatency
                             result={live.result}
                             series={live.series}
                             error={live.error}
-                            pending={live.updatedAt === undefined}
+                            probeable={live.probeable}
+                            settled={live.settled}
                         />
                     )}
                 </div>
 
                 {item.app && (
                     <p className="truncate text-xs text-accent">
-                        {item.app.name}
+                        {appLabel(item.app)}
                         {live.result?.map && (
                             <span className="text-muted"> · {live.result.map}</span>
                         )}
@@ -151,8 +175,16 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
                                 value={item.stats.downloads}
                                 label="downloads"
                             />
-                            <Stat icon={FiEye} value={item.stats.views} label="views" />
-                            <Stat icon={FiHeart} value={item.stats.likes} label="likes" />
+                            <Stat
+                                icon={FiEye}
+                                value={item.stats.views}
+                                label="views"
+                            />
+                            <Stat
+                                icon={FiHeart}
+                                value={item.stats.likes}
+                                label="likes"
+                            />
                         </>
                     )}
 
@@ -169,7 +201,38 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
                         </span>
                     )}
                 </div>
+
+                {/* The history goes along the BOTTOM edge, under the stats
+                    rather than beside the number. Sitting next to the reading
+                    it made the row's most important value — the current ping —
+                    compete with a sixty-point line for the same glance. */}
+                {item.server && live.enabled && (
+                    <LiveLatencyStrip series={live.series} />
+                )}
             </div>
+        </>
+    )
+
+    if (external)
+        return (
+            <button
+                type="button"
+                ref={live.ref as Ref<HTMLButtonElement>}
+                onClick={() => void openExternally(item)}
+                title="Opens in your browser"
+                className={shell}
+            >
+                {body}
+            </button>
+        )
+
+    return (
+        <Link
+            ref={live.ref as Ref<HTMLAnchorElement>}
+            to={`/view/${item.kind}/${item.id}`}
+            className={shell}
+        >
+            {body}
         </Link>
     )
 }

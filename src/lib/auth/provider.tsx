@@ -180,9 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             setStatus('signedOut')
             setPending(null)
-            setError(
-                isIpcError(err) ? err.message : 'Could not start the sign-in.'
-            )
+            setError(isIpcError(err) ? err.message : 'Could not start the sign-in.')
         }
     }, [startPolling])
 

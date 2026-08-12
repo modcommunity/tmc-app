@@ -2,7 +2,10 @@ import { z } from 'zod'
 
 import { call } from './index'
 import {
+    ApiEnvSchema,
     AppSettingsSchema,
+    DirListingSchema,
+    DirRootSchema,
     InstallOutcomeSchema,
     LaunchPreviewSchema,
     LibraryRowSchema,
@@ -62,10 +65,46 @@ export const ipc = {
     authCancel: () => call('auth_cancel', z.void()),
     authSignOut: () => call('auth_sign_out', z.void()),
 
+    /**
+     * Which site this build talks to, and whether it is the real one.
+     *
+     * Read-only by design — there is no `apiSetBase`, and adding one would make
+     * the app phishable by anything that can run a line of script in it.
+     */
+    apiEnv: () => call('api_env', ApiEnvSchema),
+
     // -------------------------------------------------------------- Settings
     settingsGet: () => call('settings_get', AppSettingsSchema),
-    settingsPatch: (patch: Partial<AppSettingsT>) =>
-        call('settings_patch', AppSettingsSchema, { patch }),
+    /**
+     * Every setting except the two sandbox roots.
+     *
+     * `gameDirs` and `downloadDir` are REFUSED by Rust if they appear here —
+     * they anchor the plugin jail rather than describing a preference, so they
+     * have their own commands below and their own validation. The type reflects
+     * that so the refusal is a compile error rather than a runtime one.
+     */
+    settingsPatch: (
+        patch: Partial<Omit<AppSettingsT, 'gameDirs' | 'downloadDir'>>
+    ) => call('settings_patch', AppSettingsSchema, { patch }),
+
+    /**
+     * Point a game's install folder somewhere, or `null` to clear it.
+     *
+     * Rust validates the path before storing it and rejects anything that would
+     * make a bad jail anchor — a drive root, a system directory, or any folder
+     * containing the app's own data. It stores the CANONICAL path, so the
+     * settings this resolves with are the ones the sandbox will resolve with.
+     */
+    settingsSetGameDir: (appId: number | string, dir: string | null) =>
+        call('settings_set_game_dir', AppSettingsSchema, {
+            appId: String(appId),
+            dir,
+        }),
+
+    /** Where installers stage downloads, or `null` for the app's own cache. */
+    settingsSetDownloadDir: (dir: string | null) =>
+        call('settings_set_download_dir', AppSettingsSchema, { dir }),
+
     settingsReset: () => call('settings_reset', AppSettingsSchema),
 
     // --------------------------------------------------------------- Logging
@@ -99,6 +138,24 @@ export const ipc = {
         call('latency_series', z.array(LatencySeriesSchema), { keys }),
 
     latencyClear: () => call('latency_clear', z.void()),
+
+    // --------------------------------------------------------- Folder picker
+    /**
+     * The places the picker offers to start from — home, downloads, and every
+     * drive letter that answers on Windows.
+     */
+    fsRoots: () => call('fs_roots', z.array(DirRootSchema)),
+
+    /**
+     * The directories directly inside `path`, for the app's own folder picker.
+     *
+     * Directories only — no file is ever named in the reply. See the module
+     * header on `commands/fs.rs` for what this widens and what it does not.
+     */
+    fsListDirs: (path: string | null, showHidden = false) =>
+        call('fs_list_dirs', DirListingSchema, {
+            request: { path, showHidden },
+        }),
 
     // --------------------------------------------------------------- Plugins
     pluginList: () => call('plugin_list', z.array(PluginRecordSchema)),

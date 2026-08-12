@@ -49,7 +49,8 @@ export default function InstallButton({
             plugin.enabled &&
             !plugin.needsReapproval &&
             plugin.kinds.includes('installer') &&
-            (plugin.apps.length === 0 || (appId != null && plugin.apps.includes(appId)))
+            (plugin.apps.length === 0 ||
+                (appId != null && plugin.apps.includes(appId)))
     )
 
     if (!match)
@@ -130,9 +131,7 @@ export default function InstallButton({
     if (confirming)
         return (
             <div className="flex w-full flex-col gap-2 rounded-lg border border-border bg-surface p-3 text-xs">
-                <p className="font-medium">
-                    Install with “{match.name}”?
-                </p>
+                <p className="font-medium">Install with “{match.name}”?</p>
 
                 <ul className="flex list-disc flex-col gap-0.5 pl-4 text-muted">
                     {match.permissions.map((permission) => (
@@ -142,7 +141,8 @@ export default function InstallButton({
 
                 {!gameDir && (
                     <p className="text-danger">
-                        No install folder is set for {summary.app?.name ?? 'this game'}.{' '}
+                        No install folder is set for{' '}
+                        {summary.app?.name ?? 'this game'}.{' '}
                         <Link to="/settings/games" className="underline">
                             Set one first
                         </Link>
