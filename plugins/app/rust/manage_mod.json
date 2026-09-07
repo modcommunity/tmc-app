@@ -1,0 +1,63 @@
+{
+    "manifestVersion": 1,
+    "label": "Rust server plugin (.cs)",
+    "description": "An Oxide/uMod plugin, dropped into oxide/plugins where the loader compiles it at runtime. Rust's anti-cheat means this is a SERVER-side rule and there is deliberately no client equivalent.",
+    "match": {
+        "extensions": [
+            "cs"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "oxide/plugins",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "mkdir",
+                "path": {
+                    "root": "gameDir",
+                    "path": "oxide/plugins"
+                }
+            },
+            {
+                "action": "move",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "oxide/plugins/{fileName}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "oxide/plugins/{fileName}"
+                }
+            }
+        ]
+    }
+}

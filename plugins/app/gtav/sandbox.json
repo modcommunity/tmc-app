@@ -1,0 +1,73 @@
+{
+    "manifestVersion": 1,
+    "label": "GTA V sandboxes",
+    "description": "GTA V loads script mods from the game root by absolute path, so there is nothing to point at a profile directory — its sandboxes deploy into the game folder itself.",
+
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "direct",
+            "supportedStrategies": ["direct"],
+            "antiCheat": "kernel",
+
+            "modTargets": [
+                { "type": "script", "relPath": "scripts" },
+                { "type": "asi_plugin", "relPath": "." },
+                { "type": "archive_mod", "relPath": "mods" }
+            ],
+
+            "notes": [
+                "Only Direct is offered. ScriptHookV resolves its plugins relative to the executable and does not read a profile directory, so a linked file is either invisible to it or looks like tampering.",
+                "Never launch GTA Online with mods deployed. The sandbox's purge puts the game folder back; run it before you go online."
+            ]
+        },
+
+        "detect": {
+            "steamAppIds": ["271590"],
+            "names": ["Grand Theft Auto V", "GTAV", "Grand Theft Auto V Enhanced"],
+            "markers": ["GTA5.exe", "PlayGTAV.exe", "GTA5_Enhanced.exe"],
+            "paths": {
+                "windows": [
+                    "<programFiles>/Rockstar Games/Grand Theft Auto V",
+                    "<drives>/Games/Grand Theft Auto V"
+                ]
+            }
+        },
+
+        "presets": [
+            {
+                "id": "singleplayer",
+                "label": "Single player",
+                "description": "Script mods and asi plugins. Offline only.",
+                "environment": "client",
+                "strategy": "direct"
+            },
+            {
+                "id": "fivem",
+                "label": "FiveM",
+                "description": "Client resources for FiveM servers.",
+                "environment": "client",
+                "loader": "fivem",
+                "strategy": "direct"
+            }
+        ],
+
+        "options": [
+            {
+                "key": "windowMode",
+                "label": "Window mode",
+                "type": "select",
+                "choices": [
+                    { "value": "fullscreen", "label": "Fullscreen" },
+                    { "value": "borderless", "label": "Borderless" },
+                    { "value": "windowed", "label": "Windowed" }
+                ]
+            },
+            {
+                "key": "commandLine",
+                "label": "Additional command line",
+                "description": "Written to commandline.txt beside the executable.",
+                "type": "text"
+            }
+        ]
+    }
+}

@@ -1,0 +1,82 @@
+{
+    "manifestVersion": 1,
+    "label": "7 Days to Die sandboxes",
+    "description": "How 7 Days to Die sandboxes deploy, and how to find the game.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "Mods"
+                }
+            ],
+            "notes": [
+                "Mods that change game rules have to match on the server AND on every client connecting to it. A sandbox is per-machine, so a group playing together needs the same sandbox exported to each of them \u2014 the share code is what that is for.",
+                "The game ships EasyAntiCheat and refuses to load Mods/ with it enabled. Turn it off in the launcher's options; this app cannot do it for you and will not pretend a modded launch is possible with it on.",
+                "An alpha bump usually breaks every mod at once, because ModInfo.xml declares a game version the loader checks. Nothing here can detect that in advance \u2014 the game simply refuses the mod at startup and says so in the log."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "251570"
+            ],
+            "names": [
+                "7 Days To Die",
+                "7DaysToDie"
+            ],
+            "markers": [
+                "7DaysToDie.exe",
+                "7DaysToDie.x86_64",
+                "Data/Config"
+            ],
+            "paths": {}
+        },
+        "presets": [
+            {
+                "id": "client",
+                "label": "Client",
+                "environment": "client"
+            },
+            {
+                "id": "server",
+                "label": "Dedicated server",
+                "environment": "server",
+                "strategy": "direct",
+                "options": {
+                    "maxPlayers": 8
+                }
+            }
+        ],
+        "options": [
+            {
+                "key": "maxPlayers",
+                "label": "Player slots",
+                "type": "int",
+                "min": 1,
+                "max": 64,
+                "default": 8,
+                "unit": "players",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "worldName",
+                "label": "World",
+                "type": "text",
+                "default": "Navezgane"
+            },
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

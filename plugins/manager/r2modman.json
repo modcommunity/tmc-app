@@ -1,0 +1,35 @@
+{
+    "manifestVersion": 1,
+    "manager": {
+        "id": "r2modman",
+        "label": "r2modman",
+        "homepage": "https://github.com/ebkr/r2modmanPlus",
+        "notes": [
+            "Reads r2modman's own profile folders. Nothing is moved or changed — the mods stay where r2modman put them and this app takes a copy.",
+            "Each r2modman profile is listed separately, so importing 'Default' and 'Hardcore' gives you two sets you can put in different sandboxes.",
+            "r2modman names its game folders itself. If your game is missing here, drop a corrected descriptor in the app's plugins/manager folder — the folder name is the only thing that needs to change."
+        ],
+        "roots": [
+            { "base": "config", "path": "r2modmanPlus-local" }
+        ],
+        "layout": {
+            "modsPath": "{game}/profiles/*/BepInEx/plugins",
+            "entry": "directory",
+            "ignore": ["_state", "MMHOOK"]
+        },
+        "games": [
+            { "dir": "Valheim", "slug": "valheim", "relPath": "BepInEx/plugins" },
+            { "dir": "V Rising", "slug": "vrising", "relPath": "BepInEx/plugins" },
+            { "dir": "VRising", "slug": "vrising", "relPath": "BepInEx/plugins" },
+            { "dir": "Sons Of The Forest", "slug": "sotf", "relPath": "BepInEx/plugins" },
+            { "dir": "SonsOfTheForest", "slug": "sotf", "relPath": "BepInEx/plugins" }
+        ],
+        "metadata": {
+            "file": "manifest.json",
+            "name": "/name",
+            "version": "/version_number",
+            "author": "/author",
+            "website": "/website_url"
+        }
+    }
+}

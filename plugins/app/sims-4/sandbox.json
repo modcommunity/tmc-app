@@ -1,0 +1,63 @@
+{
+    "manifestVersion": 1,
+    "label": "The Sims 4 sandboxes",
+    "description": "How The Sims 4 sandboxes deploy, and how to find the game on this machine. Paths: vortex.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "direct",
+            "supportedStrategies": [
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "Mods"
+                }
+            ],
+            "notes": [
+                "Point this sandbox at Documents/Electronic Arts/The Sims 4 \u2014 the folder with Options.ini in it \u2014 and NOT at the Steam or EA install. The Sims 4 reads mods from your documents folder; the install folder holds no mods at all.",
+                "Script mods (.ts4script) do nothing until they are enabled in the game: Game Options \u2192 Other \u2192 Enable Custom Content and Mods, and Script Mods Allowed. That is a setting inside Options.ini, which the config editor can open.",
+                "The folder is localised \u2014 'Die Sims 4' on a German install, 'Los Sims 4' on a Spanish one. Pick whichever exists on your machine; nothing here assumes the English name.",
+                "Copying is the default here and the link strategies are not offered. This folder is in your documents and is very often on a different drive from the app's staging folder, which is the one case a hard link cannot cross."
+            ]
+        },
+        "detect": {
+            "names": [
+                "The Sims 4"
+            ],
+            "markers": [
+                "Options.ini",
+                "Mods"
+            ],
+            "paths": {
+                "windows": [
+                    "~/Documents/Electronic Arts/The Sims 4"
+                ],
+                "macos": [
+                    "~/Documents/Electronic Arts/The Sims 4"
+                ]
+            }
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

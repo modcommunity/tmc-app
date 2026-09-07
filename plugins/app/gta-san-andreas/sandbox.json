@@ -1,0 +1,61 @@
+{
+    "manifestVersion": 1,
+    "label": "Grand Theft Auto: San Andreas sandboxes",
+    "description": "How Grand Theft Auto: San Andreas sandboxes deploy, and how to find the game on this machine. Paths: known.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "direct",
+            "supportedStrategies": [
+                "direct",
+                "hardlink"
+            ],
+            "modTargets": [
+                {
+                    "type": "modloader_mod",
+                    "relPath": "modloader"
+                },
+                {
+                    "type": "native_plugin",
+                    "relPath": ""
+                }
+            ],
+            "notes": [
+                "modloader is the safe half and is where anything that can go there should go. The game reads it without its own files being replaced, so removing a mod really does remove it.",
+                "The .asi and CLEO rules write into the game ROOT, because that is where their loaders scan and there is no folder to narrow them to. That is the widest grant in this game's rules and it is worth reading before approving.",
+                "Direct copying is the default. These games are old enough that their loaders stat files in ways links have been reported to confuse, and the folders are small."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "12120"
+            ],
+            "names": [
+                "Grand Theft Auto: San Andreas"
+            ],
+            "markers": [
+                "gta_sa.exe"
+            ]
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

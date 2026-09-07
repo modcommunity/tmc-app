@@ -1,0 +1,57 @@
+{
+    "manifestVersion": 1,
+    "label": "Stardew Valley mod",
+    "description": "Unpacked into a folder of its own under Mods. The loader walks that directory and treats each subfolder as one mod, so a mod IS its folder \u2014 which also makes uninstalling one directory removal.",
+    "match": {
+        "extensions": [
+            "zip",
+            "7z"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "Mods",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "extract",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "Mods/{itemId}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "Mods/{itemId}"
+                }
+            }
+        ]
+    }
+}

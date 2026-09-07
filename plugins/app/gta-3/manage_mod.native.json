@@ -1,0 +1,58 @@
+{
+    "manifestVersion": 1,
+    "label": "Grand Theft Auto III native plugin (.asi / .cleo / .dll)",
+    "description": "A loader plugin, beside the executable where its loader scans for it. Nothing is extracted: these ship as single files.",
+    "match": {
+        "extensions": [
+            "asi",
+            "cleo",
+            "dll"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "move",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "{fileName}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "{fileName}"
+                }
+            }
+        ]
+    }
+}

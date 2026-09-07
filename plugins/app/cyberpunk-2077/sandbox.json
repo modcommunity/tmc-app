@@ -1,0 +1,58 @@
+{
+    "manifestVersion": 1,
+    "label": "Cyberpunk 2077 sandboxes",
+    "description": "How Cyberpunk 2077 sandboxes deploy, and how to find the game on this machine. Paths: vortex.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "archive/pc/mod"
+                }
+            ],
+            "notes": [
+                "Mods live in archive/pc/mod, one folder each.",
+                "archive/pc/mod is the folder for packed game content. Script and plugin mods go elsewhere \u2014 r6/scripts for redscript, bin/x64/plugins for RED4ext \u2014 and a mod that ships those needs its archive laying out from the game root instead.",
+                "Hard links are the default: nothing is copied twice when two sandboxes share a mod, and every file is still a real file to the game."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "1091500"
+            ],
+            "names": [
+                "Cyberpunk 2077"
+            ],
+            "markers": [
+                "bin/x64/Cyberpunk2077.exe"
+            ]
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

@@ -1,0 +1,57 @@
+{
+    "manifestVersion": 1,
+    "label": "Palworld sandboxes",
+    "description": "How Palworld sandboxes deploy, and how to find the game on this machine. Paths: vortex.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "Pal/Binaries/Win64/Mods"
+                }
+            ],
+            "notes": [
+                "Mods live in Pal/Binaries/Win64/Mods, one folder each.",
+                "Hard links are the default: nothing is copied twice when two sandboxes share a mod, and every file is still a real file to the game."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "1623730"
+            ],
+            "names": [
+                "Palworld"
+            ],
+            "markers": [
+                "Palworld.exe"
+            ]
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

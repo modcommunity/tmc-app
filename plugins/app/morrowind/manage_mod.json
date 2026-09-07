@@ -1,0 +1,67 @@
+{
+    "manifestVersion": 1,
+    "label": "The Elder Scrolls III: Morrowind plugin file",
+    "description": "A single plugin or archive file, straight into Data Files. This is the shape a small mod ships in \u2014 one .esp, or one .bsa beside it.",
+    "match": {
+        "extensions": [
+            "esp",
+            "esm",
+            "esl",
+            "bsa",
+            "ba2"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "Data Files",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "mkdir",
+                "path": {
+                    "root": "gameDir",
+                    "path": "Data Files"
+                }
+            },
+            {
+                "action": "move",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "Data Files/{fileName}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "Data Files/{fileName}"
+                }
+            }
+        ]
+    }
+}

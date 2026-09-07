@@ -1,0 +1,63 @@
+{
+    "manifestVersion": 1,
+    "label": "Fallout 3 script extender plugin (.dll)",
+    "description": "A native plugin for the script extender, into Data/FOSE/Plugins. The extender itself is not a mod and is not installed here.",
+    "match": {
+        "extensions": [
+            "dll"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "Data/FOSE/Plugins",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "mkdir",
+                "path": {
+                    "root": "gameDir",
+                    "path": "Data/FOSE/Plugins"
+                }
+            },
+            {
+                "action": "move",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "Data/FOSE/Plugins/{fileName}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "Data/FOSE/Plugins/{fileName}"
+                }
+            }
+        ]
+    }
+}

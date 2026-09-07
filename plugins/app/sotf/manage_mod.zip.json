@@ -1,0 +1,56 @@
+{
+    "manifestVersion": 1,
+    "label": "Sons of the Forest BepInEx package (.zip)",
+    "description": "A packaged plugin: unpacked into a folder of its own under BepInEx/plugins, so uninstalling is one directory removal rather than guessing which of the loose files came from which mod. That folder-per-mod layout is what r2modman and Gale both use, for the same reason.",
+    "match": {
+        "extensions": [
+            "zip"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "BepInEx/plugins",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "extract",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "BepInEx/plugins/{itemId}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "BepInEx/plugins/{itemId}"
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,9 @@
+{
+    "manifestVersion": 1,
+    "label": "Garry's Mod (Steam)",
+    "description": "Through Steam, which is also what mounts the other Source games' content that half of Garry's Mod depends on.",
+    "permissions": {},
+    "launch": {
+        "uri": "steam://rungameid/4000"
+    }
+}

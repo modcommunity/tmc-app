@@ -1,0 +1,115 @@
+{
+    "manifestVersion": 1,
+    "label": "Garry's Mod sandboxes",
+    "description": "How Garry's Mod sandboxes deploy, and how to find the game.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "engine_addon",
+                    "relPath": "garrysmod/addons"
+                },
+                {
+                    "type": "server_plugin",
+                    "relPath": "garrysmod/lua/autorun"
+                },
+                {
+                    "type": "workshop_content",
+                    "relPath": "garrysmod/cache/workshop"
+                }
+            ],
+            "notes": [
+                "Addons subscribed to on the Steam Workshop are mounted by the game itself from garrysmod/cache/workshop, and are not what a sandbox deploys. What lands here is the manual half \u2014 addons downloaded rather than subscribed.",
+                "A server sandbox is the more useful one for this game: garrysmod/addons is also where a dedicated server's gamemodes and its DarkRP-style content go, and there is no Workshop subscription doing it for you.",
+                "Garry's Mod mounts every addon it finds, so a sandbox's load order decides only which file wins a collision. Two addons overwriting each other's Lua is reported rather than merged."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "4000"
+            ],
+            "names": [
+                "Garry's Mod",
+                "GarrysMod"
+            ],
+            "markers": [
+                "garrysmod/gameinfo.txt",
+                "hl2.exe",
+                "gmod.exe"
+            ],
+            "paths": {}
+        },
+        "presets": [
+            {
+                "id": "client",
+                "label": "Client",
+                "description": "Addons for playing.",
+                "environment": "client"
+            },
+            {
+                "id": "server",
+                "label": "Dedicated server",
+                "description": "Gamemodes and content for a server you run.",
+                "environment": "server",
+                "strategy": "direct",
+                "options": {
+                    "maxPlayers": 32,
+                    "tickRate": 66
+                }
+            }
+        ],
+        "options": [
+            {
+                "key": "maxPlayers",
+                "label": "Player slots",
+                "type": "int",
+                "min": 1,
+                "max": 128,
+                "default": 32,
+                "unit": "players",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "tickRate",
+                "label": "Tick rate",
+                "description": "How many times a second the server simulates. Above 66 costs CPU for diminishing returns on most gamemodes.",
+                "type": "int",
+                "min": 33,
+                "max": 128,
+                "default": 66,
+                "unit": "tick",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "gamemode",
+                "label": "Gamemode",
+                "type": "text",
+                "description": "The folder name under garrysmod/gamemodes. Empty means sandbox.",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "map",
+                "label": "Starting map",
+                "type": "text",
+                "default": "gm_construct"
+            },
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

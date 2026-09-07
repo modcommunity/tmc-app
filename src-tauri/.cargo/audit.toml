@@ -1,0 +1,59 @@
+# cargo-audit configuration. Read by `npm run audit:rust`.
+#
+# The point of this file is that the run is DENY-ON-WARNING. Without an
+# allow-list, `cargo audit` reports the same 17 advisories on every run and the
+# only sane reaction is to stop reading it — at which point a real advisory
+# arrives and nobody notices. With one, the command is silent until something
+# NEW appears, and a new advisory against a crate already listed here still
+# fails, because ignores are per advisory id and not per crate.
+#
+# Nothing here is a vulnerability. `cargo audit` reports zero of those across
+# 576 crates. Every entry is `unmaintained` or `unsound`, and every entry is
+# reachable only through Tauri's own dependency tree — none of them is a crate
+# this repo chose, and none can be moved without Tauri moving first.
+#
+# Re-check this list whenever Tauri is upgraded. An entry that no longer
+# appears should be deleted, not left as a comment.
+
+[advisories]
+ignore = [
+    # --- Tauri's Linux webview backend: the gtk-rs GTK3 bindings -------------
+    #
+    # tauri -> muda/wry -> gtk 0.18 -> the rest. The gtk-rs project retired its
+    # whole GTK3 binding set in 2024 in favour of GTK4; there is no patched
+    # version to move to, and no way to drop them while Tauri's Linux target is
+    # WebKitGTK. They are also Linux-only, so they are not in the Windows,
+    # macOS, Android or iOS builds at all.
+    "RUSTSEC-2024-0413", # atk
+    "RUSTSEC-2024-0416", # atk-sys
+    "RUSTSEC-2024-0412", # gdk
+    "RUSTSEC-2024-0418", # gdk-sys
+    "RUSTSEC-2024-0411", # gdkwayland-sys
+    "RUSTSEC-2024-0417", # gdkx11
+    "RUSTSEC-2024-0414", # gdkx11-sys
+    "RUSTSEC-2024-0415", # gtk
+    "RUSTSEC-2024-0420", # gtk-sys
+    "RUSTSEC-2024-0419", # gtk3-macros
+
+    # glib 0.18.5, same tree. `unsound`, not `unmaintained`: the iterator impls
+    # for `VariantStrIter` are unsound. This app never constructs a
+    # `glib::Variant` — the only reachable use is inside GTK itself.
+    "RUSTSEC-2024-0429", # glib
+
+    # proc-macro-error 1.0.4, pulled in by glib-macros from the same tree. A
+    # build-time proc macro: it runs on the machine doing the compiling and no
+    # part of it is linked into a shipped binary.
+    "RUSTSEC-2024-0370", # proc-macro-error
+
+    # --- Tauri's build script: urlpattern -> unic-* -------------------------
+    #
+    # tauri-build -> tauri-utils -> urlpattern 0.3 -> the unic crates, which
+    # were retired in 2025. Build-dependencies, like proc-macro-error above:
+    # they parse URL patterns out of tauri.conf.json at compile time and are
+    # not linked into the app.
+    "RUSTSEC-2025-0081", # unic-char-property
+    "RUSTSEC-2025-0075", # unic-char-range
+    "RUSTSEC-2025-0080", # unic-common
+    "RUSTSEC-2025-0100", # unic-ucd-ident
+    "RUSTSEC-2025-0098", # unic-ucd-version
+]

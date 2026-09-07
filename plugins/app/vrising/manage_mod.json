@@ -1,0 +1,63 @@
+{
+    "manifestVersion": 1,
+    "label": "V Rising BepInEx plugin (.dll)",
+    "description": "A loose plugin assembly, dropped into BepInEx/plugins where the loader scans for it. Nothing is extracted: these ship as one file.",
+    "match": {
+        "extensions": [
+            "dll"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "BepInEx/plugins",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "mkdir",
+                "path": {
+                    "root": "gameDir",
+                    "path": "BepInEx/plugins"
+                }
+            },
+            {
+                "action": "move",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "BepInEx/plugins/{fileName}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "BepInEx/plugins/{fileName}"
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "manifestVersion": 1,
+    "label": "Minecraft (bundled launcher)",
+    "description": "Starts the launcher that ships inside the game folder, pointed at this sandbox's own directory with --workDir. That flag is what makes a sandbox an instance: the launcher writes mods, config, saves and options.txt underneath it, so two sandboxes never share any of them.",
+
+    "permissions": {},
+
+    "launch": {
+        "exec": "minecraft-launcher",
+        "execPlatform": {
+            "windows": "MinecraftLauncher.exe",
+            "macos": "Minecraft.app/Contents/MacOS/launcher",
+            "linux": "minecraft-launcher"
+        },
+
+        "args": ["--workDir", "{installDir}", "--version", "{gameVersion}"],
+
+        "optionArgs": {
+            "width": ["--width", "{width}"],
+            "height": ["--height", "{height}"],
+            "windowMode": ["--{windowMode}"],
+            "memoryMb": ["--jvmArgs", "-Xmx{memoryMb}M"],
+            "minMemoryMb": ["--jvmArgs", "-Xms{minMemoryMb}M"]
+        },
+
+        "env": {
+            "TMC_INSTALL": "{installName}"
+        }
+    }
+}

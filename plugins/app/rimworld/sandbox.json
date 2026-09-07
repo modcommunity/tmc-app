@@ -1,0 +1,59 @@
+{
+    "manifestVersion": 1,
+    "label": "RimWorld sandboxes",
+    "description": "How RimWorld sandboxes deploy, and how to find the game on this machine. Paths: vortex.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "Mods"
+                }
+            ],
+            "notes": [
+                "Mods live in Mods, one folder each.",
+                "Load order is what RimWorld cares about most: a mod patching another has to come after it. The sandbox's order is the order they are written, so drag them into the order the mod pages tell you.",
+                "Hard links are the default: nothing is copied twice when two sandboxes share a mod, and every file is still a real file to the game."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "294100"
+            ],
+            "names": [
+                "RimWorld"
+            ],
+            "markers": [
+                "RimWorldWin64.exe",
+                "RimWorldLinux"
+            ]
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

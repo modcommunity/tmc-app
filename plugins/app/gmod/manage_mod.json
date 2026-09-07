@@ -1,0 +1,63 @@
+{
+    "manifestVersion": 1,
+    "label": "Garry's Mod addon (.gma)",
+    "description": "A packed addon, dropped into garrysmod/addons. Garry's Mod mounts a .gma without unpacking it, which is also what makes uninstalling a single file removal.",
+    "match": {
+        "extensions": [
+            "gma"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "garrysmod/addons",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "mkdir",
+                "path": {
+                    "root": "gameDir",
+                    "path": "garrysmod/addons"
+                }
+            },
+            {
+                "action": "move",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "garrysmod/addons/{fileName}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "garrysmod/addons/{fileName}"
+                }
+            }
+        ]
+    }
+}

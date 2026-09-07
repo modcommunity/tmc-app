@@ -1,0 +1,56 @@
+{
+    "manifestVersion": 1,
+    "label": "Rust server plugin bundle (.zip)",
+    "description": "A plugin that ships with its own data files or language files. Unpacked into oxide/plugins under a folder of its own; Oxide reads plugins from subdirectories too.",
+    "match": {
+        "extensions": [
+            "zip"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "oxide/plugins",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "extract",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "oxide/plugins/{itemId}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "oxide/plugins/{itemId}"
+                }
+            }
+        ]
+    }
+}

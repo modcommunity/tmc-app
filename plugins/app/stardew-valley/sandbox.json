@@ -1,0 +1,59 @@
+{
+    "manifestVersion": 1,
+    "label": "Stardew Valley sandboxes",
+    "description": "How Stardew Valley sandboxes deploy, and how to find the game on this machine. Paths: known.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "Mods"
+                }
+            ],
+            "notes": [
+                "Mods live in Mods, one folder each.",
+                "Every mod here is a folder with a manifest.json in it, loaded by SMAPI. SMAPI itself is not a mod and is not installed by this app \u2014 without it the Mods folder is never read.",
+                "Hard links are the default: nothing is copied twice when two sandboxes share a mod, and every file is still a real file to the game."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "413150"
+            ],
+            "names": [
+                "Stardew Valley"
+            ],
+            "markers": [
+                "Stardew Valley.exe",
+                "StardewValley"
+            ]
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

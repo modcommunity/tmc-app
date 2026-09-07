@@ -1,0 +1,59 @@
+{
+    "manifestVersion": 1,
+    "label": "The Witcher 3: Wild Hunt sandboxes",
+    "description": "How The Witcher 3: Wild Hunt sandboxes deploy, and how to find the game on this machine. Paths: vortex.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "Mods"
+                }
+            ],
+            "notes": [
+                "Mods live in Mods, one folder each.",
+                "Mods that add menu entries also need their .xml registering in bin/config/r4game/user_config_matrix/pc, and script mods usually need merging with the Script Merger. Neither is something a declarative rule can do \u2014 the files land correctly and the merge is still yours.",
+                "Hard links are the default: nothing is copied twice when two sandboxes share a mod, and every file is still a real file to the game."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "292030",
+                "499450"
+            ],
+            "names": [
+                "The Witcher 3: Wild Hunt"
+            ],
+            "markers": [
+                "bin/x64/witcher3.exe"
+            ]
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

@@ -1,0 +1,84 @@
+{
+    "manifestVersion": 1,
+    "label": "Valheim sandboxes",
+    "description": "How Valheim sandboxes deploy, and how to find the game on this machine.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "loader_plugin",
+                    "relPath": "BepInEx/plugins"
+                },
+                {
+                    "type": "loader_patcher",
+                    "relPath": "BepInEx/patchers"
+                },
+                {
+                    "type": "loader_config",
+                    "relPath": "BepInEx/config"
+                }
+            ],
+            "notes": [
+                "Valheim ships EasyAntiCheat and BepInEx cannot load with it running. Every Valheim modding guide's first step is the launcher's 'Start Game without EasyAntiCheat' option, and this app cannot do it for you \u2014 start the game that way once and the sandbox works from then on.",
+                "BepInEx itself is not a mod and this app does not install it. Unpack it into the game folder once \u2014 the sandbox's plugins go under the BepInEx/plugins folder it creates.",
+                "Hard links are the default: a plugin assembly is a real file to the loader, the game folder and the staging folder are almost always the same drive, and nothing has to be copied twice when two sandboxes share a plugin.",
+                "BepInEx writes each plugin's settings into BepInEx/config the first time it runs. Those files belong to the game folder rather than to the sandbox, so Settings \u2192 Game settings is where to edit them."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "892970"
+            ],
+            "names": [
+                "Valheim"
+            ],
+            "markers": [
+                "valheim.exe",
+                "valheim.x86_64",
+                "valheim_Data"
+            ],
+            "paths": {
+                "windows": [
+                    "<programFiles>/Steam/steamapps/common/Valheim"
+                ]
+            }
+        },
+        "presets": [
+            {
+                "id": "bepinex",
+                "label": "BepInEx",
+                "description": "The usual setup: plugins loaded by BepInEx at startup.",
+                "environment": "client",
+                "loader": "bepinex"
+            },
+            {
+                "id": "vanilla",
+                "label": "Vanilla",
+                "description": "No loader. Nothing is deployed, which is how you check whether a bug is yours.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "consoleLog",
+                "label": "Show the BepInEx console",
+                "description": "Opens the loader's console window alongside the game. The first thing to turn on when a plugin does not load.",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "description": "Passed verbatim. One argument per space; nothing here goes through a shell.",
+                "type": "text"
+            }
+        ]
+    }
+}

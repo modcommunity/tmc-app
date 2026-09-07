@@ -1,0 +1,51 @@
+{
+    "manifestVersion": 1,
+    "id": "com.example.minecraft-forge",
+    "name": "Minecraft (Forge) installer",
+    "version": "1.0.0",
+    "author": "Example Author",
+    "description": "Drops a mod's jar into the Forge mods folder and registers it for uninstall.",
+    "apps": [1],
+
+    "permissions": {
+        "fs": [
+            { "root": "downloads", "path": "tmc", "write": true },
+            { "root": "gameDir", "path": "mods", "write": true },
+            { "root": "pluginData", "path": "", "write": true }
+        ],
+        "net": ["moddingcommunity.com", "*.moddingcommunity.com"]
+    },
+
+    "installer": {
+        "kinds": ["mod"],
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": { "root": "downloads", "path": "tmc/{id}.jar" },
+                "maxBytes": 268435456
+            },
+            {
+                "action": "copy",
+                "from": { "root": "downloads", "path": "tmc/{id}.jar" },
+                "to": { "root": "gameDir", "path": "mods/{id}-{version}.jar" }
+            },
+            {
+                "action": "patchJson",
+                "path": { "root": "pluginData", "path": "installed.json" },
+                "pointer": "/mods/{id}",
+                "value": { "managed": true }
+            },
+            {
+                "action": "remove",
+                "path": { "root": "downloads", "path": "tmc/{id}.jar" }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": { "root": "gameDir", "path": "mods/{id}-{version}.jar" }
+            }
+        ]
+    }
+}

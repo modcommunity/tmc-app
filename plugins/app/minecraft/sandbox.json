@@ -1,0 +1,169 @@
+{
+    "manifestVersion": 1,
+    "label": "Minecraft sandboxes",
+    "description": "How Minecraft sandboxes deploy, the presets they can be created from, and the settings its launch rule understands.",
+
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "direct",
+            "supportedStrategies": ["direct", "hardlink", "symlink"],
+
+            "modTargets": [
+                { "type": "loader_mod", "relPath": "mods" },
+                { "type": "resource_pack", "relPath": "resourcepacks" },
+                { "type": "shader_pack", "relPath": "shaderpacks" },
+                { "type": "data_pack", "relPath": "datapacks" },
+                { "type": "loader_config", "relPath": "config" }
+            ],
+
+            "notes": [
+                "Each sandbox is a self-contained INSTANCE, the way CurseForge, Prism and MultiMC do it: give it its own game folder and it gets its own mods, config, saves, resourcepacks and options.txt. Nothing is shared with your vanilla .minecraft, so a modpack cannot corrupt a world you care about and two packs on different Minecraft versions cannot fight over one config folder.",
+                "Copying is the default for the same reason those launchers copy. A Minecraft instance is a directory the launcher is pointed at with --workDir, and everything inside it is expected to be a real file: loaders resolve paths, some mods rewrite their own jar on first run, and Windows refuses to create a symbolic link at all unless Developer Mode is on. Mod jars are small; correctness is worth the megabytes.",
+                "Switch to hard links if you keep several packs that share many of the same mods and the staging folder is on the same drive as the instance. They cost nothing on disk and behave like real files. Symbolic links are the last option: they work, but a mod that rewrites its own jar writes back into staging, where the next sandbox to use that mod will find it.",
+                "Point the sandbox at a NEW empty folder rather than at your existing .minecraft. That is what makes it an instance rather than a redecoration of the install you already have.",
+                "A client sandbox and a server sandbox need different builds of the same mod. Set the environment on the sandbox and the browser will only offer you mods that run on that side."
+            ]
+        },
+
+        "detect": {
+            "names": ["Minecraft", "Minecraft Launcher", "Minecraft: Java Edition"],
+            "paths": {
+                "windows": [
+                    "<appData>/.minecraft",
+                    "<localAppData>/Packages/Microsoft.4297127D64EC6_8wekyb3d8bbwe/LocalCache/Local/games/com.mojang",
+                    "<appData>/PrismLauncher/instances",
+                    "<appData>/ATLauncher/instances",
+                    "<localAppData>/Programs/curseforge",
+                    "<appData>/gdlauncher_next/instances"
+                ],
+                "linux": [
+                    "~/.minecraft",
+                    "~/.var/app/com.mojang.Minecraft/.minecraft",
+                    "~/snap/mc-installer/current/.minecraft",
+                    "~/.local/share/PrismLauncher/instances",
+                    "~/.local/share/multimc/instances"
+                ],
+                "macos": [
+                    "~/Library/Application Support/minecraft",
+                    "~/Library/Application Support/PrismLauncher/instances"
+                ]
+            }
+        },
+
+        "presets": [
+            {
+                "id": "vanilla",
+                "label": "Vanilla",
+                "description": "No loader. Resource packs and shaders only.",
+                "environment": "client",
+                "options": { "memoryMb": 2048, "minMemoryMb": 512 }
+            },
+            {
+                "id": "fabric-latest",
+                "label": "Fabric",
+                "description": "The lightweight loader most performance mods target.",
+                "environment": "client",
+                "loader": "fabric",
+                "options": { "memoryMb": 4096, "minMemoryMb": 1024 }
+            },
+            {
+                "id": "quilt-latest",
+                "label": "Quilt",
+                "description": "Fabric-compatible, with its own module system.",
+                "environment": "client",
+                "loader": "quilt",
+                "options": { "memoryMb": 4096, "minMemoryMb": 1024 }
+            },
+            {
+                "id": "forge-latest",
+                "label": "Forge",
+                "description": "The long-running loader most large modpacks are built on.",
+                "environment": "client",
+                "loader": "forge",
+                "options": { "memoryMb": 6144, "minMemoryMb": 2048 }
+            },
+            {
+                "id": "neoforge-latest",
+                "label": "NeoForge",
+                "description": "Forge's successor, for 1.20.2 and later.",
+                "environment": "client",
+                "loader": "neoforge",
+                "options": { "memoryMb": 6144, "minMemoryMb": 2048 }
+            },
+            {
+                "id": "neoforge-server",
+                "label": "NeoForge dedicated server",
+                "description": "A server sandbox. Client-only mods are hidden from it.",
+                "environment": "server",
+                "loader": "neoforge",
+                "strategy": "direct",
+                "options": { "memoryMb": 8192, "minMemoryMb": 8192, "nogui": true }
+            }
+        ],
+
+        "options": [
+            {
+                "key": "memoryMb",
+                "label": "Maximum memory",
+                "description": "The most heap the JVM may use (-Xmx). More is not always better — the garbage collector has to walk all of it, and a 16 GB heap stutters where a 6 GB one does not. 4 GB runs most packs; 6-8 GB is for the 300-mod ones.",
+                "type": "int",
+                "min": 512,
+                "max": 65536,
+                "step": 512,
+                "default": 4096,
+                "unit": "MB"
+            },
+            {
+                "key": "minMemoryMb",
+                "label": "Starting memory",
+                "description": "The heap the JVM starts with (-Xms). Setting it equal to the maximum avoids the pauses that come from growing the heap mid-game, at the cost of the memory being committed the whole session.",
+                "type": "int",
+                "min": 256,
+                "max": 65536,
+                "step": 256,
+                "default": 1024,
+                "unit": "MB"
+            },
+            {
+                "key": "jvmArgs",
+                "label": "Additional JVM arguments",
+                "description": "Passed verbatim, before the game's own. One argument per space; nothing here goes through a shell.",
+                "type": "text"
+            },
+            {
+                "key": "gameArgs",
+                "label": "Additional game arguments",
+                "type": "text"
+            },
+            {
+                "key": "javaPath",
+                "label": "Java version",
+                "description": "Which of the launcher's bundled runtimes to use.",
+                "type": "select",
+                "choices": [
+                    { "value": "auto", "label": "Chosen by the launcher" },
+                    { "value": "17", "label": "Java 17" },
+                    { "value": "21", "label": "Java 21" }
+                ],
+                "default": "auto"
+            },
+            {
+                "key": "nogui",
+                "label": "No server GUI",
+                "description": "Run the dedicated server headless. Saves a few hundred megabytes.",
+                "type": "bool",
+                "default": true,
+                "environments": ["server"]
+            },
+            {
+                "key": "maxPlayers",
+                "label": "Player slots",
+                "type": "int",
+                "min": 1,
+                "max": 1000,
+                "unit": "players",
+                "environments": ["server"]
+            }
+        ]
+    }
+}

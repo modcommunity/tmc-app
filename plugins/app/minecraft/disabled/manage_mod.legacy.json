@@ -1,0 +1,38 @@
+{
+    "manifestVersion": 1,
+    "label": "Minecraft mod (legacy .zip, pre-1.6)",
+    "description": "Kept as a demonstration of the disable mechanism: this file is inside `disabled/`, so the loader skips it entirely — at any depth, without reading it. Moving it one directory up is all it takes to bring it back, which is the point of using a directory rather than a flag inside the file.",
+
+    "match": {
+        "extensions": ["zip"]
+    },
+
+    "permissions": {
+        "fs": [
+            { "root": "pluginData", "path": "", "write": true },
+            { "root": "gameDir", "path": "mods", "write": true }
+        ],
+        "net": ["moddingcommunity.com"]
+    },
+
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": { "root": "pluginData", "path": "staging/{itemId}/{fileName}" }
+            },
+            {
+                "action": "move",
+                "from": { "root": "pluginData", "path": "staging/{itemId}/{fileName}" },
+                "to": { "root": "gameDir", "path": "mods/{fileName}" }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": { "root": "gameDir", "path": "mods/{fileName}" }
+            }
+        ]
+    }
+}

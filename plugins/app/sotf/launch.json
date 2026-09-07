@@ -1,0 +1,9 @@
+{
+    "manifestVersion": 1,
+    "label": "Sons of the Forest (Steam)",
+    "description": "Hands off to Steam rather than starting the executable directly, so the overlay, the controller configuration and cloud saves all behave as they normally would.",
+    "permissions": {},
+    "launch": {
+        "uri": "steam://rungameid/1326470"
+    }
+}

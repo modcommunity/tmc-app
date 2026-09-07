@@ -1,0 +1,8 @@
+{
+    "manifestVersion": 1,
+    "label": "7 Days to Die (Steam)",
+    "permissions": {},
+    "launch": {
+        "uri": "steam://rungameid/251570"
+    }
+}

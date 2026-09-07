@@ -1,0 +1,35 @@
+{
+    "manifestVersion": 1,
+    "label": "Minecraft settings files",
+    "description": "Where Minecraft and its mod loaders keep the files a player edits by hand.",
+
+    "config": {
+        "locations": [
+            {
+                "label": "Mod settings",
+                "root": "gameDir",
+                "path": "config",
+                "extensions": ["toml", "json", "json5", "cfg", "properties"],
+                "recursive": true
+            },
+            {
+                "label": "Game options",
+                "root": "gameDir",
+                "path": "",
+                "files": ["options.txt", "servers.dat", "optionsof.txt"]
+            },
+            {
+                "label": "Server settings",
+                "root": "gameDir",
+                "path": "",
+                "files": [
+                    "server.properties",
+                    "ops.json",
+                    "whitelist.json",
+                    "banned-players.json",
+                    "banned-ips.json"
+                ]
+            }
+        ]
+    }
+}

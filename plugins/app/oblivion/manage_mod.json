@@ -1,0 +1,67 @@
+{
+    "manifestVersion": 1,
+    "label": "The Elder Scrolls IV: Oblivion plugin file",
+    "description": "A single plugin or archive file, straight into Data. This is the shape a small mod ships in \u2014 one .esp, or one .bsa beside it.",
+    "match": {
+        "extensions": [
+            "esp",
+            "esm",
+            "esl",
+            "bsa",
+            "ba2"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "Data",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "mkdir",
+                "path": {
+                    "root": "gameDir",
+                    "path": "Data"
+                }
+            },
+            {
+                "action": "move",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "Data/{fileName}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "Data/{fileName}"
+                }
+            }
+        ]
+    }
+}

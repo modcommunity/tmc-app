@@ -1,0 +1,65 @@
+{
+    "manifestVersion": 1,
+    "label": "Fallout 4 mod archive (.zip)",
+    "description": "Unpacked FLAT into Data, because that is the layout the archive already has \u2014 a Nexus mod's zip contains meshes/, textures/ and its .esp at the top level, and the game reads them from exactly those paths. There is no folder-per-mod to retreat to: the engine would simply not find anything inside one. What makes uninstalling precise instead is the executor's journal, which records every file the extract wrote.",
+    "match": {
+        "extensions": [
+            "zip",
+            "7z",
+            "rar"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "Data",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "mkdir",
+                "path": {
+                    "root": "gameDir",
+                    "path": "Data"
+                }
+            },
+            {
+                "action": "extract",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "Data"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}"
+                }
+            }
+        ]
+    }
+}

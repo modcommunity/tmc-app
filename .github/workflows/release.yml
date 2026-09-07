@@ -1,0 +1,125 @@
+# Cut a release: build on every desktop platform, then publish one GitHub
+# release with checksums.
+#
+# This is the ONLY path that produces a macOS build. Windows and Linux both
+# cross-build from a Linux box (`scripts/build-windows.sh`), and that is the
+# fast local loop — but macOS needs the Apple SDK, and a .app that has not been
+# signed and notarised on a real macOS runner is one Gatekeeper refuses to open
+# without a right-click dance. See docs/BUILDING.md.
+name: release
+
+on:
+    push:
+        tags: ['v*']
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: 'Tag to build and publish (e.g. v0.2.0)'
+                required: true
+
+permissions:
+    contents: write
+    packages: read
+
+jobs:
+    build:
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - os: ubuntu-22.04
+                      name: linux
+                      args: '--bundles appimage,deb'
+                    - os: windows-latest
+                      name: windows
+                      args: '--bundles nsis,msi'
+                    # Both architectures in one binary — an Apple Silicon-only
+                    # build is a support ticket from every 2019 MacBook.
+                    - os: macos-latest
+                      name: macos
+                      args: '--target universal-apple-darwin --bundles dmg,app'
+        runs-on: ${{ matrix.os }}
+        steps:
+            # A manual run names the tag to build; without this it would build
+            # the default branch and publish the result under that tag.
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event.inputs.tag || github.ref }}
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  registry-url: https://npm.pkg.github.com
+                  scope: '@modcommunity'
+
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: ${{ matrix.name == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: src-tauri
+
+            - name: Linux build dependencies
+              if: matrix.name == 'linux'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends \
+                    libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev \
+                    libsoup-3.0-dev libgtk-3-dev libdbus-1-dev \
+                    librsvg2-dev libxdo-dev patchelf file
+
+            # `@modcommunity/shared` lives in GitHub Packages. GITHUB_TOKEN can
+            # read it when the package grants this repository access; where it
+            # does not, PACKAGES_TOKEN is a PAT with `read:packages`.
+            - name: Install
+              run: npm ci
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+
+            - name: Build
+              run: npx tauri build ${{ matrix.args }}
+
+            - name: Collect
+              shell: bash
+              run: |
+                  mkdir -p out
+                  find src-tauri/target -type f \
+                    \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
+                       -o -name '*-setup.exe' -o -name '*.msi' -o -name '*.dmg' \) \
+                    -exec cp {} out/ \;
+                  ls -la out
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ matrix.name }}
+                  path: out/*
+                  if-no-files-found: error
+
+    publish:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event.inputs.tag || github.ref }}
+            - uses: actions/download-artifact@v4
+              with:
+                  path: artifacts
+                  merge-multiple: true
+
+            # checksums.txt is not decoration: `scripts/install.sh` REFUSES to
+            # install without it, so a release published without this step is a
+            # release the one-line installer will not touch.
+            - name: Checksums
+              working-directory: artifacts
+              run: sha256sum * > checksums.txt && cat checksums.txt
+
+            - name: Publish
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+              run: |
+                  gh release create "$TAG" --title "TMC $TAG" --generate-notes --draft=false \
+                    || echo "release already exists, uploading into it"
+                  gh release upload "$TAG" artifacts/* --clobber

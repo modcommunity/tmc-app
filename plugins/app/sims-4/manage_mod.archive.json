@@ -1,0 +1,57 @@
+{
+    "manifestVersion": 1,
+    "label": "The Sims 4 mod package (.zip)",
+    "description": "A packaged mod, unpacked into a folder of its own under Mods. One folder deep is deliberate: it is what the game's default scan depth reaches, and it keeps a mod's files together so removing one is a single directory removal.",
+    "match": {
+        "extensions": [
+            "zip",
+            "7z"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "Mods",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "extract",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "Mods/{itemId}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "Mods/{itemId}"
+                }
+            }
+        ]
+    }
+}

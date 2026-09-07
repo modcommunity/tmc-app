@@ -1,0 +1,8 @@
+{
+    "manifestVersion": 1,
+    "label": "Team Fortress 2 (Steam)",
+    "permissions": {},
+    "launch": {
+        "uri": "steam://rungameid/440"
+    }
+}

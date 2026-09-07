@@ -1,0 +1,65 @@
+# The second GTA V mod rule — Lua and .NET scripts, which go into `scripts/`
+# rather than beside the executable.
+#
+# TWO RULES, ONE KIND. The loader picks between them by SPECIFICITY: both
+# declare an `extensions` condition of the same length, so the tie is broken by
+# path and the answer is stable. What actually separates them is that their
+# extension lists are disjoint — `.asi` never matches this one and `.lua` never
+# matches the other.
+#
+# Note the narrower grant: this rule can only write inside `scripts/`, while the
+# ASI rule needs the game root. Two rules is what makes that possible; one rule
+# covering both would have to ask for the wider of the two.
+manifestVersion: 1
+label: GTA V script (.lua / .cs)
+description: >-
+  Places a single Lua or ScriptHookVDotNet script into scripts/. The archive
+  form — several files that all have to land together — is a separate rule, see
+  manage_mod.archive.yaml.
+
+match:
+  extensions:
+    - lua
+    - cs
+
+permissions:
+  fs:
+    - root: pluginData
+      path: ""
+      write: true
+    - root: gameDir
+      path: scripts
+      write: true
+  net:
+    - moddingcommunity.com
+    - "*.moddingcommunity.com"
+
+manage:
+  install:
+    - action: download
+      url: "{fileUrl}"
+      to:
+        root: pluginData
+        path: "staging/{itemId}/{fileName}"
+
+    - action: mkdir
+      path:
+        root: gameDir
+        path: scripts
+
+    # A single file moves; an archive is extracted. There are no conditionals
+    # in a rule — by design — so the two cases are two files, selected by their
+    # extension lists.
+    - action: move
+      from:
+        root: pluginData
+        path: "staging/{itemId}/{fileName}"
+      to:
+        root: gameDir
+        path: "scripts/{fileName}"
+
+  uninstall:
+    - action: remove
+      path:
+        root: gameDir
+        path: "scripts/{fileName}"

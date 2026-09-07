@@ -1,0 +1,62 @@
+{
+    "manifestVersion": 1,
+    "label": "The Sims 3 sandboxes",
+    "description": "How The Sims 3 sandboxes deploy, and how to find the game on this machine. Paths: vortex.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "direct",
+            "supportedStrategies": [
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "Mods/Packages"
+                }
+            ],
+            "notes": [
+                "Point this sandbox at Documents/Electronic Arts/The Sims 3, not at the install folder.",
+                "The Sims 3 will not read Mods/Packages until a Resource.cfg exists beside it. The game does not create one; the framework install from ModTheSims does. Without it the folder fills up and nothing appears in game.",
+                "Copying is the default here and the link strategies are not offered. This folder is in your documents and is very often on a different drive from the app's staging folder, which is the one case a hard link cannot cross."
+            ]
+        },
+        "detect": {
+            "names": [
+                "The Sims 3"
+            ],
+            "markers": [
+                "Options.ini",
+                "Mods"
+            ],
+            "paths": {
+                "windows": [
+                    "~/Documents/Electronic Arts/The Sims 3"
+                ],
+                "macos": [
+                    "~/Documents/Electronic Arts/The Sims 3"
+                ]
+            }
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

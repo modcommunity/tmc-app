@@ -1,0 +1,57 @@
+{
+    "manifestVersion": 1,
+    "label": "Mount & Blade II: Bannerlord sandboxes",
+    "description": "How Mount & Blade II: Bannerlord sandboxes deploy, and how to find the game on this machine. Paths: vortex.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "Modules"
+                }
+            ],
+            "notes": [
+                "Mods live in Modules, one folder each.",
+                "Hard links are the default: nothing is copied twice when two sandboxes share a mod, and every file is still a real file to the game."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "261550"
+            ],
+            "names": [
+                "Mount & Blade II: Bannerlord"
+            ],
+            "markers": [
+                "bin/Win64_Shipping_Client/Bannerlord.exe"
+            ]
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

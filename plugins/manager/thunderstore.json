@@ -1,0 +1,34 @@
+{
+    "manifestVersion": 1,
+    "manager": {
+        "id": "thunderstore",
+        "label": "Thunderstore Mod Manager",
+        "homepage": "https://www.overwolf.com/app/Thunderstore-Thunderstore_Mod_Manager",
+        "notes": [
+            "The Overwolf build of r2modman. Same profile layout, different folder — both are listed separately because a machine can have both.",
+            "Nothing is moved: the mods stay in Thunderstore Mod Manager and this app takes a copy."
+        ],
+        "roots": [
+            { "base": "config", "path": "Thunderstore Mod Manager/DataFolder" }
+        ],
+        "layout": {
+            "modsPath": "{game}/profiles/*/BepInEx/plugins",
+            "entry": "directory",
+            "ignore": ["_state", "MMHOOK"]
+        },
+        "games": [
+            { "dir": "Valheim", "slug": "valheim", "relPath": "BepInEx/plugins" },
+            { "dir": "V Rising", "slug": "vrising", "relPath": "BepInEx/plugins" },
+            { "dir": "VRising", "slug": "vrising", "relPath": "BepInEx/plugins" },
+            { "dir": "Sons Of The Forest", "slug": "sotf", "relPath": "BepInEx/plugins" },
+            { "dir": "SonsOfTheForest", "slug": "sotf", "relPath": "BepInEx/plugins" }
+        ],
+        "metadata": {
+            "file": "manifest.json",
+            "name": "/name",
+            "version": "/version_number",
+            "author": "/author",
+            "website": "/website_url"
+        }
+    }
+}

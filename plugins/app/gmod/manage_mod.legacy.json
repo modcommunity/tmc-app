@@ -1,0 +1,56 @@
+{
+    "manifestVersion": 1,
+    "label": "Garry's Mod legacy addon (.zip)",
+    "description": "The unpacked form: an addon folder containing lua/, materials/ and an addon.txt. It goes into a folder of its own so uninstalling does not have to work out which loose Lua file came from where.",
+    "match": {
+        "extensions": [
+            "zip"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "garrysmod/addons",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "extract",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "garrysmod/addons/{itemId}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "garrysmod/addons/{itemId}"
+                }
+            }
+        ]
+    }
+}

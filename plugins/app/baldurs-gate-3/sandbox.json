@@ -1,0 +1,65 @@
+{
+    "manifestVersion": 1,
+    "label": "Baldur's Gate 3 sandboxes",
+    "description": "How Baldur's Gate 3 sandboxes deploy, and how to find the game on this machine. Paths: known.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "direct",
+            "supportedStrategies": [
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "game_mod",
+                    "relPath": "Mods"
+                }
+            ],
+            "notes": [
+                "Point this sandbox at the Larian Studios/Baldur's Gate 3 folder in your local app data, not at the install. That is where .pak mods go.",
+                "A .pak in the folder is only half of it: modsettings.lsx has to list the mod as well, in the same order. Nothing here edits that file \u2014 use BG3 Mod Manager for the load order and this app for the files.",
+                "Copying is the default here and the link strategies are not offered. This folder is in your documents and is very often on a different drive from the app's staging folder, which is the one case a hard link cannot cross."
+            ]
+        },
+        "detect": {
+            "names": [
+                "Baldur's Gate 3"
+            ],
+            "markers": [
+                "Mods",
+                "PlayerProfiles"
+            ],
+            "paths": {
+                "windows": [
+                    "<localAppData>/Larian Studios/Baldur's Gate 3"
+                ],
+                "macos": [
+                    "~/Documents/Larian Studios/Baldur's Gate 3"
+                ],
+                "linux": [
+                    "~/.local/share/Larian Studios/Baldur's Gate 3"
+                ]
+            }
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

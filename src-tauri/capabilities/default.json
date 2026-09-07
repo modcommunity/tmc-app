@@ -1,10 +1,25 @@
 {
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "opener:default"
-  ]
+    "$schema": "../gen/schemas/desktop-schema.json",
+    "identifier": "default",
+    "description": "The main window. Deliberately minimal: every privileged operation goes through this crate's own commands, which enforce their own policy, rather than through a Tauri plugin the webview can call directly.",
+    "windows": ["main"],
+    "permissions": [
+        "core:default",
+        "core:window:allow-start-dragging",
+        "core:window:allow-start-resize-dragging",
+        "core:window:allow-minimize",
+        "core:window:allow-toggle-maximize",
+        "core:window:allow-is-maximized",
+        "core:window:allow-close",
+
+        "os:allow-os-type",
+        "os:allow-platform",
+        "os:allow-version",
+        {
+            "identifier": "opener:allow-open-url",
+            "allow": [
+                { "url": "https://*" }
+            ]
+        }
+    ]
 }

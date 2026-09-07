@@ -1,0 +1,24 @@
+{
+    "manifestVersion": 1,
+    "manager": {
+        "id": "curseforge",
+        "label": "CurseForge",
+        "homepage": "https://www.curseforge.com/download/app",
+        "notes": [
+            "Reads the jars in each CurseForge instance's mods folder. One entry per instance, so a modpack imports as the set of mods it actually installed.",
+            "If you changed CurseForge's install folder, this finds nothing — drop a descriptor naming your folder in the app's plugins/manager folder.",
+            "CurseForge's API needs a key issued per application and does not answer 'what has this user installed', so this reads the instance folders instead. They are the authority anyway."
+        ],
+        "roots": [
+            { "base": "home", "path": "curseforge" },
+            { "base": "documents", "path": "curseforge" }
+        ],
+        "layout": {
+            "modsPath": "{game}/Instances/*/mods",
+            "entry": "archive"
+        },
+        "games": [
+            { "dir": "minecraft", "slug": "minecraft", "relPath": "mods" }
+        ]
+    }
+}

@@ -1,0 +1,130 @@
+[package]
+name = "tmc-core"
+version = "0.1.0"
+description = "Platform-independent core for the TMC app: API client, auth, plugin sandbox and game-server query protocols"
+authors = ["The Modding Community"]
+edition = "2021"
+# 1.82 for `Option::is_none_or`, used in the log filter and the query parsers'
+# bounds checks.
+rust-version = "1.82"
+license = "GPL-3.0-only"
+
+[features]
+# The OS credential store. ON in the app; OFF for `cargo test -p tmc-core`,
+# because `keyring` pulls `libdbus-sys` on Linux and that needs a dev package
+# the security tests have no business requiring. Without it `SecureStore` uses
+# its private-directory fallback, which is the same code path mobile takes.
+default = []
+os-keyring = ["dep:keyring"]
+
+# Virtual-filesystem deployment, the strategy that leaves the game folder
+# byte-identical. OFF, and see `tmc-usvfs`'s header for exactly why: the tree
+# and the blob format are tested everywhere, but the halves that patch an import
+# table and inject a DLL into somebody else's game process have only ever been
+# type-checked against the Windows target. Turning this on is what makes
+# `Strategy::Usvfs` deployable rather than a documented refusal.
+#
+# It gates behaviour, not compilation: the crate is a dependency either way, so
+# `Strategy::Usvfs` builds the same virtual tree and reports the same
+# availability on every platform whether or not the feature is on.
+usvfs-hooks = []
+
+[dependencies]
+# The virtual tree and its blob format. No Windows-only code is reachable from
+# here — `hooks` and `inject` are `#[cfg(windows)]` inside that crate — so this
+# dependency costs a BTreeMap and a serde impl on the four platforms that will
+# never use it.
+tmc-usvfs = { path = "../usvfs" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+# rustls rather than the platform TLS stack: one certificate verifier on every
+# target, including Android, where native-tls drags in the NDK's OpenSSL.
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+    "stream",
+    "gzip",
+] }
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "time",
+    "fs",
+    "io-util",
+    "sync",
+] }
+futures-util = "0.3"
+
+# PKCE, download checksums, plugin manifest pinning.
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+hex = "0.4"
+
+url = "2"
+time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
+
+# The device-local library: which subscriptions are materialised, at which
+# version, where. SQLite rather than a JSON file because the sync loop reads and
+# writes it on a timer while the UI reads it on every render, and a whole-file
+# rewrite loses one of those to the other. `bundled` so there is no libsqlite3
+# on the target — Android in particular ships one we may not link against.
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# YAML for app-scoped plugins, alongside JSON. Both are supported because a
+# plugin is hand-authored and YAML is what people reach for when a manifest has
+# more than a handful of steps. `serde_yaml_ng` is the maintained fork of the
+# now-archived `serde_yaml`, with the same API.
+serde_yaml_ng = "0.10"
+
+# Archive readers for installer plugins. Both are pure Rust; neither is allowed
+# to write outside a jail (see `plugins::sandbox`).
+zip = { version = "2", default-features = false, features = ["deflate", "bzip2"] }
+
+# A2S's compressed split replies. Both already build as part of `zip`; naming
+# them here is what makes `net::query::a2s` allowed to use them directly rather
+# than reaching through a dependency's re-exports.
+bzip2 = "0.5"
+crc32fast = "1"
+tar = "0.4"
+flate2 = "1"
+
+tracing = "0.1"
+chacha20poly1305 = "0.10"
+md-5 = "0.10"
+# Plugin signatures. No `rand` feature: nothing here GENERATES a key — this
+# side only ever verifies — and the tests derive theirs from fixed bytes, which
+# is what makes them deterministic.
+ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
+
+# Stopping a running game. `Sessions::stop` signals by pid rather than through
+# `Child::kill`, because the supervisor thread holds the `&mut Child` for the
+# whole of its `wait` — see the comment there for why that is sound in exactly
+# that position.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+] }
+
+[target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
+keyring = { version = "3", features = [
+    "apple-native",
+    "windows-native",
+    "sync-secret-service",
+], optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+# Key generation for `examples/plugin-sign`. A dev-dependency on purpose: the
+# shipped crate only ever VERIFIES, and nothing in it should be able to mint a
+# signing key.
+getrandom = "0.2"
+tokio = { version = "1", features = ["rt", "macros", "test-util"] }

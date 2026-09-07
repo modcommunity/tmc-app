@@ -1,0 +1,11 @@
+{
+    "manifestVersion": 1,
+    "label": "GTA V (Steam)",
+    "description": "Hands off to the Steam client rather than starting the executable directly — GTA V refuses to run without it, and going through Steam is also what gives the user their overlay, their controller config and their cloud saves.",
+
+    "permissions": {},
+
+    "launch": {
+        "uri": "steam://rungameid/271590"
+    }
+}

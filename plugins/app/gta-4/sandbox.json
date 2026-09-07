@@ -1,0 +1,61 @@
+{
+    "manifestVersion": 1,
+    "label": "Grand Theft Auto IV sandboxes",
+    "description": "How Grand Theft Auto IV sandboxes deploy, and how to find the game on this machine. Paths: known.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "direct",
+            "supportedStrategies": [
+                "direct",
+                "hardlink"
+            ],
+            "modTargets": [
+                {
+                    "type": "native_plugin",
+                    "relPath": ""
+                },
+                {
+                    "type": "script",
+                    "relPath": "scripts"
+                }
+            ],
+            "notes": [
+                "GTA IV has no modloader equivalent, so script mods go loose in the game root and into scripts/. That is a wide grant and it is why this rule is worth reading before approving.",
+                "Direct copying is the default. These games are old enough that their loaders stat files in ways links have been reported to confuse, and the folders are small."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "12210"
+            ],
+            "names": [
+                "Grand Theft Auto IV"
+            ],
+            "markers": [
+                "GTAIV.exe",
+                "EFLC.exe"
+            ]
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

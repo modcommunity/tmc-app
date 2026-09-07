@@ -1,0 +1,66 @@
+{
+    "manifestVersion": 1,
+    "label": "Grand Theft Auto III CLEO script (.zip)",
+    "description": "A CLEO script package, unpacked into CLEO/ under a folder of its own.",
+    "match": {
+        "extensions": [
+            "zip"
+        ],
+        "nameContains": [
+            "cleo"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "CLEO",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "mkdir",
+                "path": {
+                    "root": "gameDir",
+                    "path": "CLEO"
+                }
+            },
+            {
+                "action": "extract",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "CLEO/{itemId}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "CLEO/{itemId}"
+                }
+            }
+        ]
+    }
+}

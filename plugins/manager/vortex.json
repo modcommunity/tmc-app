@@ -1,0 +1,31 @@
+{
+    "manifestVersion": 1,
+    "manager": {
+        "id": "vortex",
+        "label": "Vortex",
+        "homepage": "https://www.nexusmods.com/about/vortex/",
+        "notes": [
+            "Reads Vortex's own staging folders — the copies it keeps, not the ones it has deployed into your game. That is deliberate: a deployed file is a link back to the staging copy, and importing the link would leave Vortex's own copy behind.",
+            "Vortex is not touched. Its mods stay installed and deployed exactly as they are.",
+            "Vortex names its game folders with its own ids. If a game you have is missing, correcting the id in a dropped descriptor is the whole fix.",
+            "Nexus's API is per-user and Vortex has no remote API, so everything here comes from what is already on this machine."
+        ],
+        "roots": [
+            { "base": "appData", "path": "Vortex" }
+        ],
+        "layout": {
+            "modsPath": "{game}/mods",
+            "entry": "directory",
+            "ignore": ["__vortex_staging_folder", "downloads"]
+        },
+        "games": [
+            { "dir": "valheim", "slug": "valheim", "relPath": "BepInEx/plugins" },
+            { "dir": "vrising", "slug": "vrising", "relPath": "BepInEx/plugins" },
+            { "dir": "sonsoftheforest", "slug": "sotf", "relPath": "BepInEx/plugins" },
+            { "dir": "7daystodie", "slug": "7-days-to-die", "relPath": "Mods" },
+            { "dir": "gta5", "slug": "gtav" },
+            { "dir": "garrysmod", "slug": "gmod", "relPath": "garrysmod/addons" },
+            { "dir": "teamfortress2", "slug": "tf2", "relPath": "tf/custom" }
+        ]
+    }
+}

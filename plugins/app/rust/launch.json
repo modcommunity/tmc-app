@@ -1,0 +1,9 @@
+{
+    "manifestVersion": 1,
+    "label": "Rust (Steam)",
+    "description": "The client, through Steam. A sandbox deploys nothing into it \u2014 see the sandbox notes.",
+    "permissions": {},
+    "launch": {
+        "uri": "steam://rungameid/252490"
+    }
+}

@@ -1,0 +1,63 @@
+{
+    "manifestVersion": 1,
+    "label": "Team Fortress 2 custom content (.vpk)",
+    "description": "A packed asset \u2014 a HUD, a skin, a sound pack \u2014 into tf/custom, which is the folder Valve added precisely so that custom content survives an update instead of being overwritten by it.",
+    "match": {
+        "extensions": [
+            "vpk"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "tf/custom",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "mkdir",
+                "path": {
+                    "root": "gameDir",
+                    "path": "tf/custom"
+                }
+            },
+            {
+                "action": "move",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "tf/custom/{fileName}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "tf/custom/{fileName}"
+                }
+            }
+        ]
+    }
+}

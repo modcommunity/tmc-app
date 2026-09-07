@@ -1,0 +1,55 @@
+# A Minecraft asset: a resource pack or a shader pack, both of which ship as a
+# .zip and live in their own folder.
+#
+# YAML rather than JSON purely to demonstrate that both are supported — the two
+# formats deserialise into exactly the same structure, so anything one can
+# express the other can. Pick whichever you would rather edit.
+manifestVersion: 1
+label: Minecraft resource pack (.zip)
+description: >-
+  Drops a resource/shader pack zip into resourcepacks/. Minecraft reads the
+  archive itself, so nothing is extracted — which also means uninstalling is a
+  single file removal rather than a directory sweep.
+
+match:
+  extensions:
+    - zip
+
+permissions:
+  fs:
+    - root: pluginData
+      path: ""
+      write: true
+    - root: gameDir
+      path: resourcepacks
+      write: true
+  net:
+    - moddingcommunity.com
+    - "*.moddingcommunity.com"
+
+manage:
+  install:
+    - action: download
+      url: "{fileUrl}"
+      to:
+        root: pluginData
+        path: "staging/{itemId}/{fileName}"
+
+    - action: mkdir
+      path:
+        root: gameDir
+        path: resourcepacks
+
+    - action: move
+      from:
+        root: pluginData
+        path: "staging/{itemId}/{fileName}"
+      to:
+        root: gameDir
+        path: "resourcepacks/{fileName}"
+
+  uninstall:
+    - action: remove
+      path:
+        root: gameDir
+        path: "resourcepacks/{fileName}"

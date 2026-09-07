@@ -1,0 +1,9 @@
+{
+    "manifestVersion": 1,
+    "label": "Baldur's Gate 3 (Steam)",
+    "description": "Through Steam rather than the executable directly, so the overlay, the controller configuration and cloud saves behave as they normally would.",
+    "permissions": {},
+    "launch": {
+        "uri": "steam://rungameid/1086940"
+    }
+}

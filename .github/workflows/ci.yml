@@ -1,0 +1,139 @@
+# Everything `npm run check` runs, plus the tests and the one cross-check that
+# proves the Windows-only half of `tmc-usvfs` still compiles.
+#
+# Deliberately NOT a copy of the release workflow's matrix. The point here is to
+# fail a pull request that breaks a guard, and every guard worth failing over —
+# the path jail, the address guard, the protocol parsers, the token lifecycle —
+# lives in `tmc-core`, which needs no display stack. Building the bundle on
+# three operating systems on every push would cost twenty minutes to re-prove
+# something the release workflow proves when it matters.
+name: ci
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
+
+# A force-push while CI is running should cancel the run it superseded.
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+    packages: read
+
+jobs:
+    web:
+        name: web (tsc, eslint, vitest)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+                  registry-url: https://npm.pkg.github.com
+                  scope: '@modcommunity'
+
+            # `@modcommunity/shared` lives in GitHub Packages. See the release
+            # workflow for why PACKAGES_TOKEN is the fallback.
+            - name: Install
+              run: npm ci
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+
+            - run: npm run check:web
+
+    core:
+        name: tmc-core (clippy, tests)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  components: clippy, rustfmt
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: src-tauri
+
+            # `tmc-core` and `tmc-usvfs` need none of the GTK stack — that is
+            # the entire point of the workspace split, and this job is what
+            # keeps the claim honest.
+            - name: Clippy
+              working-directory: src-tauri
+              run: cargo clippy -p tmc-core -p tmc-usvfs --all-targets -- -D warnings
+
+            - name: Test
+              working-directory: src-tauri
+              run: cargo test -p tmc-core -p tmc-usvfs
+
+            - name: Formatting
+              working-directory: src-tauri
+              run: cargo fmt --all -- --check
+
+    shell:
+        name: tmc-app (clippy, tests)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+                  registry-url: https://npm.pkg.github.com
+                  scope: '@modcommunity'
+
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  components: clippy
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: src-tauri
+
+            # The Tauri crate is the half that needs a webview and a GTK stack.
+            - name: Build dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends \
+                    libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev \
+                    libsoup-3.0-dev libgtk-3-dev libdbus-1-dev \
+                    librsvg2-dev libxdo-dev
+
+            # `tauri-build` reads the frontend's dist directory, so the bundle
+            # has to exist before the Rust crate will check.
+            - name: Install and build the frontend
+              run: npm ci && npm run build
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+
+            - run: npm run check:rust
+            - run: npm run test:rust
+
+    windows-crosscheck:
+        # The Windows-only halves of `tmc-usvfs` — the IAT patch and the
+        # injector — are never RUN in CI and cannot be. Type-checking them
+        # against the Windows target is what catches the class of mistake that
+        # would otherwise be found by reading, and it has already caught four.
+        name: tmc-usvfs against x86_64-pc-windows-gnu
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: x86_64-pc-windows-gnu
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: src-tauri
+
+            - name: Check
+              working-directory: src-tauri
+              run: cargo check -p tmc-usvfs --target x86_64-pc-windows-gnu

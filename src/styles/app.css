@@ -1,0 +1,327 @@
+@import 'tailwindcss';
+
+/*
+ * The design tokens come from @modcommunity/shared, which is the same file
+ * website-city and website-processing use. Importing it rather than redefining
+ * the palette is what keeps the app looking like TMC without a second source of
+ * truth to drift.
+ *
+ * The @source line is essential: Tailwind ignores node_modules by default, so
+ * without it none of the shared components' utility classes are generated.
+ */
+@import '@modcommunity/shared/theme.css';
+@source "../../node_modules/@modcommunity/shared/dist";
+
+/*
+ * App-only tokens. Everything here describes chrome the WEBSITE does not have —
+ * a bottom tab bar, safe-area insets, a titlebar drag region — so it belongs
+ * to this app rather than in the shared theme.
+ */
+@theme inline {
+    --color-app-chrome: var(--app-chrome);
+    --color-app-chrome-border: var(--app-chrome-border);
+
+    /*
+     * `surface-2` — the app's name for the shared theme's `surface-secondary`.
+     *
+     * An alias rather than a new colour. The app has a lot of small inset
+     * panels the website does not (a console transcript, a resolved command
+     * line, a queue row), and every one of them was written as `bg-surface-2`
+     * because that is the obvious name. Tailwind 4 generates a utility only for
+     * a token that exists, so those classes silently produced no background at
+     * all — a bug that looks exactly like a design choice.
+     */
+    --color-surface-2: var(--surface-secondary);
+
+    --color-lat-good: var(--lat-good);
+    --color-lat-fair: var(--lat-fair);
+    --color-lat-poor: var(--lat-poor);
+    --color-lat-bad: var(--lat-bad);
+    --color-lat-dead: var(--lat-dead);
+}
+
+:root {
+    --app-chrome: var(--surface);
+    --app-chrome-border: var(--border);
+
+    /*
+     * The latency ladder, as five steps rather than the shared theme's three.
+     *
+     * `success`/`warning`/`danger` cover "good, careful, bad", which is one
+     * step too coarse for ping: 150ms and 400ms are both "bad" in that palette
+     * and are completely different games to play. The two extra rungs are
+     * app-local because nothing on the website measures a round trip.
+     *
+     * A failed probe gets its own token rather than reusing the slowest rung.
+     * "500ms" and "no answer at all" are different facts, and the row prints
+     * `TO` for the second precisely so they cannot be confused — see
+     * `latencyTone` in components/latency-graph.tsx.
+     */
+    --lat-good: var(--success);
+    --lat-fair: var(--warning);
+    --lat-poor: oklch(0.74 0.17 62);
+    --lat-bad: oklch(0.68 0.2 38);
+    --lat-dead: var(--danger);
+
+    /* Filled in by the OS on iOS/Android; 0 elsewhere. */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+
+    /* Driven by the `uiScale` app setting. */
+    --app-scale: 1;
+}
+
+/* The two mixed rungs need lifting on the dark shell for the same reason the
+ * shared theme lifts `warning` and `danger` there. */
+.dark,
+[data-theme='dark'] {
+    --lat-poor: oklch(0.79 0.155 66);
+    --lat-bad: oklch(0.72 0.185 42);
+}
+
+html {
+    font-size: calc(16px * var(--app-scale));
+}
+
+body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+
+    /*
+     * A native app does not rubber-band its whole document, and on Android a
+     * scrollable body under a fixed tab bar produces a scrollbar that never
+     * settles. Panes scroll; the shell does not.
+     */
+    overflow: hidden;
+    overscroll-behavior: none;
+
+    /* Text selection is a desktop affordance. On a touch device a long-press
+     * that selects a card's title instead of opening it feels broken. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Opt back in wherever reading and copying is the point. */
+.selectable,
+input,
+textarea,
+[contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+h1,
+h2,
+h3,
+h4 {
+    font-family: var(--font-pjs), var(--font-dm-sans), system-ui, sans-serif;
+}
+
+/*
+ * Thin scrollbars that match the theme. Chromium (Windows/Android/Linux) and
+ * WebKit (macOS/iOS) need different properties; both are set rather than picked
+ * at runtime, since each is simply ignored by the other engine.
+ */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/*
+ * Dragging the window is `data-tauri-drag-region`, NOT `-webkit-app-region`.
+ *
+ * The CSS property is a Chromium extension: it works in the WebView2 shell on
+ * Windows and does nothing whatsoever in WebKitGTK or WKWebView, which is both
+ * of the platforms whose frame the app now draws itself. The attribute is
+ * handled in the Tauri shell and works on all of them. Nothing here should
+ * reintroduce the property — see components/titlebar.tsx.
+ *
+ * Anything interactive inside the drag strip carries `.no-drag`, which stops
+ * the shell claiming the press before the button sees it.
+ */
+[data-tauri-drag-region] {
+    cursor: default;
+}
+
+.no-drag {
+    -webkit-app-region: no-drag;
+}
+
+/* ------------------------------------------------------------ Form controls
+ *
+ * The engine's defaults are the OS's: a GTK combo box on Linux, an Aqua select
+ * on macOS, a Fluent one on Windows. Three different shapes for one screen, and
+ * on Linux one that follows whatever theme the desktop is set to — which is
+ * exactly the mismatch the custom titlebar exists to remove, arriving through a
+ * different door. `appearance: none` takes the drawing back and everything
+ * below re-supplies what it removed.
+ */
+input,
+select,
+textarea,
+button {
+    font: inherit;
+    color: inherit;
+}
+
+/*
+ * `text-transform` is NOT reset here, deliberately.
+ *
+ * Every engine's UA stylesheet sets `text-transform: none` on form controls, so
+ * a sort button inside an `uppercase` table header renders "Server" next to
+ * "COUNTRY". The tempting fix — `button { text-transform: inherit }` — is
+ * wrong: everything in this file is UNLAYERED, and unlayered rules beat
+ * `@layer utilities` in the cascade whatever their specificity. That one line
+ * silently overrode Tailwind's `uppercase` on every button in the app.
+ *
+ * Buttons that need the casing carry the utility themselves.
+ */
+
+select {
+    appearance: none;
+    -webkit-appearance: none;
+
+    /* The arrow the appearance reset removed, as an inline SVG so no request
+     * is made and the CSP has nothing to allow. `currentColor` is not usable
+     * in a data URI, so it is drawn in the muted token's rough value and the
+     * opacity carries the rest. */
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5 8 10.5 12 6.5'/%3E%3C/svg%3E");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem;
+    padding-right: 2rem;
+}
+
+/* The dropdown LIST itself is drawn by the OS and cannot be styled. Giving the
+ * options the app's own colours is the most that can be reached, and it stops a
+ * dark app opening a white popup on the platforms that honour it. */
+select option {
+    background: var(--surface);
+    color: var(--foreground);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+    appearance: none;
+    -webkit-appearance: none;
+
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition:
+        background-color 0.12s,
+        border-color 0.12s;
+}
+
+input[type='checkbox'] {
+    border-radius: 0.25rem;
+}
+
+input[type='radio'] {
+    border-radius: 50%;
+}
+
+input[type='checkbox']:checked,
+input[type='radio']:checked {
+    border-color: var(--accent);
+    background-color: var(--accent);
+}
+
+input[type='checkbox']:checked {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5 6.5 11.5 12.5 4.5'/%3E%3C/svg%3E");
+    background-size: 100%;
+}
+
+input[type='radio']:checked {
+    /* A ring rather than a glyph: an inner dot in the accent's foreground
+     * colour survives both themes without a second asset. */
+    box-shadow: inset 0 0 0 3px var(--surface);
+}
+
+input[type='range'] {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 1rem;
+    background: transparent;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+    height: 0.25rem;
+    border-radius: 999px;
+    background: var(--border);
+}
+
+input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    margin-top: -0.375rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+/* Firefox/WebKitGTK take the same job through their own pseudo-elements; both
+ * sets are declared because each engine ignores the other's. */
+input[type='range']::-moz-range-track {
+    height: 0.25rem;
+    border-radius: 999px;
+    background: var(--border);
+}
+
+input[type='range']::-moz-range-thumb {
+    width: 1rem;
+    height: 1rem;
+    border: 0;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+/*
+ * One focus ring for the whole app, in the accent colour.
+ *
+ * `:focus-visible` rather than `:focus` so a mouse click on a button does not
+ * leave a ring behind it, while keyboard navigation keeps the outline it
+ * depends on. Never remove this without replacing it.
+ */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+}
+
+/* The engine's own text-selection colour is another OS default that changes per
+ * platform. */
+::selection {
+    background: color-mix(in oklab, var(--accent) 40%, transparent);
+    color: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

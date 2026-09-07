@@ -1,0 +1,117 @@
+{
+    "manifestVersion": 1,
+    "label": "Rust server sandboxes",
+    "description": "Rust modding is server-side. This describes what a sandbox does to a dedicated server, and why it does nothing to a client.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "direct",
+            "supportedStrategies": [
+                "direct",
+                "hardlink"
+            ],
+            "antiCheat": "kernel",
+            "modTargets": [
+                {
+                    "type": "server_plugin",
+                    "relPath": "oxide/plugins"
+                },
+                {
+                    "type": "server_config",
+                    "relPath": "oxide/config"
+                },
+                {
+                    "type": "server_data",
+                    "relPath": "oxide/data"
+                }
+            ],
+            "notes": [
+                "There is no client-side Rust modding, and this app will not invent one. EasyAntiCheat runs in the kernel and treats a modified game folder as what it is; the cost of being clever here is somebody's Steam account, not a failed install. Point a Rust sandbox at a DEDICATED SERVER folder.",
+                "Copying is the default and the two link strategies are offered only because a server operator staging plugins on the same volume has a real use for them. EAC does not run on the server, which is why they are available at all.",
+                "Oxide (uMod) or Carbon has to be installed into the server folder first. A plugin deployed with no loader underneath it is a .cs file nothing will ever compile.",
+                "Oxide writes each plugin's configuration into oxide/config on first load and never overwrites it afterwards. Removing a plugin from a sandbox does not remove its config, which is deliberate \u2014 it is the thing you spent an evening tuning."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "252490",
+                "258550"
+            ],
+            "names": [
+                "Rust",
+                "Rust Dedicated Server"
+            ],
+            "markers": [
+                "RustDedicated.exe",
+                "RustDedicated",
+                "RustClient.exe"
+            ],
+            "paths": {}
+        },
+        "presets": [
+            {
+                "id": "oxide",
+                "label": "Oxide / uMod server",
+                "description": "The long-established plugin loader. Nearly every published Rust plugin targets it.",
+                "environment": "server",
+                "loader": "oxide",
+                "strategy": "direct",
+                "options": {
+                    "maxPlayers": 100,
+                    "worldSize": 3500
+                }
+            },
+            {
+                "id": "carbon",
+                "label": "Carbon server",
+                "description": "A newer loader that is API-compatible with most Oxide plugins.",
+                "environment": "server",
+                "loader": "carbon",
+                "strategy": "direct",
+                "options": {
+                    "maxPlayers": 100,
+                    "worldSize": 3500
+                }
+            }
+        ],
+        "options": [
+            {
+                "key": "maxPlayers",
+                "label": "Player slots",
+                "type": "int",
+                "min": 1,
+                "max": 1000,
+                "default": 100,
+                "unit": "players",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "worldSize",
+                "label": "World size",
+                "type": "int",
+                "min": 1000,
+                "max": 6000,
+                "step": 500,
+                "default": 3500,
+                "description": "Bigger maps take longer to generate and much more memory. 3500-4500 is the usual range.",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "seed",
+                "label": "Map seed",
+                "type": "text",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}

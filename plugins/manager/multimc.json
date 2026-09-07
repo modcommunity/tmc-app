@@ -1,0 +1,25 @@
+{
+    "manifestVersion": 1,
+    "manager": {
+        "id": "multimc",
+        "label": "MultiMC",
+        "homepage": "https://multimc.org/",
+        "notes": [
+            "MultiMC keeps its instances beside its own executable, which this app cannot resolve — so only the two default locations are checked.",
+            "If your MultiMC lives elsewhere, drop a descriptor naming the folder in the app's plugins/manager folder."
+        ],
+        "roots": [
+            { "platform": "windows", "base": "appData", "path": "MultiMC" },
+            { "platform": "linux", "base": "home", "path": ".local/share/multimc" },
+            { "platform": "macos", "base": "config", "path": "MultiMC" }
+        ],
+        "layout": {
+            "modsPath": "instances/*/.minecraft/mods",
+            "entry": "archive",
+            "ignore": ["instgroups.json"]
+        },
+        "games": [
+            { "dir": "minecraft", "slug": "minecraft", "relPath": "mods" }
+        ]
+    }
+}

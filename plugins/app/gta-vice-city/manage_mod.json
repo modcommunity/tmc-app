@@ -1,0 +1,57 @@
+{
+    "manifestVersion": 1,
+    "label": "Grand Theft Auto: Vice City mod (modloader)",
+    "description": "Unpacked into modloader, which loads each subfolder without touching the game's own files. It is the reason this game can be modded without a reinstall being the uninstaller.",
+    "match": {
+        "extensions": [
+            "zip",
+            "7z"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "modloader",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "extract",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "modloader/{itemId}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "modloader/{itemId}"
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,16 @@
+{
+    "manifestVersion": 1,
+    "label": "The Sims 3 settings",
+    "description": "Resource.cfg is what tells The Sims 3 to read Mods/Packages at all. The game does not write one; the framework install does, and a folder full of packages with no Resource.cfg beside it is the single most common reason nothing shows up in game.",
+
+    "config": {
+        "locations": [
+            {
+                "label": "Game options",
+                "root": "gameDir",
+                "path": "",
+                "files": ["Options.ini", "Resource.cfg"]
+            }
+        ]
+    }
+}

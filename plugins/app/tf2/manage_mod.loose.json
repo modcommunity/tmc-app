@@ -1,0 +1,56 @@
+{
+    "manifestVersion": 1,
+    "label": "Team Fortress 2 custom content (.zip)",
+    "description": "The unpacked form \u2014 a folder with materials/, resource/ and scripts/ in it, which is how nearly every HUD is distributed. It gets a folder of its own under tf/custom, which is exactly how Source expects loose custom content to be laid out.",
+    "match": {
+        "extensions": [
+            "zip"
+        ]
+    },
+    "permissions": {
+        "fs": [
+            {
+                "root": "pluginData",
+                "path": "",
+                "write": true
+            },
+            {
+                "root": "gameDir",
+                "path": "tf/custom",
+                "write": true
+            }
+        ]
+    },
+    "manage": {
+        "install": [
+            {
+                "action": "download",
+                "url": "{fileUrl}",
+                "to": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                }
+            },
+            {
+                "action": "extract",
+                "from": {
+                    "root": "pluginData",
+                    "path": "staging/{itemId}/{fileName}"
+                },
+                "to": {
+                    "root": "gameDir",
+                    "path": "tf/custom/{itemId}"
+                }
+            }
+        ],
+        "uninstall": [
+            {
+                "action": "remove",
+                "path": {
+                    "root": "gameDir",
+                    "path": "tf/custom/{itemId}"
+                }
+            }
+        ]
+    }
+}

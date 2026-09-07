@@ -1,0 +1,16 @@
+{
+    "manifestVersion": 1,
+    "label": "The Sims 4 settings",
+    "description": "Options.ini is where the two switches that decide whether mods load at all live — modsdisabled and scriptmodsenabled. A player whose mods 'do nothing' has almost always got one of them wrong, and it is a file you would otherwise have to leave the app to edit.",
+
+    "config": {
+        "locations": [
+            {
+                "label": "Game options",
+                "root": "gameDir",
+                "path": "",
+                "files": ["Options.ini", "Resource.cfg"]
+            }
+        ]
+    }
+}

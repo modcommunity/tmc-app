@@ -1,0 +1,69 @@
+{
+    "manifestVersion": 1,
+    "label": "Fallout 3 sandboxes",
+    "description": "How Fallout 3 sandboxes deploy, and how to find the game on this machine. Paths: vortex.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "plugin",
+                    "relPath": "Data"
+                },
+                {
+                    "type": "archive",
+                    "relPath": "Data"
+                },
+                {
+                    "type": "extender_plugin",
+                    "relPath": "Data/FOSE/Plugins"
+                }
+            ],
+            "notes": [
+                "Everything lands in Data. Load order is the sandbox's order, and for these games it is not cosmetic \u2014 a patch that loads before the mod it patches does nothing, and two mods editing one record are resolved by whichever loads last.",
+                "This app does not write the plugin list the game reads (plugins.txt / loadorder.txt). It puts the files where they belong; enabling them in the launcher, or with a load-order tool, is still yours to do.",
+                "Hard links are the default so several sandboxes can share one copy of a 4 GB texture pack. Copying is there for a staging folder on a different drive."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "22300",
+                "22370"
+            ],
+            "names": [
+                "Fallout 3"
+            ],
+            "markers": [
+                "Fallout3.exe"
+            ]
+        },
+        "presets": [
+            {
+                "id": "default",
+                "label": "Modded",
+                "description": "Plugins and archives in the game's data folder.",
+                "environment": "client"
+            },
+            {
+                "id": "clean",
+                "label": "Clean",
+                "description": "Nothing deployed \u2014 the vanilla game, for checking whether a bug is yours.",
+                "environment": "client",
+                "strategy": "direct"
+            }
+        ],
+        "options": [
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text",
+                "description": "Passed verbatim. One argument per space; nothing here goes through a shell."
+            }
+        ]
+    }
+}

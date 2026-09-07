@@ -1,0 +1,25 @@
+{
+    "manifestVersion": 1,
+    "manager": {
+        "id": "prism",
+        "label": "Prism Launcher",
+        "homepage": "https://prismlauncher.org/",
+        "notes": [
+            "Reads the jars in each Prism instance's mods folder, one entry per instance.",
+            "Prism instances are already isolated, which is the same model this app's Minecraft sandboxes use — an imported instance deploys the same way it ran there."
+        ],
+        "roots": [
+            { "platform": "windows", "base": "appData", "path": "PrismLauncher" },
+            { "platform": "linux", "base": "localData", "path": "PrismLauncher" },
+            { "platform": "macos", "base": "config", "path": "PrismLauncher" }
+        ],
+        "layout": {
+            "modsPath": "instances/*/minecraft/mods",
+            "entry": "archive",
+            "ignore": [".minecraft", "instgroups.json"]
+        },
+        "games": [
+            { "dir": "minecraft", "slug": "minecraft", "relPath": "mods" }
+        ]
+    }
+}

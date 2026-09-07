@@ -1,0 +1,109 @@
+{
+    "manifestVersion": 1,
+    "label": "Team Fortress 2 sandboxes",
+    "description": "How Team Fortress 2 sandboxes deploy, and how to find the game.",
+    "sandbox": {
+        "deploy": {
+            "defaultStrategy": "hardlink",
+            "supportedStrategies": [
+                "hardlink",
+                "symlink",
+                "direct"
+            ],
+            "modTargets": [
+                {
+                    "type": "custom_content",
+                    "relPath": "tf/custom"
+                },
+                {
+                    "type": "config",
+                    "relPath": "tf/cfg"
+                },
+                {
+                    "type": "server_plugin",
+                    "relPath": "tf/addons/sourcemod/plugins"
+                }
+            ],
+            "notes": [
+                "tf/custom is the whole story for a client. Valve added it so custom content survives a game update, and anything deployed anywhere else in tf/ is liable to be replaced the next time TF2 patches.",
+                "Source loads custom folders in alphabetical order and the LAST one wins a collision, which is the opposite of this app's load order. The merge is resolved here before anything is written, so what reaches tf/custom is already the winner \u2014 reorder the sandbox rather than renaming folders.",
+                "A server sandbox deploys SourceMod plugins into tf/addons/sourcemod/plugins. SourceMod and Metamod themselves are not mods and are not installed by this app."
+            ]
+        },
+        "detect": {
+            "steamAppIds": [
+                "440"
+            ],
+            "names": [
+                "Team Fortress 2"
+            ],
+            "markers": [
+                "tf/gameinfo.txt",
+                "hl2.exe",
+                "tf_win64.exe",
+                "tf_linux64"
+            ],
+            "paths": {}
+        },
+        "presets": [
+            {
+                "id": "client",
+                "label": "Client",
+                "description": "HUDs, skins and sound packs.",
+                "environment": "client"
+            },
+            {
+                "id": "server",
+                "label": "Dedicated server",
+                "description": "SourceMod plugins and server configuration.",
+                "environment": "server",
+                "strategy": "direct",
+                "options": {
+                    "maxPlayers": 24,
+                    "tickRate": 66
+                }
+            }
+        ],
+        "options": [
+            {
+                "key": "maxPlayers",
+                "label": "Player slots",
+                "type": "int",
+                "min": 2,
+                "max": 101,
+                "default": 24,
+                "unit": "players",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "tickRate",
+                "label": "Tick rate",
+                "description": "TF2 runs at 66 by default. A community server on 100 is a different game and every config that assumes 66 is wrong on it.",
+                "type": "int",
+                "min": 33,
+                "max": 128,
+                "default": 66,
+                "unit": "tick",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "map",
+                "label": "Starting map",
+                "type": "text",
+                "default": "ctf_2fort",
+                "environments": [
+                    "server"
+                ]
+            },
+            {
+                "key": "launchArgs",
+                "label": "Additional launch arguments",
+                "type": "text"
+            }
+        ]
+    }
+}
