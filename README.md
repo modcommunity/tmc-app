@@ -1,60 +1,63 @@
-# TMC App
+The **official** [TMC App](https://moddingcommunity.com/tmc-app), built with [Tauri 2](https://tauri.app/), [Rust](https://rust-lang.org/) and [React](https://react.dev/).
 
-The official [The Modding Community](https://moddingcommunity.com) app, built
-with [Tauri 2](https://tauri.app/), Rust and React.
+## What It Does
+### Mod Management
+- **One-click Install**: Simply click to install or uninstall mods that support installing via the app. The list of [supported games](#supported-games) are at the bottom of this page.
+- **Sandboxes**: Named mod profiles per game, with their own load order and their own deployment method.
+  - Switching between them does not re-download anything, and your game folder is recoverable either way!
+### Server Management
+- **Server Browser**: A full server browser like the one on the website, but with **real-time latency** and **server status** along with latency charts & graphs. You can also filter by game version, mod list, and more.
+- **RCON**: Remote console access to your servers, with a full command history and logging. You can also send commands to multiple servers at once, and even schedule commands to be sent at a later time.
+- **Connect**: One-click connect to servers that support it, with the ability to save your login credentials for future use.
+### Gaming Platform
+- **Integrated Game Launcher**: Launch external games from the app or launch integrated games right within the built-in Game Player.
+- **Find fun games or servers**: Our gaming platform relies on third-party communities creating games and servers. Browse these games and servers right through our app and connect to them with one click!
+- **Assets**: Automatically download and install game assets onto servers where the game supports it (integrated games only).
 
-One codebase, five targets: **Windows, macOS, Linux, Android and iOS**.
+## Device Support
+| Platform | Status |
+| --- | --- |
+| Linux | ✅ |
+| Windows | ✅ |
+| macOS | ✅ |
+| Android | ✅ |
+| iOS | ✅ |
 
-## What it does
+## From Maintainer & WARNING
+This application was built initially with **Claude Code** and will continue to be maintained and extended using it. This is because I (`gamemann`) cannot build the entire TMC platform alone (I wish I could lol).
 
-- **Install mods for a lot of games** — one click, into the right folder for
-  that game, with an uninstall that removes exactly what it added and nothing
-  else. The [supported games](#supported-games) are at the bottom
-- **Sandboxes** — named mod profiles per game, with their own load order and
-  their own deployment method. Switching between them does not re-download
-  anything, and your game folder is recoverable either way
-- Browse and view assets, mods, servers, server maps, articles, communities,
-  collections and members
-- **No account password, anywhere.** Signing in happens on the real website in
-  your own browser; the app is handed a token and never a password. There is
-  nothing to type into this app and nothing for it to store
-- Real latency pings measured from your device, not from a scanner in another
-  hemisphere
-- Live server queries over each game's own protocol
-- A download queue that pauses, resumes and obeys a bandwidth limit
-- RCON for servers you run — passwords encrypted on the device, never uploaded
-- Settings split between this device and your account
+**Please treat this as partially tested.** I've tested many things in the app, but there are still many things that need to be tested and verified. If you find any bugs or issues, please report them in [issues](https://github.com/modcommunity/tmc-app/issues).
+
+I intend on reviewing code, testing, and editing documentation regularly. If you're interested in helping out, please let me know!
 
 ## Installing
-
-**Linux** — one line, no root, no package manager:
+### Linux
+One line, no root, no package manager, just `curl` and `sh`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/modcommunity/tmc-app/main/scripts/install.sh | sh
 ```
 
-It verifies the download against the release's checksums, installs into
-`~/.local`, and registers the launcher entry and the `tmc://` scheme. Undo it
-with `… | sh -s -- --uninstall`.
+The script verifies the download against the release's checksums, installs into `~/.local`, and registers the launcher entry and the `tmc://` scheme. Undo it with `… | sh -s -- --uninstall`.
 
-**Windows** — the `-setup.exe` from the [releases
-page](https://github.com/modcommunity/tmc-app/releases), or the `.msi` if you
-deploy by policy.
+### Windows
+You can install the app onto your computer using the `setup` executables (`setup.exe` or `setup.msi`) in the releases.
 
-**macOS** — the `.dmg`.
+The `portable` executable is also available for those who want to run the app without installing it. The portable version **DOES NOT** register the launcher entry or the `tmc://` scheme.
 
-## Getting started
+### macOS
+Install using the included `.dmg` file.
 
+## Development
+### Getting Started
 ```bash
 npm install
 npm run desktop      # or: android / ios
 ```
 
-Linux desktop builds need `webkit2gtk-4.1`, `libsoup-3.0` and `pkg-config` —
-or `npm run sysroot`, which builds a private one without needing root.
+Linux desktop builds need `webkit2gtk-4.1`, `libsoup-3.0` and `pkg-config`, or `npm run sysroot`, which builds a private one without needing root.
 
-## Building something to ship
-
+### Targeting Platforms
 ```bash
 npm run build:linux      # AppImage + deb
 npm run build:windows    # portable exe, .exe setup and .msi — FROM LINUX
@@ -66,30 +69,26 @@ own machine, and comes from CI. [`docs/BUILDING.md`](docs/BUILDING.md) has the
 prerequisites, the caveats (unsigned binaries, WebView2 in the MSI) and the
 release process.
 
-## Contributing plugins
-
+## Contributing Plugins
 A plugin is a folder with a `plugin.json` in it. See `examples/plugins/` for a
 working installer, server-query and theme plugin, and `CLAUDE.md` for the format
-and the sandbox rules.
+and the sandbox rules. We will be improving this system over time.
 
-Per-game rules — where a game's mods go, how it launches, how its sandboxes
-behave — live in `plugins/app/<slug>/` and are compiled into the binary.
-Adding a game is four small JSON files and no Rust;
-[`scripts/gen-app-rules.py`](scripts/gen-app-rules.py) writes the first draft.
+**Per-game rules**:
+  - Where a game's mods go
+  - How it launches
+  - How its sandboxes behave
 
-Plugins are **data, not code** — they describe steps the app carries out inside
-a jail the user grants, and every action is written to the activity log.
+All of these live in `plugins/app/<slug>/` and are compiled into the binary.
 
-## Supported games
+Adding a game is four small JSON files and no Rust; [`scripts/gen-app-rules.py`](scripts/gen-app-rules.py) writes the first draft.
 
-Mod install management, per game: where its mods go, how it launches, which
-deployment methods suit it, and how to find it on your machine.
+**Plugins are data, not code**: They describe steps the app carries out inside a jail the user grants, and every action is written to the activity log.
 
-**Tested** means somebody has actually installed a mod for that game with this
-app and watched it land in the right place. Every row is currently **No** —
-the rules are written from each game's own modding documentation and from
-Vortex's and r2modman's published game data, which is not the same thing as
-having been run once. They will flip to Yes one at a time.
+## Supported Games
+Here's a full list of the games that the app currently *supports*. The **Mods land in** column is where the app will deploy mods for that game, and the "Tested" column indicates whether or not the deployment has been tested with that game.
+
+All games right now **haven't been tested**. We will be testing and verifying the deployment of mods for each game in the future.
 
 | Game | Mods land in | Tested |
 | --- | --- | :-: |
@@ -139,23 +138,21 @@ Five of those need a word of warning before you point a sandbox at a folder:
   a sandbox its own empty folder and it gets its own `mods`, `config`, `saves`
   and `options.txt`, with your vanilla `.minecraft` left alone.
 
-A few games refuse to load mods at all while their anti-cheat is on — Valheim
+**WARNING**: A few games refuse to load mods at all while their anti-cheat is active. Valheim
 and 7 Days to Die both want it switched off in their launcher first. The app
 cannot do that for you and says so rather than deploying into a folder the game
 will ignore.
 
 Your game is not here? It is four JSON files under `plugins/app/<slug>/` and no
-code — see **Adding a game** in `CLAUDE.md`.
+code. See **Adding a game** in `CLAUDE.md` for more details.
 
 ## Security
-
 Found something? **Please do not open a public issue** —
 [`SECURITY.md`](SECURITY.md) has the private reporting route, the threat model
 the app is built around, and the list of things that look like holes and are
 deliberate (RCON reaching private addresses is the usual one).
 
 ## Licence
-
 [GPL-3.0-only](LICENSE). The game names, trademarks and mod-manager names used
 throughout are their respective owners'; they appear here to say which game a
 rule is for and which manager a folder layout belongs to, and nothing in this
