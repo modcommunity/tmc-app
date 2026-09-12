@@ -123,7 +123,10 @@ git tag v0.2.0 && git push origin v0.2.0
 ```
 
 `.github/workflows/release.yml` builds on all three desktop platforms, collects
-the bundles, writes `checksums.txt` and publishes them to the GitHub release.
+the bundles, writes `checksums.txt`, publishes them to the GitHub release and —
+once the signing key and release token below are configured — publishes the
+release to the website so installed copies of the app update themselves. There
+is no manual step.
 
 `checksums.txt` is not decoration: `scripts/install.sh` **refuses to install**
 a release that does not have one, so a release published by hand without it is
@@ -174,30 +177,52 @@ Building locally still needs nothing. `TMC_UPDATER_PUBKEY` is read through
 
 ### Publishing a release so the app will install it
 
-The workflow signs each bundle and uploads the `.sig` files beside it, then
-prints the exact commands into its own log. In **website-city**, once per
-platform:
+**Nothing to do.** `git push origin v0.2.0` is the whole release: the workflow
+signs each bundle, uploads the artifacts and their `.sig` files to the GitHub
+release, and then posts the lot to the site in one call, which writes every
+platform's row and moves `app.version.latest` in one transaction. Users are
+offered the update from the moment that returns.
+
+That needs one more secret, alongside the signing pair above:
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `TMC_RELEASE_TOKEN` | **Secret** | the same value as `APP_RELEASE_TOKEN` on the website |
+| `TMC_SITE_URL` | Variable, optional | only for a fork or a staging deployment; defaults to production |
+
+Generate the token once with `openssl rand -hex 32`, put it in the website's
+environment as `APP_RELEASE_TOKEN`, and in this repository as
+`TMC_RELEASE_TOKEN`. With it unset the release still builds and publishes to
+GitHub — the job warns and skips this step, because a release that was cut and
+not announced is fixable in a minute while a failed job has to be re-run against
+a tag that already has artifacts on it.
+
+`scripts/publish-release.mjs` is what the job runs, and it works by hand too:
 
 ```bash
-npm run app:release:publish -- --version 0.2.0 --target LINUX_X86_64 \
-  --url https://github.com/…/releases/download/v0.2.0/tmc_0.2.0_amd64.AppImage \
-  --sig '<contents of tmc_0.2.0_amd64.AppImage.sig>'
+TMC_RELEASE_TOKEN=… node scripts/publish-release.mjs \
+  --dir artifacts --version 0.2.0 \
+  --base-url https://github.com/…/releases/download/v0.2.0 \
+  --promote --dry-run
 ```
 
-Targets: `LINUX_X86_64`, `LINUX_AARCH64`, `WINDOWS_X86_64`, `WINDOWS_AARCH64`,
-`DARWIN_UNIVERSAL` (the `.app.tar.gz`, not the `.dmg` — a disk image is
-something a person mounts, not something an updater unpacks over a running app).
+It maps bundle filenames to update targets — that mapping lives here rather than
+in the workflow because the names are this repository's business, and a shell
+glob in YAML is the thing most likely to break quietly when a bundler renames
+its output. `--dry-run` prints what it would send.
 
-Then **once, after every platform is up**:
+Two details it encodes:
 
-```bash
-npm run app:release:publish -- --version 0.2.0 --target LINUX_X86_64 --promote …
-```
+  * **macOS ships the `.app.tar.gz`, not the `.dmg`.** A disk image is something
+    a person mounts, not something an updater unpacks over a running app.
+  * **Windows prefers the `-setup.exe` over the `.msi`.** The MSI does not
+    bootstrap the WebView2 runtime — wixl has no launch conditions, so it cannot
+    even warn — which is why the `.exe` is the recommended download.
 
-`--promote` moves the `app.version.latest` site setting, and that setting is
-what actually offers the release to anybody. Doing it first means a Windows user
-is told there is an update and handed a 404; a rollback is promoting the
-previous version rather than deleting anything.
+`--promote` is what moves `app.version.latest`, and that setting is what offers
+the release to anybody. The workflow sends it in the same request as the
+artifacts, so there is no window where it names a version some machines have no
+build for. A rollback is re-publishing the previous version with `--promote`.
 
 ## Installing
 

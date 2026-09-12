@@ -1468,6 +1468,95 @@ export const ServerLookupResponseSchema = z.object({
 
 export type ServerLookupResponseT = z.infer<typeof ServerLookupResponseSchema>
 
+/* ------------------------------------------------- Publishing a release */
+
+/**
+ * Which machine one desktop build is for. Mirrors `AppUpdateTarget`.
+ *
+ * TAURI'S names, not ours, and that is the point. The updater matches a running
+ * client to an artifact by `"{target}-{arch}"` — `linux-x86_64`,
+ * `darwin-aarch64` — and a taxonomy of our own would have to be translated into
+ * those at the one point where being wrong means the update silently never
+ * applies to anybody.
+ */
+export const AppUpdateTargetVals = [
+    'DARWIN_X86_64',
+    'DARWIN_AARCH64',
+    /** One universal binary. Matched for both Macs when no specific entry exists. */
+    'DARWIN_UNIVERSAL',
+    'LINUX_X86_64',
+    'LINUX_AARCH64',
+    'WINDOWS_X86_64',
+    'WINDOWS_AARCH64',
+] as const
+
+export const AppUpdateTargetSchema = z.enum(AppUpdateTargetVals)
+export type AppUpdateTargetT = (typeof AppUpdateTargetVals)[number]
+
+/** One signed artifact of one release. */
+export const ReleaseArtifactSchema = z.object({
+    target: AppUpdateTargetSchema,
+    /** Absolute https. Re-checked on the read path too, since a row can predate a check. */
+    url: z.string().url().max(2048),
+    /**
+     * The minisign signature `tauri build` emitted beside the artifact.
+     *
+     * Not a secret: it proves who built the file and is useless without the
+     * file. The length floor is not cryptography — the DEVICE does the
+     * cryptography — it is what keeps a placeholder from being published as an
+     * artifact whose install fails on every machine at once, after the
+     * download.
+     */
+    signature: z.string().min(64).max(4096),
+})
+
+export type ReleaseArtifactT = z.infer<typeof ReleaseArtifactSchema>
+
+/**
+ * A whole release, published in one call.
+ *
+ * ONE CALL FOR EVERY PLATFORM, deliberately, and it is what makes `promote`
+ * safe to send in the same request. Publishing platform by platform and
+ * promoting afterwards has a window in it where the setting names a version
+ * some machines have no artifact for — and what those users get is being told
+ * there is an update and then handed a 404. Here every row and the setting move
+ * together or not at all.
+ */
+export const ReleasePublishRequest = z.object({
+    /** Dotted numeric. The app COMPARES this; one it cannot order is one it never offers. */
+    version: z
+        .string()
+        .min(1)
+        .max(64)
+        .regex(/^\d+(\.\d+){0,7}([-+][0-9A-Za-z.-]+)?$/, {
+            message:
+                'A version is dotted numeric, optionally with a -pre or +build suffix.',
+        }),
+    /** Shown in the app before it installs. Plain text. */
+    notes: z.string().max(20_000).optional(),
+    artifacts: z.array(ReleaseArtifactSchema).min(1).max(16),
+    /**
+     * Also move `app.version.latest`, which is what actually offers the release
+     * to anybody. False publishes the artifacts and leaves them unreachable —
+     * which is the right shape for a pre-release somebody wants staged.
+     */
+    promote: z.boolean().default(false),
+})
+
+export type ReleasePublishRequestT = z.input<typeof ReleasePublishRequest>
+
+export const ReleasePublishResponseSchema = z.object({
+    version: z.string(),
+    /** The targets written, in the order they were stored. */
+    published: z.array(AppUpdateTargetSchema),
+    /** Whether `app.version.latest` now names this version. */
+    promoted: z.boolean(),
+})
+
+export type ReleasePublishResponseT = z.infer<
+    typeof ReleasePublishResponseSchema
+>
+
 /* ------------------------------------------------------ Installing a game */
 
 /**

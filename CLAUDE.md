@@ -1361,20 +1361,32 @@ would break `npm run desktop:build` for every developer. CI enables it exactly
 when both halves are present, and its absence is a warning rather than a failed
 job: a release nobody can auto-update is still a release people can download.
 
-Publishing a release is then, per platform:
+### Cutting a release is pushing a tag
 
-```bash
-npm run app:release:publish -- --version 1.2.0 --target LINUX_X86_64 \
-  --url https://…/tmc_1.2.0_amd64.AppImage --sig-file ./…​.AppImage.sig
-```
+`release.yml` signs each bundle, uploads the artifacts and their `.sig` files to
+the GitHub release, and then posts the lot to `POST /api/app/v1/releases` — one
+call carrying every platform AND the promotion, which the site writes in one
+transaction.
 
-…and once every platform is up, one more run with `--promote`, which moves
-`app.version.latest`. **That setting is the switch**, and it is deliberately the
-same one the banner already reads: two sources would mean a release that is
-announced and not installable, or installable and not announced, depending on
-which an operator moved. A release uploaded one platform at a time is invisible
-rather than handing a Windows user a 404, and a rollback is promoting the
-previous version rather than deleting rows.
+**That is one call on purpose.** `app.version.latest` is the switch and nothing
+reaches anybody until it names a version, so publishing platform by platform and
+promoting afterwards leaves a window where it names a version some machines have
+no build for — and what a user on one of those gets is being told there is an
+update and then handed a 404. A rollback is re-publishing the previous version.
+
+`scripts/publish-release.mjs` maps bundle filenames to update targets, and that
+mapping lives in this repository rather than in the workflow because the names
+are this repository's business: a shell glob in YAML is the thing most likely to
+break quietly when a bundler renames its output, in a language with no way to
+test it. Two decisions it encodes — macOS ships the `.app.tar.gz` rather than
+the `.dmg` (a disk image is something a person mounts, not something an updater
+unpacks over a running app), and Windows prefers the `-setup.exe` over the
+`.msi`, which does not bootstrap WebView2.
+
+It needs `TMC_RELEASE_TOKEN` (matching the site's `APP_RELEASE_TOKEN`). Without
+it the job warns and skips, rather than failing: a release that was cut and not
+announced is fixable in a minute, while a failed release job has to be re-run
+against a tag that already has artifacts on it.
 
 ### Three refusals worth keeping
 

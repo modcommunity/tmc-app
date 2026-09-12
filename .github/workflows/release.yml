@@ -147,6 +147,12 @@ jobs:
                   path: artifacts
                   merge-multiple: true
 
+            # Pinned rather than relying on the runner image's default, since
+            # `publish-release.mjs` uses `fetch` and top-level `await`.
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+
             # checksums.txt is not decoration: `scripts/install.sh` REFUSES to
             # install without it, so a release published without this step is a
             # release the one-line installer will not touch.
@@ -159,34 +165,6 @@ jobs:
                   sha256sum $(ls | grep -v '\.sig$') > checksums.txt
                   cat checksums.txt
 
-            # What to do next, printed into the run's own log so the person who
-            # cut the release does not have to go and find it. The app is not
-            # offered the release until `app.version.latest` moves, which is
-            # what `--promote` does — see `docs/BUILDING.md`.
-            - name: Next steps
-              shell: bash
-              working-directory: artifacts
-              env:
-                  TAG: ${{ github.event.inputs.tag || github.ref_name }}
-              run: |
-                  if ! ls *.sig >/dev/null 2>&1; then
-                      echo "No .sig files: this release is download-only."
-                      exit 0
-                  fi
-
-                  echo "Signed. To make it installable from inside the app, run in website-city:"
-                  echo
-
-                  for sig in *.sig; do
-                      echo "  npm run app:release:publish -- --version ${TAG#v} \\"
-                      echo "    --target <TARGET> \\"
-                      echo "    --url https://github.com/${{ github.repository }}/releases/download/${TAG}/${sig%.sig} \\"
-                      echo "    --sig '<contents of ${sig}>'"
-                      echo
-                  done
-
-                  echo "…then once every platform is published, one more run with --promote."
-
             - name: Publish
               env:
                   GH_TOKEN: ${{ github.token }}
@@ -195,3 +173,56 @@ jobs:
                   gh release create "$TAG" --title "TMC $TAG" --generate-notes --draft=false \
                     || echo "release already exists, uploading into it"
                   gh release upload "$TAG" artifacts/* --clobber
+
+            # PUBLISHING THE RELEASE TO THE SITE IS PART OF CUTTING IT.
+            #
+            # Without this, every release ended with somebody running a script
+            # once per platform and then remembering to promote — three chances
+            # to get it wrong on the one workflow where getting it wrong means
+            # telling users about an update and handing them a 404.
+            #
+            # It runs AFTER the GitHub release exists, because the URLs it
+            # publishes are that release's download URLs: sending them first
+            # would name files nothing serves yet. One request carries every
+            # platform and the promotion together, so the site writes them in
+            # one transaction or writes none.
+            #
+            # It is skipped, loudly, when the secret is unset. A release that
+            # was cut and not announced is a state somebody can fix in a minute;
+            # a failed release job is one that has to be re-run against a tag
+            # that already has artifacts on it.
+            - name: Publish to TMC
+              shell: bash
+              env:
+                  TMC_RELEASE_TOKEN: ${{ secrets.TMC_RELEASE_TOKEN }}
+                  TMC_SITE_URL: ${{ vars.TMC_SITE_URL }}
+                  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+              run: |
+                  if [ -z "${TMC_RELEASE_TOKEN:-}" ]; then
+                      echo "::warning::TMC_RELEASE_TOKEN is not set, so this release was not published to the site. Nobody is offered it until it is — run scripts/publish-release.mjs by hand, or set the secret and re-run this job."
+                      exit 0
+                  fi
+
+                  if ! ls artifacts/*.sig >/dev/null 2>&1; then
+                      echo "::warning::This release is unsigned, so the app cannot install it. Not publishing to the site — the version banner will still offer the download page."
+                      exit 0
+                  fi
+
+                  # An ARRAY, not `${VAR:+--site "$VAR"}`. That expansion
+                  # word-splits without re-interpreting the quotes, so the URL
+                  # would arrive with literal quote characters around it.
+                  # Unset means the production site, which is what the script
+                  # defaults to. The variable exists so a fork or a staging
+                  # deployment can point its own releases somewhere else.
+                  site=()
+
+                  if [ -n "${TMC_SITE_URL:-}" ]; then
+                      site=(--site "$TMC_SITE_URL")
+                  fi
+
+                  node scripts/publish-release.mjs \
+                      --dir artifacts \
+                      --version "${TAG#v}" \
+                      --base-url "https://github.com/${{ github.repository }}/releases/download/${TAG}" \
+                      "${site[@]}" \
+                      --promote
