@@ -55,7 +55,14 @@ export function ApiOk<S extends z.ZodTypeAny>(schema: S) {
 /** Self-reported client identity. Untrusted — a label for the approval screen. */
 export const ClientInfoSchema = z.object({
     name: z.string().min(1).max(64),
-    platform: z.enum(['windows', 'macos', 'linux', 'android', 'ios', 'unknown']),
+    platform: z.enum([
+        'windows',
+        'macos',
+        'linux',
+        'android',
+        'ios',
+        'unknown',
+    ]),
     version: z.string().min(1).max(32),
 })
 
@@ -654,7 +661,9 @@ export const FacetsResponseSchema = z.object({
      * nothing, and a filter that can only ever return an empty list is worse
      * than no filter.
      */
-    countries: z.array(RefSchema.extend({ count: z.number().int() })).default([]),
+    countries: z
+        .array(RefSchema.extend({ count: z.number().int() }))
+        .default([]),
 })
 
 export type FacetsResponseT = z.infer<typeof FacetsResponseSchema>
@@ -1068,10 +1077,7 @@ export const DeviceDownloadReportRequest = z.object({
      * a device list renders, and the items are for the one device somebody
      * opened.
      */
-    items: z
-        .array(DeviceDownloadItemSchema)
-        .max(MAX_REPORTED_DOWNLOADS)
-        .default([]),
+    items: z.array(DeviceDownloadItemSchema).max(MAX_REPORTED_DOWNLOADS).default([]),
 })
 
 export const DeviceDownloadSchema = z.object({
@@ -1391,9 +1397,16 @@ export const PlayOptionSchema = z.discriminatedUnion('kind', [
 
 export type PlayOptionT = z.infer<typeof PlayOptionSchema>
 
-export const PlayOptionValueSchema = z.union([z.string(), z.number(), z.boolean()])
+export const PlayOptionValueSchema = z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+])
 
-export const PlayOptionValuesSchema = z.record(z.string(), PlayOptionValueSchema)
+export const PlayOptionValuesSchema = z.record(
+    z.string(),
+    PlayOptionValueSchema
+)
 
 export type PlayOptionValuesT = z.infer<typeof PlayOptionValuesSchema>
 
@@ -1653,6 +1666,16 @@ export const AppListQuerySchema = z.object({
     playable: QueryBool.optional(),
     /** Only apps the app can install mods for (`TMC_APP_MANAGE`). */
     managed: QueryBool.optional(),
+    /**
+     * Only apps with a native build published for SOME platform.
+     *
+     * Not for THIS device's platform, deliberately: the row already carries
+     * which targets exist, and a server-side narrowing would need the app to
+     * send its architecture on a catalogue request — which is a fact about the
+     * user's machine going out on every browse rather than on the one request
+     * that installs something.
+     */
+    installable: QueryBool.optional(),
     sort: AppSortSchema.default('players'),
     cursor: z.string().max(64).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),

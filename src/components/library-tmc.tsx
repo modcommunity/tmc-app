@@ -105,14 +105,20 @@ export default function LibraryTmcGames() {
     }, [refresh])
 
     /*
-     * The catalogue, narrowed to what can be installed. `playable` is not the
-     * filter: a game can be perfectly playable in the browser window and have
-     * nothing to install, and vice versa — `install` on the row is the field
-     * that answers this screen's question.
+     * The catalogue, narrowed SERVER-side to apps with a build. `playable` is
+     * not the filter: a game can be perfectly playable in the browser window
+     * and have nothing to install, and vice versa.
+     *
+     * Narrowed there rather than here because the alternative — filtering a
+     * page of the whole catalogue — makes an installable game past the last row
+     * of that page invisible, with nothing on screen to suggest it exists. The
+     * server narrows to a build on ANY platform and the merge below drops the
+     * ones with none for this machine, which is the safe direction of that
+     * asymmetry.
      */
     const catalogue = useQuery({
-        queryKey: ['apps', { install: true }],
-        queryFn: () => api.apps({ limit: 100, sort: 'players' }),
+        queryKey: ['apps', { installable: true }],
+        queryFn: () => api.apps({ installable: true, limit: 100, sort: 'name' }),
         staleTime: 5 * 60 * 1000,
     })
 
