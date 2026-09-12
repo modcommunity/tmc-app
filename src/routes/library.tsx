@@ -1,28 +1,33 @@
 import { Link, useSearchParams } from 'react-router-dom'
-import { FiDownload, FiLayers, FiPackage } from 'react-icons/fi'
+import { FiDownload, FiLayers, FiPackage, FiZap } from 'react-icons/fi'
 
 import { useAuth } from '~/lib/auth/provider'
 import { useLibrary } from '~/lib/library/provider'
 import LibraryGames from '~/components/library-games'
 import LibraryContent from '~/components/library-content'
+import LibraryTmcGames from '~/components/library-tmc'
 
 /**
  * **Library** — this device's half of the app.
  *
- * Two views, because the screen was answering the wrong question. It used to be
- * a list of subscriptions, which tells somebody what they subscribed to; the
+ * Three views, because the screen was answering the wrong question. It used to
+ * be a list of subscriptions, which tells somebody what they subscribed to; the
  * question people open a mod manager for is *what have I got installed, and how
  * do I play it*. That is now the view it opens on, and the subscription list is
- * the second tab rather than the whole screen.
+ * a tab rather than the whole screen.
  *
- * The split is not cosmetic. The two lists come from different places and mean
- * different things — Games is assembled from this machine's sandboxes and
- * configured folders, Content is the account's subscriptions mirrored down —
- * and one list holding both would have to explain, per row, which kind of thing
- * it was.
+ * The split is not cosmetic. The three lists come from different places and
+ * mean genuinely different things, and one list holding all of them would have
+ * to explain, per row, which kind of thing it was:
+ *
+ *   * **Games** — what somebody ELSE's launcher installed, assembled from this
+ *     machine's sandboxes and configured folders. The app mods these.
+ *   * **TMC Games** — what THIS app installed, from a build TMC published. The
+ *     app owns these folders outright and keeps them current.
+ *   * **Subscribed** — what the ACCOUNT subscribed to, mirrored down.
  */
 
-type View = 'games' | 'content'
+type View = 'games' | 'content' | 'tmc'
 
 export default function LibraryRoute() {
     const { status } = useAuth()
@@ -34,7 +39,9 @@ export default function LibraryRoute() {
      * the content view has to survive a reload and the back button, and it is
      * what lets another screen point at one half of this one.
      */
-    const view: View = params.get('view') === 'content' ? 'content' : 'games'
+    const raw = params.get('view')
+    const view: View =
+        raw === 'content' ? 'content' : raw === 'tmc' ? 'tmc' : 'games'
 
     const setView = (next: View) => {
         const updated = new URLSearchParams(params)
@@ -74,7 +81,9 @@ export default function LibraryRoute() {
         <div className="flex flex-col gap-3 p-3">
             <Header view={view} onChange={setView} count={rows.length} />
 
-            {view === 'games' ? <LibraryGames /> : <LibraryContent />}
+            {view === 'games' && <LibraryGames />}
+            {view === 'tmc' && <LibraryTmcGames />}
+            {view === 'content' && <LibraryContent />}
         </div>
     )
 }
@@ -96,6 +105,12 @@ function Header({
                     onClick={() => onChange('games')}
                     icon={FiLayers}
                     label="Games"
+                />
+                <Tab
+                    active={view === 'tmc'}
+                    onClick={() => onChange('tmc')}
+                    icon={FiZap}
+                    label="TMC Games"
                 />
                 <Tab
                     active={view === 'content'}

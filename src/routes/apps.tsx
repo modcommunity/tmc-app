@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
     FiBox,
@@ -248,6 +248,51 @@ export default function AppsRoute() {
 
         setParams(next, { replace: true })
     }
+
+    /*
+     * `tmc://play/app/<slug>` lands here with `?app=&start=1`.
+     *
+     * The link opens the launch dialog and nothing else — the deep-link rule is
+     * that a link may ask the app to SHOW something, and a dialog with a Play
+     * button in it is a thing shown. Resolved by a lookup rather than by
+     * searching the loaded page: the game somebody was linked to is very often
+     * not on the first page of a catalogue sorted by player count.
+     */
+    const startRef = params.get('start') === '1' ? params.get('app') : null
+
+    const startLookup = useQuery({
+        queryKey: ['apps', { start: startRef }],
+        queryFn: () =>
+            api.apps(
+                /^\d+$/.test(startRef ?? '')
+                    ? { ids: [Number(startRef)], limit: 1 }
+                    : { slugs: [startRef ?? ''], limit: 1 }
+            ),
+        enabled: Boolean(startRef),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    useEffect(() => {
+        const app = startLookup.data?.apps[0]
+
+        if (!app) return
+
+        setTarget({ appId: app.id, app })
+
+        // Cleared so a reload, or closing the dialog and pressing back, does
+        // not reopen it. The link has been followed; the URL should stop
+        // describing an action.
+        const next = new URLSearchParams(params)
+
+        next.delete('start')
+        next.delete('app')
+
+        setParams(next, { replace: true })
+        // `params`/`setParams` are deliberately absent: this must run when the
+        // lookup resolves, and including them re-runs it on the very change it
+        // makes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [startLookup.data])
 
     const filters = useMemo(
         () => ({

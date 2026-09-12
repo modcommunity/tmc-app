@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
     FiAlertTriangle,
+    FiCpu,
     FiExternalLink,
     FiGlobe,
     FiHardDrive,
@@ -12,6 +13,7 @@ import {
 } from 'react-icons/fi'
 
 import { api } from '~/lib/api/client'
+import { useSettings } from '~/lib/settings/provider'
 import { ipc } from '~/lib/ipc/commands'
 import { messageOf } from '~/lib/ipc'
 import { GameIcon } from '~/components/game-icon'
@@ -25,15 +27,19 @@ import type {
     PlayOptionT,
     PlayOptionValuesT,
 } from '~/lib/api/contract'
-import type { LaunchPreviewT, SandboxRowT } from '~/lib/ipc/schemas'
+import type { InstalledGameT, LaunchPreviewT, SandboxRowT } from '~/lib/ipc/schemas'
 
 /**
  * **The launcher**, and the reason the app's player beats a modal in a page.
  *
  * The website can offer one button, because a browser has exactly one way to
- * start a game. This device has three, and which of them is even possible is a
+ * start a game. This device has four, and which of them is even possible is a
  * fact about THIS machine that no server can answer:
  *
+ *   * **The TMC build** — a game this app downloaded and unpacked itself, run
+ *     as a real process. It is offered first when it exists, because it is the
+ *     only mode where the app knows the exact build on disk and can therefore
+ *     say that it will start.
  *   * **In a window** — the app's own web loader, in a webview with no IPC.
  *   * **The installed copy** — through a sandbox, with its mods deployed, its
  *     load order applied and its launch options resolved. Nothing on the web
@@ -56,7 +62,7 @@ import type { LaunchPreviewT, SandboxRowT } from '~/lib/ipc/schemas'
  */
 
 /** The ways a game can be started, in the order they are offered. */
-type Mode = 'web' | 'sandbox' | 'connect'
+type Mode = 'native' | 'web' | 'sandbox' | 'connect'
 
 export type PlayTargetT = {
     appId: number
@@ -197,6 +203,7 @@ export default function PlayDialog({
     onClose: () => void
 }) {
     const { server } = target
+    const { user } = useSettings()
 
     /*
      * Skipped entirely when the caller already handed over a row. `enabled`
@@ -238,10 +245,33 @@ export default function PlayDialog({
                 engine: null,
                 counts: { mods: 0, assets: 0, servers: 0, players: 0 },
                 play: null,
+                // Same honesty as `play`: without the catalogue row nothing is
+                // known about installable builds, so none is offered.
+                install: null,
                 webUrl: '',
             },
         [target.app, target.appId, target.fallback, looked.data]
     )
+
+    /*
+     * The TMC build installed for this game, or null.
+     *
+     * `undefined` while it is being looked up, so the mode chooser below can
+     * wait for the answer rather than defaulting to a worse mode and then
+     * moving under somebody's cursor.
+     */
+    const [native, setNative] = useState<InstalledGameT | null | undefined>(
+        undefined
+    )
+    const [fullscreen, setFullscreen] = useState(false)
+    /*
+     * The ACCOUNT's language, for a build whose launch arguments name
+     * `{locale}`. It is an account setting rather than a machine one, so Rust
+     * has none and the caller supplies it — and a signed-out user gets the
+     * default rather than a blank, which is what the site's own launch
+     * resolution does with the same field.
+     */
+    const locale = user?.locale ?? 'en'
 
     const [sandboxes, setSandboxes] = useState<SandboxRowT[] | null>(null)
     const [sandboxId, setSandboxId] = useState<string>('')
@@ -265,6 +295,23 @@ export default function PlayDialog({
     )
 
     useEffect(() => setValues(defaultsFor(options)), [options])
+
+    useEffect(() => {
+        let live = true
+
+        void ipc
+            .gamesList()
+            .then((rows) => {
+                if (live) setNative(rows.find((r) => r.appId === app.id) ?? null)
+            })
+            .catch(() => {
+                if (live) setNative(null)
+            })
+
+        return () => {
+            live = false
+        }
+    }, [app.id])
 
     useEffect(() => {
         let live = true
@@ -305,6 +352,16 @@ export default function PlayDialog({
     const canSandbox = (sandboxes?.length ?? 0) > 0
 
     /*
+     * An installed TMC build can always be started — with a server or without
+     * one. `directPlay` is not consulted, and that is deliberate rather than an
+     * oversight: the flag answers "does pressing Play with no server start
+     * something worth starting", which is a question about a launch the SITE
+     * performs. This launch is a binary on this disk, and whether it opens to a
+     * menu is the game's own business.
+     */
+    const canNative = native != null
+
+    /*
      * Chosen once the facts are in, not on every render.
      *
      * The default is the mode that produces the best result rather than the
@@ -313,15 +370,25 @@ export default function PlayDialog({
      * that may not be installed.
      */
     useEffect(() => {
-        if (mode !== null || sandboxes === null) return
+        if (mode !== null || sandboxes === null || native === undefined) return
         if (!target.app && looked.isPending) return
 
         setMode(
-            canSandbox ? 'sandbox' : canWeb ? 'web' : canConnect ? 'connect' : null
+            canNative
+                ? 'native'
+                : canSandbox
+                  ? 'sandbox'
+                  : canWeb
+                    ? 'web'
+                    : canConnect
+                      ? 'connect'
+                      : null
         )
     }, [
         mode,
         sandboxes,
+        native,
+        canNative,
         canSandbox,
         canWeb,
         canConnect,
@@ -340,6 +407,7 @@ export default function PlayDialog({
                 options: values,
                 title: app.name,
                 appSlug: app.slug ?? undefined,
+                fullscreen,
             })
 
             onClose()
@@ -348,7 +416,33 @@ export default function PlayDialog({
         } finally {
             setBusy(false)
         }
-    }, [app, server, values, onClose])
+    }, [app, server, values, fullscreen, onClose])
+
+    const launchNative = useCallback(async () => {
+        setBusy(true)
+        setError(null)
+
+        try {
+            /*
+             * A server ID, never an address. The host and port are read from
+             * the API in Rust, for the same reason `playConnect` reads a
+             * connect link there — "point this process at that box" is not a
+             * decision the webview makes.
+             */
+            await ipc.gameLaunch({
+                appId: app.id,
+                serverId: server ? Number(server.id) : undefined,
+                options: values,
+                locale,
+            })
+
+            onClose()
+        } catch (err) {
+            setError(messageOf(err))
+        } finally {
+            setBusy(false)
+        }
+    }, [app.id, server, values, locale, onClose])
 
     const launchSandbox = useCallback(async () => {
         const id = Number(sandboxId)
@@ -420,7 +514,7 @@ export default function PlayDialog({
             />
         )
 
-    const nothing = !canWeb && !canConnect && !canSandbox
+    const nothing = !canNative && !canWeb && !canConnect && !canSandbox
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -484,6 +578,38 @@ export default function PlayDialog({
                         </div>
                     ) : (
                         <div className="flex flex-col gap-2">
+                            {canNative && native && (
+                                <ModeCard
+                                    active={mode === 'native'}
+                                    onSelect={() => setMode('native')}
+                                    icon={FiCpu}
+                                    title="Play the TMC build"
+                                    body={
+                                        server
+                                            ? `Starts version ${native.version} on this machine and joins the server.`
+                                            : `Starts version ${native.version} installed on this machine.`
+                                    }
+                                >
+                                    {options.length > 0 && (
+                                        <div className="flex flex-col gap-3">
+                                            {options.map((option) => (
+                                                <OptionField
+                                                    key={option.key}
+                                                    option={option}
+                                                    value={values[option.key]}
+                                                    onChange={(next) =>
+                                                        setValues((prev) => ({
+                                                            ...prev,
+                                                            [option.key]: next,
+                                                        }))
+                                                    }
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </ModeCard>
+                            )}
+
                             {canSandbox && (
                                 <ModeCard
                                     active={mode === 'sandbox'}
@@ -516,6 +642,29 @@ export default function PlayDialog({
                                     title="Play in a window"
                                     body="Runs the game's web build in a window of its own. Nothing is installed."
                                 >
+                                    <label className="mb-3 flex cursor-pointer items-start gap-2 text-xs">
+                                        <input
+                                            type="checkbox"
+                                            className="mt-0.5"
+                                            checked={fullscreen}
+                                            onChange={(e) =>
+                                                setFullscreen(e.target.checked)
+                                            }
+                                        />
+                                        <span className="flex flex-col gap-0.5">
+                                            <span>Start full screen</span>
+                                            {/* The window is a REMOTE page with
+                                                no IPC, so it cannot offer its
+                                                own control for this — the
+                                                choice has to be made here,
+                                                before it opens. Escape leaves
+                                                full screen. */}
+                                            <span className="text-[11px] text-muted">
+                                                Press Escape to leave full screen.
+                                            </span>
+                                        </span>
+                                    </label>
+
                                     {options.length > 0 && (
                                         <div className="flex flex-col gap-3">
                                             {options.map((option) => (
@@ -544,6 +693,22 @@ export default function PlayDialog({
                                     title="Connect with the game client"
                                     body="Hands the server's address to the copy already installed on this machine, through its own launcher."
                                 />
+                            )}
+
+                            {!canNative && app.install && (
+                                <p className="flex items-start gap-2 px-1 text-[11px] text-muted">
+                                    <FiCpu className="mt-0.5 size-3 shrink-0" />
+                                    <span>
+                                        TMC publishes a build of this game.{' '}
+                                        <Link
+                                            to="/library?view=tmc"
+                                            className="underline"
+                                        >
+                                            Install it
+                                        </Link>{' '}
+                                        to play it without a browser.
+                                    </span>
+                                </p>
                             )}
 
                             {!canSandbox && (
@@ -583,7 +748,8 @@ export default function PlayDialog({
                         type="button"
                         disabled={busy || mode === null}
                         onClick={() => {
-                            if (mode === 'web') void launchWeb()
+                            if (mode === 'native') void launchNative()
+                            else if (mode === 'web') void launchWeb()
                             else if (mode === 'sandbox') void launchSandbox()
                             else if (mode === 'connect') void connect()
                         }}

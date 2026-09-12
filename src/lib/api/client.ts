@@ -16,6 +16,7 @@ import {
     ReviewListResponse,
     ReviewVoteResponse,
     ReviewWriteResponse,
+    ServerLookupResponseSchema,
     SubscriptionSyncResponse,
     UserSettingsSchema,
     type AppListQueryT,
@@ -136,6 +137,20 @@ export const api = {
         ),
 
     facets: (kind: ContentKindT) => get('/facets', FacetsResponseSchema, { kind }),
+
+    /**
+     * Which listed server is at an address.
+     *
+     * What a `tmc://play/<host>:<port>` link resolves through. The caller
+     * already holds the address — that is what a link IS — so this discloses
+     * nothing the browser does not; what it adds is which game is running
+     * there, which is the fact a join screen needs before it can draw a button.
+     *
+     * A host running two servers answers with both, newest-and-busiest first,
+     * and the screen draws a choice rather than guessing between them.
+     */
+    serverLookup: (host: string, port?: number) =>
+        get('/servers/lookup', ServerLookupResponseSchema, { host, port }),
 
     // ------------------------------------------------------------------ Apps
     /**

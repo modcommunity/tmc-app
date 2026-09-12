@@ -25,6 +25,7 @@ pub mod config;
 pub mod detect;
 pub mod downloads;
 pub mod fs;
+pub mod games;
 pub mod import;
 pub mod library;
 pub mod logs;

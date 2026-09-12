@@ -64,6 +64,33 @@ pub enum DeepLink {
     /// Local ids only, so this is only ever useful to something already on this
     /// machine. It still only opens a screen.
     Sandbox { id: i64 },
+
+    /// `tmc://play/<host>:<port>` — open a join screen for that address.
+    ///
+    /// The link the website's Join button produces (`PLAY_URI_DEFAULT`), and
+    /// the one place in this enum where the payload is not an id of ours. It is
+    /// STILL only a screen: the app looks the address up, shows what is running
+    /// there, and puts a Join button on it. It does not start a game.
+    ///
+    /// That distinction is the whole module's rule and it is load-bearing here
+    /// rather than theoretical, because this is the link an ordinary web page
+    /// can navigate to without a click. An auto-joining version would be a
+    /// remote primitive for making somebody's machine connect to an address a
+    /// stranger chose — which is a small harm on its own and is exactly the
+    /// shape of the thing this app spends four hundred lines avoiding
+    /// elsewhere.
+    ///
+    /// The port is optional: `tmc://play/example.com` is a perfectly good way
+    /// to say "this box", and the game's own default port is a thing the join
+    /// screen can fill in.
+    Play { host: String, port: Option<u16> },
+
+    /// `tmc://play/app/<slug-or-id>` — open one game's launch screen.
+    ///
+    /// The serverless half. A slug rather than only an id because that is what
+    /// the website's `{app}` token substitutes, and because a link somebody
+    /// writes by hand is written with a name in it.
+    PlayApp { app: String },
 }
 
 /// Content kinds a link may name.
@@ -149,8 +176,136 @@ pub fn parse(raw: &str) -> Option<DeepLink> {
             id: parse_id(segments.get(1)?)?,
         }),
 
+        "play" => {
+            /*
+             * EXACTLY the two shapes, with nothing after them.
+             *
+             * A trailing segment is ignored by `auth`, where that is right — a
+             * wake-up has no arguments and reading one would be reading a value
+             * an attacker chose. Here it is wrong for the opposite reason: this
+             * action HAS a grammar, and accepting `tmc://play/host:1/join`
+             * today is how `/join` quietly becomes meaningful the first time
+             * somebody adds a segment to the match below.
+             */
+            let first = segments.get(1)?;
+
+            let expected = if first.eq_ignore_ascii_case("app") {
+                3
+            } else {
+                2
+            };
+
+            if segments.len() != expected {
+                return None;
+            }
+
+            /*
+             * `play/app/<x>` is the serverless shape, and is checked before the
+             * address one so that a game whose slug happens to be `app` cannot
+             * be reached as an address. The alternative ordering would make
+             * `tmc://play/app` parse as a hostname called "app".
+             */
+            if first.eq_ignore_ascii_case("app") {
+                let app = segments.get(2)?;
+
+                return parse_app_ref(app).map(|app| DeepLink::PlayApp { app });
+            }
+
+            let (host, port) = split_address(first)?;
+
+            Some(DeepLink::Play { host, port })
+        }
+
         _ => None,
     }
+}
+
+/// Split `host:port`, `host`, or `[v6]:port` into its two halves.
+///
+/// Written out rather than handed to `SocketAddr::from_str`, for two reasons
+/// that both matter here: the host is very often a NAME and not an address, and
+/// the port is optional. What this does check is that the host could be one —
+/// the value becomes a lookup and then a screen, and a "hostname" containing a
+/// slash, a space or a control character is not a typo somebody made.
+fn split_address(raw: &str) -> Option<(String, Option<u16>)> {
+    // A bracketed IPv6 literal keeps its brackets: `[::1]` is how the address
+    // is written everywhere a port might follow it, and splitting on the last
+    // colon without them would take `::1` apart in the middle.
+    let (host, port) = if let Some(rest) = raw.strip_prefix('[') {
+        let close = rest.find(']')?;
+        let host = format!("[{}]", &rest[..close]);
+
+        match rest[close + 1..].strip_prefix(':') {
+            Some(port) => (host, Some(port)),
+            None if rest[close + 1..].is_empty() => (host, None),
+            None => return None,
+        }
+    } else {
+        match raw.rsplit_once(':') {
+            Some((host, port)) => (host.to_string(), Some(port)),
+            None => (raw.to_string(), None),
+        }
+    };
+
+    if !is_hostish(&host) {
+        return None;
+    }
+
+    let port = match port {
+        Some(raw) => {
+            let parsed: u16 = raw.parse().ok()?;
+
+            // Port 0 is "let the OS pick", which is not something a client can
+            // connect to and is the value an empty field parses to.
+            (parsed > 0).then_some(parsed)?.into()
+        }
+        None => None,
+    };
+
+    Some((host, port))
+}
+
+/// Whether this could be a hostname or an IP literal.
+///
+/// Deliberately not a full RFC check: the value is going to a lookup that will
+/// refuse it if it is not real, and the job here is to keep anything that is
+/// obviously not an address out of a router path and out of a request.
+fn is_hostish(host: &str) -> bool {
+    let inner = host.strip_prefix('[').and_then(|h| h.strip_suffix(']'));
+
+    // An IPv6 literal is hex groups and colons, and nothing else.
+    if let Some(inner) = inner {
+        return !inner.is_empty()
+            && inner.len() <= 45
+            && inner
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() || b == b':' || b == b'.');
+    }
+
+    !host.is_empty()
+        && host.len() <= 255
+        && !host.starts_with('.')
+        && !host.ends_with('.')
+        && host
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-')
+}
+
+/// A slug or a numeric id, as the `{app}` token substitutes one.
+///
+/// The value becomes a path segment in the app's router and a query parameter
+/// in a request, so the character set is closed for the same reason [`KINDS`]
+/// is.
+fn parse_app_ref(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+
+    let ok = !trimmed.is_empty()
+        && trimmed.len() <= 120
+        && trimmed
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+
+    ok.then(|| trimmed.to_ascii_lowercase())
 }
 
 fn parse_id(raw: &str) -> Option<i64> {
@@ -210,6 +365,91 @@ mod tests {
         assert_eq!(parse("tmc://sandbox/3"), Some(DeepLink::Sandbox { id: 3 }));
     }
 
+    #[test]
+    fn a_play_link_names_an_address_and_only_opens_a_screen() {
+        assert_eq!(
+            parse("tmc://play/play.example.com:6064"),
+            Some(DeepLink::Play {
+                host: "play.example.com".into(),
+                port: Some(6064)
+            })
+        );
+
+        // No port is a legitimate way to name a box.
+        assert_eq!(
+            parse("tmc://play/192.0.2.10"),
+            Some(DeepLink::Play {
+                host: "192.0.2.10".into(),
+                port: None
+            })
+        );
+
+        // A bracketed v6 literal keeps its brackets and its colons.
+        assert_eq!(
+            parse("tmc://play/[2001:db8::1]:27015"),
+            Some(DeepLink::Play {
+                host: "[2001:db8::1]".into(),
+                port: Some(27015)
+            })
+        );
+
+        /*
+         * `..` never reaches the match: the URL parser normalises the path
+         * before this module sees it, so this is a link naming a host called
+         * `etc`. Pinned because the result LOOKS like a traversal that got
+         * through, and the next person to read it should not have to re-derive
+         * why it did not — what comes out is a hostname, it is only ever used
+         * as one, and no such host resolves.
+         */
+        assert_eq!(
+            parse("tmc://play/../etc"),
+            Some(DeepLink::Play {
+                host: "etc".into(),
+                port: None
+            })
+        );
+    }
+
+    #[test]
+    fn a_play_app_link_names_a_game() {
+        assert_eq!(
+            parse("tmc://play/app/hungario"),
+            Some(DeepLink::PlayApp {
+                app: "hungario".into()
+            })
+        );
+
+        // The id form, which is what `{app}` falls back to.
+        assert_eq!(
+            parse("tmc://play/app/42"),
+            Some(DeepLink::PlayApp { app: "42".into() })
+        );
+    }
+
+    #[test]
+    fn a_play_link_that_is_not_an_address_is_refused() {
+        for bad in [
+            // The shape an empty `{host}`/`{port}` substitution used to
+            // produce. The website declines to build it now; this is the other
+            // half of that fix, on the side that would have to act on it.
+            "tmc://play/:",
+            "tmc://play/:6064",
+            "tmc://play/host:0",
+            "tmc://play/host:99999",
+            "tmc://play/host:abc",
+            "tmc://play/two%20words",
+            "tmc://play/a/b",
+            "tmc://play",
+            "tmc://play/app",
+            // `tmc://play/app/../x` is absent on purpose: the URL parser
+            // normalises it to `tmc://play/x` before this module sees it, so it
+            // is a link naming a host — see the test above.
+            "tmc://play/[2001:db8::1",
+        ] {
+            assert_eq!(parse(bad), None, "{bad} should not parse");
+        }
+    }
+
     /// The point of the whole module: a link may only ever name something to
     /// SHOW. Anything that looks like an instruction is refused.
     #[test]
@@ -222,6 +462,10 @@ mod tests {
             "tmc://exec/rm",
             "tmc://settings/gameDir?path=/",
             "tmc://rcon/1/exec?command=quit",
+            // `play` SHOWS a join screen. These would be it doing something.
+            "tmc://play/host:1/join",
+            "tmc://launch/host:1",
+            "tmc://connect/host:1",
             // Another app's scheme.
             "https://example.com/install/mod/1",
             "file:///etc/passwd",

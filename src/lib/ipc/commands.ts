@@ -2,6 +2,11 @@ import { z } from 'zod'
 
 import { call } from './index'
 import {
+    GamePlatformInfoSchema,
+    GameStatusSchema,
+    GameUpdateReportSchema,
+    InstalledGameSchema,
+    NativeBuildSchema,
     ApiEnvSchema,
     AutoUpdateReportSchema,
     DependencyReportSchema,
@@ -631,6 +636,14 @@ export const ipc = {
         options?: Record<string, string | number | boolean>
         title?: string
         appSlug?: string
+        /**
+         * Open it filling the screen.
+         *
+         * Chosen before the window opens because the window cannot choose it
+         * afterwards: it is a remote page with no `invoke`, which is the
+         * isolation the whole feature rests on.
+         */
+        fullscreen?: boolean
     }) => call('play_open_web', SessionSchema, { request }),
 
     /** Resolve the site's `playAppUri` and hand it to the OS. */
@@ -658,6 +671,68 @@ export const ipc = {
     playClose: () => call('play_close', z.void()),
 
     playState: () => call('play_state', z.object({ open: z.boolean() })),
+
+    // ------------------------------------------------------------- TMC games
+    //
+    // Installing a game TMC publishes. The webview names an APP ID and nothing
+    // else: the build's address, its checksum and the path it unpacks to are
+    // all resolved in Rust, so there is no `gameInstall(url)` and no
+    // `gameLaunch(path)` — the same rule `downloadRelease` and `playOpenWeb`
+    // already follow.
+
+    /** What this machine can install, and why it cannot when it cannot. */
+    gamesPlatform: () => call('games_platform', GamePlatformInfoSchema),
+
+    /** Every TMC game installed on this device. */
+    gamesList: () => call('games_list', z.array(InstalledGameSchema)),
+
+    /** What the site has for this machine, or null for nothing to install. */
+    gamesAvailable: (appId: number) =>
+        call('games_available', NativeBuildSchema.nullable(), { appId }),
+
+    /**
+     * Install, or update in place.
+     *
+     * One command for both, because an update is an install whose row already
+     * exists. Progress is NOT reported through here — the build goes through
+     * the ordinary download queue, so the Downloads screen shows it, pauses it
+     * and rate-limits it without learning what a game is.
+     */
+    gameInstall: (request: { appId: number; name: string; slug?: string }) =>
+        call('game_install', InstalledGameSchema, { request }),
+
+    gameUninstall: (appId: number) => call('game_uninstall', z.void(), { appId }),
+
+    gameSetAutoUpdate: (appId: number, enabled: boolean) =>
+        call('game_set_auto_update', z.void(), { appId, enabled }),
+
+    /** Ask the site about every installed game. Reports; installs nothing. */
+    gamesCheckUpdates: () => call('games_check_updates', z.array(GameStatusSchema)),
+
+    /**
+     * Bring every installed game that asked to be kept current forward.
+     *
+     * Called on the library sync pass, beside `sandboxAutoUpdate` and for the
+     * same reason: that loop is the device's own "am I online now?" heartbeat.
+     * A game that fails keeps the version it already had — the new build lands
+     * in its own directory and the row is only repointed once it is verified.
+     */
+    gamesAutoUpdate: () => call('games_auto_update', GameUpdateReportSchema),
+
+    /**
+     * Start an installed game, optionally into a server.
+     *
+     * Names a SERVER ID, never an address: the host and port are read from the
+     * API in Rust, for the same reason `playConnect` reads the connect link
+     * there. Unlike a `steam://` hand-off this is a real process — it has a
+     * duration, an exit code and a captured log.
+     */
+    gameLaunch: (request: {
+        appId: number
+        serverId?: number
+        options?: Record<string, string | number | boolean>
+        locale?: string
+    }) => call('game_launch', SessionSchema, { request }),
 
     // -------------------------------------------------------------- Sessions
     //

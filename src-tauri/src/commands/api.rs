@@ -5,6 +5,15 @@ use tauri::State;
 use tmc_core::api::Method;
 use tmc_core::audit;
 use tmc_core::error::{AppError, AppResult};
+/*
+ * Whether one version is later than another, for the update check below.
+ *
+ * It used to be a private function in this file, and then the game installer
+ * needed the same question answered about a build on disk. A second copy would
+ * have been a second place for `1.10.0` to sort below `1.9.0` — the one mistake
+ * in this app that looks right until somebody releases a tenth minor version.
+ */
+use tmc_core::version::is_newer;
 
 use crate::state::AppState;
 
@@ -187,112 +196,4 @@ pub async fn update_check(state: State<'_, AppState>) -> AppResult<UpdateCheck> 
         download,
         outdated,
     })
-}
-
-/// Is `candidate` a later version than `current`?
-///
-/// Dotted numeric comparison, component by component, with a missing component
-/// counting as zero so `1.2` sorts below `1.2.1`. Anything non-numeric in a
-/// component makes the whole comparison return **false**.
-///
-/// That refusal is the important half. The alternative — falling back to a
-/// string compare — is how `1.10.0` ends up "older" than `1.9.0`, and the
-/// symptom is an update notice that either never appears or never goes away.
-/// Saying "I cannot tell" and staying quiet is the better failure: the user
-/// hears nothing, rather than being nagged toward a version they already have.
-fn is_newer(candidate: &str, current: &str) -> bool {
-    let parse = |raw: &str| -> Option<Vec<u64>> {
-        // A build suffix (`1.2.3-beta.1`, `1.2.3+deadbeef`) is not ordered by
-        // anything this can know, so the release part is what gets compared.
-        let core = raw.split(['-', '+']).next().unwrap_or_default();
-
-        if core.is_empty() {
-            return None;
-        }
-
-        core.split('.')
-            .map(|part| part.parse::<u64>().ok())
-            .collect::<Option<Vec<u64>>>()
-            .filter(|parts| parts.len() <= 8)
-    };
-
-    let (Some(candidate), Some(current)) = (parse(candidate), parse(current)) else {
-        return false;
-    };
-
-    for index in 0..candidate.len().max(current.len()) {
-        let a = candidate.get(index).copied().unwrap_or(0);
-        let b = current.get(index).copied().unwrap_or(0);
-
-        if a != b {
-            return a > b;
-        }
-    }
-
-    false
-}
-
-#[cfg(test)]
-mod update_tests {
-    use super::is_newer;
-
-    #[test]
-    fn a_later_version_is_newer() {
-        assert!(is_newer("1.0.1", "1.0.0"));
-        assert!(is_newer("1.1.0", "1.0.9"));
-        assert!(is_newer("2.0.0", "1.99.99"));
-    }
-
-    #[test]
-    fn the_same_version_is_not() {
-        assert!(!is_newer("1.2.3", "1.2.3"));
-        assert!(!is_newer("1.0.0", "1.0.1"));
-        assert!(!is_newer("1.0.0", "2.0.0"));
-    }
-
-    /// The reason this is not a string compare.
-    #[test]
-    fn ten_is_after_nine() {
-        assert!(is_newer("1.10.0", "1.9.0"));
-        assert!(!is_newer("1.9.0", "1.10.0"));
-
-        // And the string compare that would get it wrong, stated so the
-        // temptation to "simplify" this is answered in place.
-        assert!("1.10.0" < "1.9.0", "lexically, which is the trap");
-    }
-
-    #[test]
-    fn a_missing_component_counts_as_zero() {
-        assert!(is_newer("1.2.1", "1.2"));
-        assert!(!is_newer("1.2", "1.2.0"));
-        assert!(!is_newer("1.2.0", "1.2"));
-    }
-
-    /// Anything it cannot order, it declines to order — rather than guessing
-    /// and producing a notice that never appears or never goes away.
-    #[test]
-    fn an_unparseable_version_is_never_newer() {
-        for (candidate, current) in [
-            ("nightly", "1.0.0"),
-            ("1.0.0", "nightly"),
-            ("", "1.0.0"),
-            ("1.0.0", ""),
-            ("v1.0.1", "1.0.0"),
-            ("1.0.0.0.0.0.0.0.0.0", "1.0.0"),
-        ] {
-            assert!(
-                !is_newer(candidate, current),
-                "{candidate} vs {current} is not orderable"
-            );
-        }
-    }
-
-    /// A build suffix is not ordered by anything this can know, so the release
-    /// part is what counts.
-    #[test]
-    fn a_build_suffix_does_not_change_the_release_it_belongs_to() {
-        assert!(is_newer("1.2.0-beta.1", "1.1.0"));
-        assert!(!is_newer("1.2.0-beta.1", "1.2.0"));
-        assert!(!is_newer("1.2.0+abc", "1.2.0"));
-    }
 }

@@ -136,6 +136,15 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
                     setLastUpdate({ at: Date.now(), report: updates })
 
                 /*
+                 * Games TMC published, on the same pass and for the same
+                 * reason. Swallowed the same way: a build that would not
+                 * download leaves the version already on disk, which is exactly
+                 * what the user had a minute ago, and the Library's TMC Games
+                 * tab is where an outstanding update is shown.
+                 */
+                void ipc.gamesAutoUpdate().catch(() => null)
+
+                /*
                  * Outstanding play time, sent on the same pass.
                  *
                  * A finished session is written to the device and marked

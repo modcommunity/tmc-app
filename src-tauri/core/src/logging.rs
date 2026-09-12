@@ -204,6 +204,17 @@ macro_rules! audit {
             data: Default::default(),
         })
     };
+    ($audit:expr, $level:ident, $scope:ident, $event:expr, $msg:expr, data = $data:expr) => {
+        $audit.write($crate::logging::LogEntry {
+            at: $crate::logging::now_rfc3339(),
+            level: $crate::logging::LogLevel::$level,
+            scope: $crate::logging::LogScope::$scope,
+            event: $event.into(),
+            message: $msg.into(),
+            plugin: None,
+            data: $data,
+        })
+    };
     ($audit:expr, $level:ident, $scope:ident, $event:expr, $msg:expr, plugin = $plugin:expr) => {
         $audit.write($crate::logging::LogEntry {
             at: $crate::logging::now_rfc3339(),

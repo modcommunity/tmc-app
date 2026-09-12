@@ -41,7 +41,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, AppResult};
 
 /// Schema version. Bumped whenever `migrate` gains a step.
-const SCHEMA_VERSION: i64 = 8;
+const SCHEMA_VERSION: i64 = 9;
 
 /// One subscribed item as this device knows it.
 ///
@@ -231,6 +231,7 @@ impl LibraryDb {
                     6 => conn.execute_batch(SCHEMA_V6)?,
                     7 => conn.execute_batch(SCHEMA_V7)?,
                     8 => conn.execute_batch(SCHEMA_V8)?,
+                    9 => conn.execute_batch(SCHEMA_V9)?,
                     _ => break,
                 }
 
@@ -622,6 +623,43 @@ const SCHEMA_V7: &str = r#"
 
                 CREATE INDEX IF NOT EXISTS game_session_unreported_idx
                     ON game_session (reported, install_id);
+"#;
+
+const SCHEMA_V9: &str = r#"
+                /*
+                 * A GAME THIS DEVICE INSTALLED FROM TMC ITSELF.
+                 *
+                 * Its own table rather than a column on `install` or a row in
+                 * `subscription`, for the reason `local_mod` has its own:
+                 * `subscription` is a MIRROR that the full sync rewrites, and
+                 * anything the server did not send is deleted from it. A game
+                 * on this disk is a fact about this disk — the account knows
+                 * which games exist, never which of them somebody unpacked
+                 * onto a laptop — so a sync must not be able to forget it.
+                 *
+                 * Keyed by app id, because one machine installs one build of a
+                 * game. `platform` records WHICH build, so a library moved
+                 * between machines (or a laptop that changed architecture
+                 * under Rosetta) is visibly wrong rather than quietly broken.
+                 */
+                CREATE TABLE IF NOT EXISTS native_game (
+                    app_id        INTEGER PRIMARY KEY,
+                    slug          TEXT,
+                    name          TEXT    NOT NULL,
+                    platform      TEXT    NOT NULL,
+                    version       TEXT    NOT NULL,
+                    /* Absolute, and the only thing that knows where it landed. */
+                    dir           TEXT    NOT NULL,
+                    /* Relative to `dir`. Null only for a single-file build. */
+                    entry         TEXT,
+                    /* The launch argument template, as a JSON array. */
+                    args          TEXT    NOT NULL DEFAULT '[]',
+                    size_bytes    INTEGER NOT NULL DEFAULT 0,
+                    installed_ms  INTEGER NOT NULL,
+                    updated_ms    INTEGER NOT NULL,
+                    /* Whether the update pass may replace this without asking. */
+                    auto_update   INTEGER NOT NULL DEFAULT 1
+                );
 "#;
 
 /// One finished launch, as the database holds it.
@@ -1289,6 +1327,170 @@ fn row_to_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<LibraryEntry> {
         state: row.get(27)?,
         last_error: row.get(28)?,
     })
+}
+
+/// A game this device installed from TMC, as the database holds it.
+///
+/// The row is the ONLY record that the files on disk are ours. There is no
+/// rescanning our way back to it for the same reason the deployment ledger
+/// cannot be rebuilt by looking at a game folder: a directory under our data
+/// path could have been put there by anything, and guessing wrong either
+/// strands an install forever or deletes somebody's files.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstalledGame {
+    pub app_id: i64,
+    pub slug: Option<String>,
+    pub name: String,
+    /// The build target this was installed for — see `games::BuildPlatform`.
+    pub platform: String,
+    pub version: String,
+    /// Absolute install directory.
+    pub dir: String,
+    /// The executable, relative to `dir`. Null only for a single-file build,
+    /// where the artifact IS the executable.
+    pub entry: Option<String>,
+    /// The launch argument template, one element per argument.
+    pub args: Vec<String>,
+    pub size_bytes: i64,
+    pub installed_ms: i64,
+    pub updated_ms: i64,
+    pub auto_update: bool,
+}
+
+impl LibraryDb {
+    // ---------------------------------------------------------- native games
+
+    fn game_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<InstalledGame> {
+        let args: String = row.get(7)?;
+
+        Ok(InstalledGame {
+            app_id: row.get(0)?,
+            slug: row.get(1)?,
+            name: row.get(2)?,
+            platform: row.get(3)?,
+            version: row.get(4)?,
+            dir: row.get(5)?,
+            entry: row.get(6)?,
+            /*
+             * A template that will not parse degrades to "no arguments" rather
+             * than failing the read, the same way `installed_files` does above:
+             * a row nobody can list is a game nobody can uninstall, and the
+             * launch it produces is merely one that starts at the game's own
+             * menu instead of in a server.
+             */
+            args: serde_json::from_str(&args).unwrap_or_default(),
+            size_bytes: row.get(8)?,
+            installed_ms: row.get(9)?,
+            updated_ms: row.get(10)?,
+            auto_update: row.get::<_, i64>(11)? != 0,
+        })
+    }
+
+    const GAME_COLUMNS: &'static str = "app_id, slug, name, platform, version, dir, entry, args,
+                size_bytes, installed_ms, updated_ms, auto_update";
+
+    pub fn games(&self) -> AppResult<Vec<InstalledGame>> {
+        self.with(|conn| {
+            let sql = format!(
+                "SELECT {} FROM native_game ORDER BY name COLLATE NOCASE",
+                Self::GAME_COLUMNS
+            );
+
+            let mut stmt = conn.prepare(&sql)?;
+            let rows = stmt.query_map([], Self::game_row)?;
+
+            rows.collect::<rusqlite::Result<Vec<_>>>()
+        })
+    }
+
+    pub fn game(&self, app_id: i64) -> AppResult<Option<InstalledGame>> {
+        self.with(|conn| {
+            let sql = format!(
+                "SELECT {} FROM native_game WHERE app_id = ?1",
+                Self::GAME_COLUMNS
+            );
+
+            conn.query_row(&sql, params![app_id], Self::game_row)
+                .optional()
+        })
+    }
+
+    /// Write an install, replacing whatever was there.
+    ///
+    /// `INSERT OR REPLACE` is correct here and would be a bug on `subscription`:
+    /// there are no device-local columns to lose, because every column IS a
+    /// device-local fact. An update genuinely does replace all of them.
+    ///
+    /// `installed_ms` is preserved across an update, so "installed on the 3rd,
+    /// updated yesterday" stays true — a column that reset on every update
+    /// would only ever be able to say "yesterday".
+    pub fn game_put(&self, game: &InstalledGame) -> AppResult<()> {
+        self.with(|conn| {
+            let args = serde_json::to_string(&game.args).unwrap_or_else(|_| "[]".into());
+
+            conn.execute(
+                "INSERT INTO native_game
+                     (app_id, slug, name, platform, version, dir, entry, args,
+                      size_bytes, installed_ms, updated_ms, auto_update)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9,
+                         COALESCE((SELECT installed_ms FROM native_game WHERE app_id = ?1), ?10),
+                         ?11, ?12)
+                 ON CONFLICT(app_id) DO UPDATE SET
+                     slug = excluded.slug,
+                     name = excluded.name,
+                     platform = excluded.platform,
+                     version = excluded.version,
+                     dir = excluded.dir,
+                     entry = excluded.entry,
+                     args = excluded.args,
+                     size_bytes = excluded.size_bytes,
+                     updated_ms = excluded.updated_ms,
+                     auto_update = excluded.auto_update",
+                params![
+                    game.app_id,
+                    game.slug,
+                    game.name,
+                    game.platform,
+                    game.version,
+                    game.dir,
+                    game.entry,
+                    args,
+                    game.size_bytes,
+                    game.installed_ms,
+                    game.updated_ms,
+                    game.auto_update as i64,
+                ],
+            )?;
+
+            Ok(())
+        })
+    }
+
+    pub fn game_set_auto_update(&self, app_id: i64, on: bool) -> AppResult<()> {
+        self.with(|conn| {
+            conn.execute(
+                "UPDATE native_game SET auto_update = ?2 WHERE app_id = ?1",
+                params![app_id, on as i64],
+            )?;
+
+            Ok(())
+        })
+    }
+
+    /// Forget an install. The FILES are removed by the caller.
+    ///
+    /// Split deliberately: the row is deleted last, after the directory is
+    /// gone, so a failure halfway leaves a row pointing at a partly-removed
+    /// install — which the app can see and offer to finish — rather than an
+    /// orphaned directory nothing knows about.
+    pub fn game_delete(&self, app_id: i64) -> AppResult<()> {
+        self.with(|conn| {
+            conn.execute("DELETE FROM native_game WHERE app_id = ?1", params![app_id])?;
+
+            Ok(())
+        })
+    }
 }
 
 #[cfg(test)]

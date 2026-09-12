@@ -98,6 +98,28 @@ impl AppPaths {
         self.data.join("local-mods")
     }
 
+    /// Where games TMC publishes are installed, one directory per game and one
+    /// version directory inside it.
+    ///
+    /// In DATA for the same reason staging is, and one step stronger: this is
+    /// the game itself, not a copy of something that can be fetched again
+    /// cheaply. An OS that cleared a cache directory would silently uninstall
+    /// somebody's games, and the app would report them as installed until the
+    /// moment somebody pressed Play.
+    pub fn games_dir(&self) -> PathBuf {
+        self.data.join("games")
+    }
+
+    /// Where a game's archive is downloaded to before it is unpacked.
+    ///
+    /// In CACHE, and the only part of an install that belongs there: once the
+    /// build is unpacked the archive is dead weight, and it is the largest file
+    /// the app ever writes. A machine that cleared it mid-download costs a
+    /// retry rather than an install.
+    pub fn games_scratch_dir(&self) -> PathBuf {
+        self.cache.join("games")
+    }
+
     /// The device's library database.
     ///
     /// In the DATA directory, not the cache: it records what is on disk in the

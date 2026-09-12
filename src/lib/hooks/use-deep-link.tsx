@@ -24,6 +24,14 @@ import { subscribe } from '~/lib/ipc'
  *
  * `?install` rides along so the page can scroll to and highlight the button
  * rather than leaving somebody on a page wondering what just happened.
+ *
+ * THE JOIN FLOW
+ * -------------
+ * `tmc://play/<host>:<port>` is what the website's Join button produces. It is
+ * the only link in this set whose payload is not an id of ours, and it is still
+ * only a screen: `/join` resolves the address through `/servers/lookup`, shows
+ * which game is running there with the latency measured from this device, and
+ * offers the launch modes this machine actually has.
  */
 
 const OpenSchema = z.discriminatedUnion('type', [
@@ -38,6 +46,12 @@ const OpenSchema = z.discriminatedUnion('type', [
         id: z.number(),
     }),
     z.object({ type: z.literal('sandbox'), id: z.number() }),
+    z.object({
+        type: z.literal('play'),
+        host: z.string(),
+        port: z.number().nullish(),
+    }),
+    z.object({ type: z.literal('playApp'), app: z.string() }),
     z.object({ type: z.literal('auth') }),
 ])
 
@@ -60,6 +74,34 @@ export function useDeepLink() {
                     return
                 case 'sandbox':
                     void navigate(`/sandboxes/${link.id}`)
+
+                    return
+                case 'play': {
+                    /*
+                     * A SCREEN, not a join. The link carries an address and the
+                     * page looks it up, shows what is running there and puts a
+                     * button under it — see `routes/join`. Any web page can
+                     * navigate to a custom scheme without a click, so a version
+                     * that connected on arrival would be a remote primitive for
+                     * making this machine dial an address a stranger chose.
+                     */
+                    const query = new URLSearchParams({ host: link.host })
+
+                    if (link.port) query.set('port', String(link.port))
+
+                    void navigate(`/join?${query.toString()}`)
+
+                    return
+                }
+                case 'playApp':
+                    /*
+                     * The serverless half. `?start` rings the Play control the
+                     * same way `?install` rings the install button, rather than
+                     * leaving somebody on a page wondering what the link did.
+                     */
+                    void navigate(
+                        `/apps?app=${encodeURIComponent(link.app)}&start=1`
+                    )
 
                     return
                 case 'auth':

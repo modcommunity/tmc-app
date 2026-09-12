@@ -8,6 +8,7 @@ use tmc_core::auth::AuthState;
 use tmc_core::crypto::LocalCipher;
 use tmc_core::download::DownloadManager;
 use tmc_core::error::{AppError, AppResult};
+use tmc_core::games::Games;
 use tmc_core::launch::{plan as build_launch_plan, LaunchContext, LaunchOptions, LaunchPlan};
 use tmc_core::library::LibraryDb;
 use tmc_core::local::vault::PathVault;
@@ -47,7 +48,11 @@ pub struct AppState {
     pub audit: Arc<Audit>,
     pub secure: Arc<SecureStore>,
     pub auth: Arc<AuthState>,
-    pub api: ApiClient,
+    /// Behind an `Arc` because `Games` holds one too. It is not `Clone` —
+    /// `refresh_lock` is a mutex, and two copies of a client would be two
+    /// parties refreshing one token family, which is the condition that revokes
+    /// every device.
+    pub api: Arc<ApiClient>,
     pub plugins: Registry,
     pub latency: LatencyStore,
     pub version: String,
@@ -106,6 +111,13 @@ pub struct AppState {
     /// be the wrong half.
     pub sessions: Arc<Sessions>,
 
+    /// Installing, updating and launching the games TMC publishes itself.
+    ///
+    /// Distinct from everything around it: `library` tracks what an ACCOUNT
+    /// subscribed to and `detect` finds what somebody else's launcher installed,
+    /// while this owns the folder outright. See `tmc_core::games`.
+    pub games: Arc<Games>,
+
     /// The key that encrypts RCON passwords.
     ///
     /// Created LAZILY, on first use. A user who never adds a server never has a
@@ -154,7 +166,11 @@ impl AppState {
         let auth = Arc::new(AuthState::new());
         auth.restore(&secure);
 
-        let api = ApiClient::new(Arc::clone(&auth), Arc::clone(&secure), &version)?;
+        let api = Arc::new(ApiClient::new(
+            Arc::clone(&auth),
+            Arc::clone(&secure),
+            &version,
+        )?);
 
         /*
          * The download manager gets its OWN http client rather than the API's.
@@ -213,6 +229,23 @@ impl AppState {
         }
 
         let downloads = DownloadManager::new(file_http, Arc::clone(&audit));
+
+        /*
+         * The games TMC itself publishes. It holds clones of the API client and
+         * the download queue rather than its own of either: a game build is the
+         * largest thing this app downloads, so it is the one that most needs
+         * the user's bandwidth limit and the pause button that are already
+         * attached to that queue.
+         */
+        let games = Arc::new(Games::new(
+            Arc::clone(&api),
+            downloads.clone(),
+            Arc::clone(&library),
+            Arc::clone(&audit),
+            paths.games_dir(),
+            paths.games_scratch_dir(),
+            version.clone(),
+        ));
         let rcon = RconPool::new(Arc::clone(&audit));
 
         let sessions = Arc::new(Sessions::new(paths.logs.join("sessions")));
@@ -265,6 +298,7 @@ impl AppState {
             latency: LatencyStore::new(),
             version,
             downloads,
+            games,
             rcon,
             sessions,
             app_ids: RwLock::new(std::collections::BTreeMap::new()),

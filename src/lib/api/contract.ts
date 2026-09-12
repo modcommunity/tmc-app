@@ -108,6 +108,29 @@ export const RefreshRequest = z.object({
 })
 
 /**
+ * Redeem a web-player handoff code for a game session credential.
+ *
+ * The other half of `GameBootDescriptorT.auth` — see `~/types/play/auth.ts` for
+ * why the descriptor carries a code rather than a token. Unauthenticated by
+ * necessity and by design: the code IS the credential, it is single-use, it
+ * lives sixty seconds, and it was minted for the person holding it.
+ *
+ * The response is the same {@link TokenResponse} the device flow returns, so a
+ * client that already knows how to hold a TMC session does not learn a second
+ * shape. What differs is the REACH of what it gets: an `AppToken` of kind
+ * `GAME`, bound to the app it was minted for, refused by every route that has
+ * not opted in.
+ */
+export const PlayHandoffRequest = z.object({
+    code: z.string().min(8).max(256),
+    /**
+     * Self-reported, and shown to the member on Account → Devices exactly like
+     * a device's is. UNTRUSTED — a label, never an authorisation input.
+     */
+    client: ClientInfoSchema.optional(),
+})
+
+/**
  * Poll outcomes, as their own `code` values on the error envelope.
  *
  * `authorization_pending` and `slow_down` are NOT failures in any sense the
@@ -1394,6 +1417,168 @@ export const AppPlaySchema = z.object({
 
 export type AppPlayT = z.infer<typeof AppPlaySchema>
 
+/* ---------------------------------------------- Finding a server by address */
+
+/**
+ * Look one server up by the address somebody was handed.
+ *
+ * The other half of the `tmc://play/<host>:<port>` deep link. A link is an
+ * address and nothing else — that is what makes it a link somebody can paste
+ * into a message — and the app has to turn that into "which game is this, and
+ * is it up?" before it can draw a join screen worth pressing.
+ *
+ * **The caller already knows the address**, which is what makes this endpoint
+ * unremarkable: it discloses which listed server is at an address the asker
+ * typed, and every one of those rows is on the public browser already. A server
+ * that hides its network details is still FOUND here — hiding the address stops
+ * us publishing it, and cannot un-tell somebody who was handed it — but the
+ * answer never echoes an address back.
+ */
+export const ServerLookupQuerySchema = z.object({
+    /** Hostname or IP literal, unbracketed. The app strips the brackets. */
+    host: z.string().min(1).max(255),
+    /**
+     * Optional, because `tmc://play/example.com` is a legitimate link. Absent
+     * matches any port on that host, and a host running two servers then
+     * answers with the first — which the app renders as a choice rather than
+     * guessing.
+     */
+    port: z.coerce.number().int().min(1).max(65535).optional(),
+})
+
+export type ServerLookupQueryT = z.input<typeof ServerLookupQuerySchema>
+
+export const ServerLookupResponseSchema = z.object({
+    /** Every listed server at that address. Empty when none is. */
+    servers: z.array(ContentSummarySchema).max(10).default([]),
+})
+
+export type ServerLookupResponseT = z.infer<typeof ServerLookupResponseSchema>
+
+/* ------------------------------------------------------ Installing a game */
+
+/**
+ * Which machine a native build is for. Mirrors `AppBuildPlatform`.
+ *
+ * ARCHITECTURE IS PART OF THE VALUE. `AppPlatform` — the descriptive "where is
+ * this game available" enum the website draws on an app page — says
+ * `PLATFORM_WINDOWS`, and that is a fine answer to that question. It is not an
+ * answer to this one: the app matches on these values to pick a file it is
+ * about to execute, and an x64 archive handed to an ARM machine either refuses
+ * to start or runs emulated at a cost nobody chose.
+ *
+ * The app maps its own platform to exactly one of these and asks for that one.
+ * A value it does not recognise is a platform it is not running on, so an older
+ * app meeting a newer target simply finds no build rather than failing.
+ */
+export const AppBuildPlatformVals = [
+    'WINDOWS_X64',
+    'WINDOWS_ARM64',
+    'LINUX_X64',
+    'LINUX_ARM64',
+    /** One universal binary, covering Intel and Apple Silicon. */
+    'MACOS_UNIVERSAL',
+    'ANDROID_ARM64',
+    'IOS_ARM64',
+] as const
+
+export const AppBuildPlatformSchema = z.enum(AppBuildPlatformVals)
+export type AppBuildPlatformT = (typeof AppBuildPlatformVals)[number]
+
+/**
+ * How the artifact is packed. Mirrors `AppBuildFormat`.
+ *
+ * `RAW` is not a degenerate archive: an `.apk` and a single static binary are
+ * installed exactly as served, and unpacking either would destroy the thing
+ * being installed.
+ */
+export const AppBuildFormatVals = ['ZIP', 'TAR_GZ', 'RAW'] as const
+export const AppBuildFormatSchema = z.enum(AppBuildFormatVals)
+export type AppBuildFormatT = (typeof AppBuildFormatVals)[number]
+
+/**
+ * One line in the catalogue saying a build EXISTS — never where it is.
+ *
+ * The address, the checksum and the launch arguments are answered by
+ * `GET /apps/:id/build`, one platform at a time. That split is the app's own
+ * rule about ids and URLs applied to the catalogue: a device that browses the
+ * whole app list must not come away holding download addresses for every game
+ * on every platform, and a card only needs to know whether to draw an Install
+ * button and how large the download is.
+ */
+export const AppBuildRefSchema = z.object({
+    platform: AppBuildPlatformSchema,
+    version: z.string(),
+    sizeBytes: z.number().int().nonnegative(),
+})
+
+export type AppBuildRefT = z.infer<typeof AppBuildRefSchema>
+
+/**
+ * What an app declares about being INSTALLED, or null when it publishes no
+ * native build at all.
+ *
+ * Deliberately separate from {@link AppPlaySchema}. That one is about launching
+ * something that already exists — a loader in a window, a deep link to a client
+ * somebody has. This is about putting software on a disk, which is a different
+ * question with a different answer for the same app: a game can be perfectly
+ * playable in the browser and have nothing to install, and vice versa.
+ */
+export const AppInstallSchema = z.object({
+    /** Every target with a published, enabled build. Never empty. */
+    builds: z.array(AppBuildRefSchema),
+})
+
+export type AppInstallT = z.infer<typeof AppInstallSchema>
+
+/**
+ * One resolved build — the answer to `GET /apps/:id/build?platform=…`.
+ *
+ * The same shape as `/play/launch`: every decision is made server-side and the
+ * device is told the answer, `null` meaning "not from here" for every refusal
+ * together. Naming which refusal applied would tell a caller which column to
+ * probe and would not change what the app does with the answer.
+ */
+export const NativeBuildSchema = z.object({
+    appId: z.number().int(),
+    platform: AppBuildPlatformSchema,
+    version: z.string(),
+    /** Absolute and `https`. The app re-checks the scheme before fetching it. */
+    url: z.string(),
+    /** Lower-case hex SHA-256. Never optional — the installer refuses without it. */
+    sha256: z.string(),
+    sizeBytes: z.number().int().nonnegative(),
+    format: AppBuildFormatSchema,
+    /** Relative path of the executable inside the archive; null for `RAW`. */
+    entry: z.string().nullable(),
+    /**
+     * The launch argument template, one element per argument.
+     *
+     * An ARRAY rather than a command line, because the app has no shell to split
+     * one with — a server name containing a space has to arrive as one argument
+     * and not as two. Tokens are the `PLAY_URI_TOKENS` vocabulary: `{host}`,
+     * `{port}`, `{app}`, `{appId}`, `{serverId}`, `{locale}`, `{opt:<key>}`.
+     */
+    args: z.array(z.string()).default([]),
+    /** The oldest app version that may install this, or null for any. */
+    minClientVersion: z.string().nullable(),
+    /** What changed, shown beside the update button. Plain text. */
+    notes: z.string().nullable(),
+})
+
+export type NativeBuildT = z.infer<typeof NativeBuildSchema>
+
+export const AppBuildQuerySchema = z.object({
+    /**
+     * The machine asking. Required, and there is no "give me all of them":
+     * the whole reason this is a second request is that a device receives one
+     * download address, for itself.
+     */
+    platform: AppBuildPlatformSchema,
+})
+
+export type AppBuildQueryT = z.input<typeof AppBuildQuerySchema>
+
 /**
  * Counts, per app, for the catalogue grid.
  *
@@ -1428,6 +1613,8 @@ export const AppSummarySchema = z.object({
     counts: AppCountsSchema,
     /** Null when the app is not playable at all. */
     play: AppPlaySchema.nullable().default(null),
+    /** Null when the app publishes no native build for any platform. */
+    install: AppInstallSchema.nullable().default(null),
     webUrl: z.string(),
 })
 
@@ -1513,6 +1700,71 @@ export const GameBootServerSchema = z.object({
     connectUrl: z.string().nullable(),
 })
 
+/** Mirrors `AppGraphicsType`. Descriptive — nothing is gated on it. */
+export const AppGraphicsVals = [
+    'TWO_D',
+    'TWO_HALF_D',
+    'THREE_D',
+    'VR',
+    'TEXT',
+    'MIXED',
+    'OTHER',
+] as const
+
+export const AppGraphicsSchema = z.enum(AppGraphicsVals)
+
+/** Which avatar representation a game calls for. Never null — see `AvatarKindT`. */
+export const AvatarKindVals = ['model', 'flat', 'none'] as const
+export const AvatarKindSchema = z.enum(AvatarKindVals)
+
+/**
+ * Where the published web build lives, or null when nothing is published yet.
+ *
+ * `origin` is published separately from `url` because getting the second one
+ * wrong is a security bug rather than a cosmetic one: the frame is pointed at
+ * `url`, and every `postMessage` carrying a credential must be targeted at
+ * `origin` and never at `'*'`.
+ */
+export const GameBootGameSchema = z.object({
+    url: z.string(),
+    origin: z.string(),
+    base: z.string(),
+    build: z.string(),
+})
+
+/** Mirrors `ServerAuthModeVals` — the mode IN FORCE, so never `SERVER`. */
+export const GameAuthModeVals = ['NONE', 'TMC', 'CUSTOM'] as const
+export const GameAuthModeSchema = z.enum(GameAuthModeVals)
+
+/**
+ * Who is playing, or how the game should find out.
+ *
+ * Always present and never null: a game that uses no identity gets
+ * `{ mode: 'NONE', guest: true }`, which is a complete answer rather than an
+ * absence every reader has to interpret.
+ *
+ * `handoff.code` is a single-use, sixty-second credential redeemed at
+ * `redeemUrl` (`POST /auth/handoff`). It is NOT a device token and must never
+ * be stored: what it mints is bound to one app and refused by every route that
+ * has not opted in.
+ */
+export const GameAuthSchema = z.object({
+    mode: GameAuthModeSchema,
+    guest: z.boolean(),
+    /** Whether the SERVER chose this rather than the app. */
+    fromServer: z.boolean(),
+    issuerUrl: z.string().nullable(),
+    signedIn: z.boolean(),
+    handoff: z
+        .object({
+            code: z.string(),
+            expiresIn: z.number().int(),
+            redeemUrl: z.string(),
+        })
+        .nullable()
+        .default(null),
+})
+
 export const GameBootSchema = z.object({
     version: z.literal(1),
     app: z.object({
@@ -1520,8 +1772,27 @@ export const GameBootSchema = z.object({
         name: z.string(),
         appId: z.string().nullable(),
         gameType: z.string().nullable(),
+        /*
+         * ADDED to version 1 rather than bumping it, on the descriptor's own
+         * rule: the version is bumped when an existing field's MEANING changes,
+         * and a reader that predates a new key simply does not read it. Both
+         * carry a default for the same reason — an older server answering an
+         * app built against this schema must not fail validation over a key it
+         * has never heard of.
+         */
+        graphics: AppGraphicsSchema.nullable().default(null),
+        avatarKind: AvatarKindSchema.default('flat'),
     }),
+    game: GameBootGameSchema.nullable().default(null),
     server: GameBootServerSchema.nullable(),
+    auth: GameAuthSchema.default({
+        mode: 'NONE',
+        guest: true,
+        fromServer: false,
+        issuerUrl: null,
+        signedIn: false,
+        handoff: null,
+    }),
     party: z
         .object({
             id: z.string(),

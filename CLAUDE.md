@@ -165,6 +165,8 @@ genuinely need a window belongs on that side of the line.
 | `rcon/frostbite.rs` | Battlefield's, with `login.hashed` |
 | `rcon/store.rs` | Saved servers. Passwords encrypted; none of it leaves the device |
 | `launch.rs` | The only place a launch is RESOLVED. Produces a plan; runs nothing |
+| `games/` | **Games TMC publishes, installed here.** Resolve a build for THIS machine, download it through the queue, unpack it, keep it current, plan its launch |
+| `version.rs` | Comparing two versions, in the one place that does it. `1.10.0` is after `1.9.0` |
 | `session.rs` | **Games that are running.** Keeps the `Child`, times the session, captures its output. What can be known about a launch, and what cannot |
 | `detect/walk.rs` | The bounded walk over folders the USER ticked, for what no launcher wrote down |
 | `library/share.rs` | A sandbox as a pasteable code. Item ids, never files, and nothing about this machine |
@@ -195,7 +197,8 @@ genuinely need a window belongs on that side of the line.
 | `commands/detect.rs` | Scan, and separately apply. A scan configures nothing |
 | `commands/rcon.rs` | Consoles. No command returns a password |
 | `commands/library.rs` | Sync, install, uninstall, launch |
-| `commands/play.rs` | The three ways a game starts. Names IDS, never a loader URL or a connect link |
+| `commands/play.rs` | The two ways a game starts that the SERVER resolves. Names IDS, never a loader URL or a connect link |
+| `commands/games.rs` | Installing, updating and starting a TMC build. Names an APP ID — never a URL, never a path |
 | `commands/config.rs` | The game-settings editor's three commands, behind one setting |
 | `commands/sessions.rs` | What is running, what ran, and the log it printed |
 | `commands/import.rs` | Dropped files, adopted folders, other managers. Names TOKENS, never paths |
@@ -243,10 +246,12 @@ genuinely need a window belongs on that side of the line.
 | `components/browse-filters.tsx` | The filter panel: collapsible groups, kind-aware, URL-backed |
 | `components/server-panel.tsx` | The live panel on a server's page |
 | `routes/apps.tsx` | **The front door.** Every game and app, and which of them can be started here |
-| `routes/library.tsx` | Two views: the games on this machine, and what the account subscribed to |
+| `routes/library.tsx` | Three views: the games on this machine, the games TMC published here, and what the account subscribed to |
+| `components/library-tmc.tsx` | TMC's own games: install, update, auto-update, remove |
+| `routes/join.tsx` | Where a `tmc://play/<host>:<port>` link lands. Shows what is there; joins nothing on its own |
 | `components/library-games.tsx` | Installed games, their sandboxes, play time, and what is running |
 | `components/library-content.tsx` | The subscription list, and why each row is or is not installed |
-| `components/play-dialog.tsx` | **The launcher.** The three ways to start a game, and which are possible here |
+| `components/play-dialog.tsx` | **The launcher.** The four ways to start a game, and which are possible here |
 | `components/scan-dialog.tsx` | Finding games: read the launchers, or walk folders the user ticked |
 | `components/sandbox-editor.tsx` | Create, edit and delete one sandbox |
 | `components/sandbox-share.tsx` | Export a sandbox to a code; import one from a code |
@@ -810,6 +815,13 @@ when a game folder is shared rather than instanced.
 The device's answer to the account's subscriptions: which of them this machine
 holds, which are on disk, and how they got there.
 
+> The Library SCREEN has three views and they are genuinely different nouns:
+> **Games** is what somebody else's launcher installed and this app mods,
+> **TMC Games** is what this app installed from a build TMC published (see
+> "Games TMC publishes"), and **Subscribed** is what the account subscribed to.
+> One list holding all three would have to explain, per row, which kind of thing
+> it was.
+
 **SQLite, not a JSON file** (`library/db.rs`). Everything else the app persists
 — settings, the plugin registry — is a small file rewritten whole, and that is
 right for those: read at launch, written on a click, never contended. The
@@ -1078,21 +1090,37 @@ object or an array contributes nothing, and there is still no shell.
 
 ## Playing a game
 
-There are **three** ways a game starts from the app, and which of them is
+There are **four** ways a game starts from the app, and which of them is
 possible is a fact about THIS machine that no server can answer. That is the
 whole reason the app's launcher beats the website's: a browser has exactly one
 way to start a game, so the site can offer one button.
 
 | Mode | What it is | Who resolves it |
 | --- | --- | --- |
+| **native** | A build TMC published and this app unpacked, run as a real process | Entirely local — `games::plan` |
 | **sandbox** | The copy installed here, with a profile's mods deployed and its load order applied | Entirely local — `launch::plan` |
 | **web** | The app's uploaded JavaScript loader, in a window of its own | `/play/launch` |
 | **connect** | The server's own `connectUrl`, handed to the installed game client | The API supplies it; Rust opens it |
 
-`components/play-dialog.tsx` puts the three side by side with the facts that
-decide between them — which sandboxes exist, whether a game folder is set, and
-the latency measured from this device rather than from a scanner in another
-hemisphere.
+`components/play-dialog.tsx` puts the four side by side with the facts that
+decide between them — which sandboxes exist, whether a TMC build is installed,
+whether a game folder is set, and the latency measured from this device rather
+than from a scanner in another hemisphere.
+
+**`native` is offered first when it exists**, because it is the only mode where
+the app knows the exact build on disk and can therefore say that it will start.
+It is also the only one that does not consult `directPlay`: that flag answers
+"does pressing Play with no server start something worth starting", which is a
+question about a launch the SITE performs. A binary on this disk opening to its
+own menu is the game's business.
+
+**The web player can open full screen**, and the choice is made before the
+window exists — `fullscreen` on `play_open_web`, set on the window BUILDER. The
+window is a remote page with no IPC, so it cannot ask for this itself; and
+calling `set_fullscreen` on a window that is already showing produces a visible
+resize plus a WebGL context that has already sized itself to the first geometry.
+Godot's canvas reads its size once at boot, so the game would render small
+inside a full-screen window with black bars it has no idea about.
 
 ### The web player runs on the SITE's origin, and that is the isolation
 
@@ -1138,6 +1166,137 @@ held to.
 This is the rule `download_release` already followed, restated: there is no
 `play_open(loaderUrl)`, and nothing an injected script could point at a script
 of its choosing.
+
+## Games TMC publishes
+
+Everything above manages somebody else's game: `detect` finds where Steam put
+it, `deploy` puts mods into it, `launch` starts the copy that is already there.
+`tmc-core/games/` is the one place the app is the **distributor** — it downloads
+a build, unpacks it under the app's own data directory, keeps it current and
+starts it as a real process.
+
+```
+  /apps/:id/build?platform=…   ── the site resolves ONE build for THIS machine
+           │
+           ▼
+  download::DownloadManager    ── the same queue, limits and pause button
+           │
+           ▼
+  plugins::steps::extract      ── the same zip-slip guard and expansion cap
+           │
+           ▼
+  library::db native_game      ── the only record that these files are ours
+           │
+           ▼
+  launch::LaunchPlan → spawn   ── a real process, with a real play session
+```
+
+**Nothing here is new machinery, and that is the design.** An install is a
+download, an extraction, a row and a launch, and the app already had one of each
+with the bounds and failure modes worked out. A second downloader would have
+been a second place for a bandwidth limit to be ignored; a second unpacker would
+have been a second zip-slip guard, and the one that was wrong would be the one
+nobody was reading. What the module contributes is the sequencing and the
+refusals.
+
+### Where the builds come from
+
+`AppNativeBuild` on the website — one row per (app, platform), carrying an
+`https` URL, a **required** SHA-256, a size, an archive format, the entry path
+inside it and the launch arguments. `scripts/publish-native-build.ts` writes one
+and computes the checksum from the bytes it uploads, so the row and the artifact
+cannot disagree.
+
+**The catalogue says a build EXISTS; `/apps/:id/build` says where it is**, one
+platform at a time. A device browsing the whole app list must not come away
+holding download addresses for every game on every machine it is not — the same
+rule `download_release` follows, applied to a listing.
+
+**Architecture is part of the platform value.** `AppPlatform` — the descriptive
+"where is this game available" enum the website draws on an app page — says
+`PLATFORM_WINDOWS`, and that is a fine answer to that question. It is not an
+answer to this one: an x64 archive handed to an ARM machine either refuses to
+start or runs emulated at a cost nobody chose. `games::platform::current()` is
+compile-time, from this binary's own target triple, because the binary that is
+asking IS the evidence: a build running under Rosetta should ask for the
+architecture whose emulation is already working on this machine.
+
+**Mobile is refused, and that is a statement about the OS.** Android and iOS
+both decline to execute code an app wrote into its own container; an `.apk` is
+installed by the package installer and an `.ipa` by the store. The two targets
+are in the enum because the site may publish them and the app should be able to
+say "there is a build, get it from the store" — which is true and useful, and is
+not an install.
+
+### What the install refuses, and when
+
+| Refusal | Caught before |
+| --- | --- |
+| Not `https` | a byte is fetched |
+| A checksum that is not 64 lower-case hex | a byte is fetched |
+| An archive that does not say what to start | a byte is fetched |
+| A build needing a newer app (`minClientVersion`) | a byte is fetched |
+| A digest that does not match | the file gets its real name (the queue) |
+| A `version` that would name a folder elsewhere | a directory is created |
+| An `entry` that escapes the install (`join_relative`) | anything is executed |
+| An archive that unpacked without the file it named | the row is written |
+| The game is running | anything is overwritten |
+
+The last two are the ones worth keeping. An archive that unpacked perfectly and
+does not contain its own entry is an install that **reports success and then
+cannot be started**, with nothing on screen to explain it. And writing a new
+build over files a live process has mapped fails outright on Windows and
+succeeds on Unix, leaving a process running code that is no longer on disk.
+
+**The previous version is not removed until the new one is in place.** A build
+lands in `<data>/games/<slug>/<version>/` and the row is only repointed once the
+entry is verified, so a failed update leaves a working game. Pruning the old
+version directories happens LAST, after the row already points somewhere else.
+
+**Uninstalling removes the files first and the row last**, so a failure halfway
+leaves a row naming a partly-removed install — which the app can see and offer
+to finish — rather than a directory nothing knows about. The delete refuses any
+path that is not genuinely under the app's own games root: `dir` came out of a
+SQLite file on the user's disk, and a hand-edited row naming `/` must not be
+able to turn "uninstall a game" into a recursive delete.
+
+### Why a game is not a subscription
+
+`subscription` is a MIRROR the full sync rewrites: anything the server did not
+send is deleted, because that is how an unsubscribe on another device reaches
+this one. A game on this disk is a fact about this disk — the account knows
+which games exist and cannot know which of them somebody unpacked onto a laptop
+— so `native_game` is its own table for the same reason `local_mod` is. A sync
+must not be able to forget an install, and signing out must not either.
+
+### Keeping them current
+
+`games::updates::run` on the library's sync pass, which is the device's own
+"am I online now?" heartbeat — the same place outstanding play time is drained.
+Four rules, all of them written down rather than implied: the install must have
+`auto_update` on, the game must not be running, only an install that already
+exists is updated, and **a version that cannot be ordered is not an update**.
+
+`games_check_updates` reports and installs nothing, even for a game with
+auto-update on. It is the button somebody presses, and a button that silently
+downloaded four gigabytes because a row had a flag set is a button nobody
+presses twice.
+
+### The launch arguments are a vector, never a command line
+
+`args` is one element per argument and stays that way. A command string would
+have to be split by somebody, and there is no shell in this app to split it — so
+a server name containing a space would become two arguments and one containing a
+quote would become something nobody can predict. Substitution happens INSIDE an
+element and can never create a new one, and a value carrying a control character
+drops the argument rather than being escaped.
+
+**An argument whose value is missing is dropped, with the flag before it.**
+`["--connect", "{host}:{port}"]` with no server must not become
+`["--connect", ":"]` — the game would take that as an address, fail to reach it,
+and report a connection error for a connection nobody asked for. Dropping the
+pair starts the game at its own menu, which is what "launch with no server"
+means.
 
 ## Play sessions
 
@@ -1648,6 +1807,35 @@ unknown party and the most it achieves is a screen with a button on it.
 | `tmc://install/<kind>/<id>` | Opens that item's page with the install controls ringed |
 | `tmc://view/<kind>/<id>` | Opens that item's page |
 | `tmc://sandbox/<id>` | Opens one sandbox |
+| `tmc://play/<host>:<port>` | Opens a **join screen** for that address |
+| `tmc://play/app/<slug\|id>` | Opens that game's launch dialog |
+
+**`tmc://play/<host>:<port>` is the website's Join button**, and it is the only
+link whose payload is not an id of ours. It is still only a screen: `/join`
+resolves the address through `/servers/lookup`, shows which game is running
+there with the latency measured from this device, and offers the launch modes
+this machine actually has. The rule is load-bearing here rather than
+theoretical, because this is the link an ordinary web page can navigate to
+without a click — an auto-joining version would be a remote primitive for making
+somebody's machine connect to an address a stranger chose.
+
+Three properties of the grammar:
+
+  * **The address is in the PATH, not a query string.** Custom-scheme openers
+    across five platforms disagree about almost everything and agree about path
+    segments, and a grammar with two segments is far easier to keep honest than
+    one accepting arbitrary parameters — every parameter a link can carry is a
+    parameter somebody eventually reads.
+  * **Exactly the two shapes, with nothing after them.** `tmc://auth` ignores a
+    trailing segment, and that is right for a wake-up with no arguments. Here it
+    would be wrong for the opposite reason: this action HAS a grammar, and
+    accepting `tmc://play/host:1/join` today is how `/join` quietly becomes
+    meaningful the first time somebody adds a segment to the match.
+  * **The port is optional**, because `tmc://play/example.com` is a perfectly
+    good way to name a box, and `tmc://play/:` — the shape an empty `{host}`
+    substitution used to produce — parses to nothing. The website declines to
+    build that link now; this is the other half of the same fix, on the side
+    that would have to act on it.
 
 `tmc://install/mod/1234` is the **guest** flow: a signed-in user gets a
 subscription, which follows them to their other devices and keeps the mod
@@ -2256,10 +2444,28 @@ changed it, and the lookup costs nothing.
   id — the second page of every listing.
 - **Version comparison is numeric per component, and refuses what it cannot
   order.** `1.10.0` sorts BEFORE `1.9.0` as a string, so an update banner built
-  on a string compare either never appears or never goes away. `is_newer` in
-  `commands/api.rs` parses dotted components and returns false for anything
+  on a string compare either never appears or never goes away. `tmc_core::
+  version::is_newer` parses dotted components and returns false for anything
   non-numeric — staying quiet beats nagging somebody toward a version they
-  already have.
+  already have. It lives in `tmc-core` and **not** in `commands/api.rs`, where
+  it used to: the game installer asks the same question about a build on disk,
+  and a second copy would be a second place for that trap to be re-entered.
+- **`meets_minimum` is not `!is_newer(want, have)`.** That expression answers
+  true when EITHER side is unorderable, which would wave through exactly the
+  build that declared a `minClientVersion`. An unorderable requirement is
+  refused; an unorderable own version passes, because a development build has no
+  business being told it is too old.
+- **A game build's launch `args` is a VECTOR, not a command line.** There is no
+  shell in this app to split one with, so a server name containing a space would
+  become two arguments. Substitution happens inside an element and can never
+  create one — and an argument whose value is missing is dropped along with the
+  flag before it, because `["--connect", ":"]` is an address the game will try.
+- **An archive that unpacked without the file it named is an install that
+  reports success and then cannot be started.** `games::entry_path` resolves the
+  declared entry through `join_relative` and checks that it is a file, because
+  neither the extraction nor the checksum can notice a publisher naming the
+  wrong path — and the symptom arrives days later as "the Play button does
+  nothing".
 - **`z.coerce.boolean()` is `Boolean(value)`**, so the string `"false"` is
   `true`. Use `QueryBool` from the contract.
 - **`serde(rename_all = "SCREAMING_SNAKE_CASE")` turns `A2S` into `A2_S`.** It
@@ -2410,6 +2616,13 @@ Honest list, so nothing here reads as finished when it is not:
 - **Writes.** The app is read-only against the API for publishing — no
   commenting or uploading. Reviews, review votes, reports, subscriptions,
   sandboxes and play-time reports DO write.
+- **Native builds to actually install.** The whole path exists on both sides —
+  `AppNativeBuild`, `/apps/:id/build`, the installer, the updater and the
+  Library view — and nothing has published a row yet, because
+  `dot-server-deploy/export_presets.cfg` has only a `Web` preset. Until a
+  desktop preset exists and `scripts/publish-native-build.ts` has been run
+  against its output, the TMC Games tab correctly says there is nothing
+  published for this machine.
 - **A measurable virtual launch.** A USVFS launch is recorded as a
   `SessionKind::Handoff` — not because nothing of ours started it, but because
   `inject::launch` does not return the process handle, so there is no exit to

@@ -13,6 +13,7 @@ import Shell from '~/components/shell'
 import DropImport from '~/components/drop-import'
 import AppsRoute from '~/routes/apps'
 import BrowseRoute from '~/routes/browse'
+import JoinRoute from '~/routes/join'
 import LibraryRoute from '~/routes/library'
 import InstallsRoute from '~/routes/installs'
 import SandboxesRoute from '~/routes/sandboxes'
@@ -44,6 +45,7 @@ const router = createHashRouter([
             { path: 'apps', element: <AppsRoute /> },
             { path: 'browse/:kind', element: <BrowseRoute /> },
             { path: 'view/:kind/:id', element: <ViewRoute /> },
+            { path: 'join', element: <JoinRoute /> },
             { path: 'library', element: <LibraryRoute /> },
             { path: 'installs', element: <InstallsRoute /> },
             { path: 'sandboxes', element: <SandboxesRoute /> },

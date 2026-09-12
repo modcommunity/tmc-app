@@ -1315,3 +1315,101 @@ export const ManagerCandidateSchema = z.object({
 })
 
 export type ManagerCandidateT = z.infer<typeof ManagerCandidateSchema>
+
+// --------------------------------------------------------------- TMC games
+//
+// The games TMC publishes and this device installed. Distinct from everything
+// above: `LibraryRow` is what an ACCOUNT subscribed to and `DetectedGame` is
+// what somebody else's launcher installed, while these are games the app owns
+// the folder of outright.
+
+/** Which target this machine asks the site for. Mirrors `AppBuildPlatform`. */
+export const BuildPlatformSchema = z.enum([
+    'WINDOWS_X64',
+    'WINDOWS_ARM64',
+    'LINUX_X64',
+    'LINUX_ARM64',
+    'MACOS_UNIVERSAL',
+    'ANDROID_ARM64',
+    'IOS_ARM64',
+])
+
+export type BuildPlatformT = z.infer<typeof BuildPlatformSchema>
+
+/**
+ * What this machine can do, so a screen can say why it cannot do it.
+ *
+ * Two fields rather than one boolean, because the two refusals are different
+ * facts and want different sentences. "Nothing is published for your
+ * architecture" can never change for the person reading it; "games are
+ * installed through your platform's store" is a statement about Android and iOS
+ * refusing to execute what an app wrote into its own container.
+ */
+export const GamePlatformInfoSchema = z.object({
+    platform: BuildPlatformSchema.nullable(),
+    installable: z.boolean(),
+})
+
+export type GamePlatformInfoT = z.infer<typeof GamePlatformInfoSchema>
+
+/** One game installed on this device. */
+export const InstalledGameSchema = z.object({
+    appId: z.number(),
+    slug: z.string().nullish(),
+    name: z.string(),
+    platform: z.string(),
+    version: z.string(),
+    /** Absolute. Shown so somebody can find it, never sent anywhere. */
+    dir: z.string(),
+    entry: z.string().nullish(),
+    args: z.array(z.string()),
+    sizeBytes: z.number(),
+    installedMs: z.number(),
+    updatedMs: z.number(),
+    autoUpdate: z.boolean(),
+})
+
+export type InstalledGameT = z.infer<typeof InstalledGameSchema>
+
+/** What the site has for this machine, from `games_available`. */
+export const NativeBuildSchema = z.object({
+    appId: z.number(),
+    platform: BuildPlatformSchema,
+    version: z.string(),
+    url: z.string(),
+    sha256: z.string(),
+    sizeBytes: z.number(),
+    format: z.enum(['ZIP', 'TAR_GZ', 'RAW']),
+    entry: z.string().nullish(),
+    args: z.array(z.string()),
+    minClientVersion: z.string().nullish(),
+    notes: z.string().nullish(),
+})
+
+export type NativeBuildT = z.infer<typeof NativeBuildSchema>
+
+/**
+ * An installed game plus what the site last said about it.
+ *
+ * `updateAvailable` is computed in RUST rather than by comparing the two
+ * version strings here. Version comparison is the one piece of this app that is
+ * wrong in a way that looks right — `1.10.0` sorts before `1.9.0` as a string —
+ * so it happens in `tmc_core::version` and nowhere else.
+ */
+export const GameStatusSchema = InstalledGameSchema.extend({
+    available: z.string().nullish(),
+    updateAvailable: z.boolean(),
+    notes: z.string().nullish(),
+})
+
+export type GameStatusT = z.infer<typeof GameStatusSchema>
+
+/** What one automatic game-update pass did. */
+export const GameUpdateReportSchema = z.object({
+    updated: z.array(z.string()),
+    /** Had an update and were left alone, with the reason. */
+    skipped: z.array(z.string()),
+    failed: z.array(z.string()),
+})
+
+export type GameUpdateReportT = z.infer<typeof GameUpdateReportSchema>

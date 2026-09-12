@@ -1,7 +1,7 @@
-//! **Playing a game**, in the two senses the app can mean it.
+//! **Playing a game**, in the senses that are the SERVER's to resolve.
 //!
-//! There are three ways a game starts from here and only two of them are in
-//! this module:
+//! Four ways a game starts from here, and the two in this module are the two
+//! the site decides:
 //!
 //!   * **In a window** — an app's uploaded JavaScript loader, run in a webview
 //!     of its own. [`play_open_web`].
@@ -12,6 +12,10 @@
 //!     is a sandbox launch, it goes through `commands::sandbox`, and the server
 //!     has no way of knowing whether it is possible — so it is not the server's
 //!     to declare and not this module's to resolve.
+//!   * **A build TMC published and this app installed**, which is not here
+//!     either — `commands::games`. Same reasoning, one step further: the server
+//!     knows a build EXISTS, and only the device knows it is unpacked on this
+//!     disk and starts.
 //!
 //! WHY THE WEBVIEW NAMES IDS AND NOTHING ELSE
 //! -----------------------------------------
@@ -76,6 +80,16 @@ pub struct PlayRequest {
     pub title: Option<String>,
     #[serde(default)]
     pub app_slug: Option<String>,
+    /// Open the player window filling the screen.
+    ///
+    /// Decided HERE and not in the window, because the window is a remote page
+    /// with no IPC at all — that is the isolation the whole feature rests on,
+    /// so it has no way to ask for this itself and no `invoke` to ask with. The
+    /// escape hatch is the key the OS already owns: Escape leaves full screen
+    /// on every platform's own handling of a fullscreen window, and the window
+    /// keeps its decorations so there is always a way back.
+    #[serde(default)]
+    pub fullscreen: bool,
 }
 
 /// What `/play/launch` answered, as far as this module cares.
@@ -219,6 +233,17 @@ pub async fn play_open_web(
          * one — a game window with its own OS controls is what people expect.
          */
         .decorations(true)
+        /*
+         * Fullscreen is set on the BUILDER rather than afterwards.
+         *
+         * Calling `set_fullscreen` on a window that is already showing produces
+         * a visible resize — the window opens at 1280x800, paints, and then
+         * jumps — and a WebGL context that has already sized itself to the
+         * first geometry. Godot's canvas in particular reads its size once at
+         * boot, so the game would render at the small size inside a fullscreen
+         * window with black bars it has no idea about.
+         */
+        .fullscreen(request.fullscreen)
         .initialization_script(&bootstrap)
         .build()
         .map_err(|e| AppError::internal(format!("could not open the player: {e}")))?;

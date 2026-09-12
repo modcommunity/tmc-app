@@ -22,6 +22,7 @@ pub mod deploy;
 pub mod detect;
 pub mod download;
 pub mod error;
+pub mod games;
 pub mod launch;
 pub mod library;
 pub mod local;
@@ -32,5 +33,6 @@ pub mod rcon;
 pub mod secure;
 pub mod session;
 pub mod settings;
+pub mod version;
 
 pub use error::{AppError, AppResult};
