@@ -6,14 +6,17 @@
  * behind, offers a link that opens the download page in the user's real
  * browser.
  *
- * WHY NOT A REAL UPDATER
- * ----------------------
- * `tauri-plugin-updater` needs a signing key held by whoever cuts releases and
- * a manifest endpoint to serve. Neither exists, and configuring the client half
- * against neither would be a feature that names a capability it does not have —
- * with a silently-installed binary as the consequence rather than a stale
- * banner. When those exist this becomes the fallback for platforms the updater
- * does not cover; it does not become dead code.
+ * WHEN IT CAN DO MORE THAN THAT
+ * -----------------------------
+ * A build compiled with a signing public key (`TMC_UPDATER_PUBKEY`) carries a
+ * real updater, and `installable` on the check is how this banner finds out.
+ * Then the button installs rather than opening a page — and the signature
+ * verified against that compiled-in key is the only thing making that safe,
+ * which is why a build without one still shows the link and says so.
+ *
+ * The two are not alternatives to choose between. A platform the updater does
+ * not cover — mobile, or a Linux package manager's own build — keeps the link,
+ * and it is the honest floor rather than dead code.
  *
  * WHEN IT ASKS
  * ------------
@@ -31,6 +34,7 @@ import { useEffect, useState } from 'react'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { FiDownload, FiX } from 'react-icons/fi'
 
+import { messageOf } from '~/lib/ipc'
 import { ipc } from '~/lib/ipc/commands'
 import { useSettings } from '~/lib/settings/provider'
 import type { UpdateCheckT } from '~/lib/ipc/schemas'
@@ -47,6 +51,9 @@ export default function UpdateBanner() {
 
     const [found, setFound] = useState<UpdateCheckT | null>(null)
     const [dismissed, setDismissed] = useState<string | null>(() => read())
+    const [installing, setInstalling] = useState(false)
+    const [installed, setInstalled] = useState(false)
+    const [failed, setFailed] = useState<string | null>(null)
 
     const enabled = app?.autoUpdateCheck ?? false
 
@@ -72,25 +79,75 @@ export default function UpdateBanner() {
         // it, and it changes only when the user toggles the setting.
     }, [enabled])
 
+    /*
+     * Installing does NOT relaunch, deliberately — see `update_install`. So the
+     * banner has a third state, and it is the one that matters: the update is
+     * on disk and takes effect on the next start. Saying "done" and leaving
+     * somebody on the old version is how an updater earns a reputation for not
+     * working.
+     */
+    const install = async () => {
+        setInstalling(true)
+        setFailed(null)
+
+        try {
+            await ipc.updateInstall()
+            setInstalled(true)
+        } catch (err) {
+            setFailed(messageOf(err))
+        } finally {
+            setInstalling(false)
+        }
+    }
+
     if (!found?.latest) return null
-    if (dismissed === found.latest) return null
+    // An installed-but-not-restarted update keeps the banner, because it is the
+    // only thing telling somebody to restart.
+    if (dismissed === found.latest && !installed) return null
 
     return (
         <div className="flex items-center gap-3 border-b border-border bg-surface-2 px-3 py-2 text-xs">
             <FiDownload aria-hidden className="size-4 shrink-0 text-accent" />
 
             <p className="min-w-0 flex-1">
-                Version {found.latest} is available. You have {found.current}.
+                {installed ? (
+                    <>
+                        Version {found.latest} is installed. Restart the app to
+                        finish.
+                    </>
+                ) : failed ? (
+                    <span className="text-danger">{failed}</span>
+                ) : (
+                    <>
+                        Version {found.latest} is available. You have{' '}
+                        {found.current}.
+                    </>
+                )}
             </p>
 
-            {found.download && (
+            {found.installable ? (
                 <button
                     type="button"
-                    onClick={() => void openUrl(found.download!)}
-                    className="shrink-0 rounded-lg bg-accent px-2.5 py-1 font-semibold text-accent-foreground"
+                    disabled={installing || installed}
+                    onClick={() => void install()}
+                    className="shrink-0 rounded-lg bg-accent px-2.5 py-1 font-semibold text-accent-foreground disabled:opacity-60"
                 >
-                    Get it
+                    {installed
+                        ? 'Restart to finish'
+                        : installing
+                          ? 'Installing…'
+                          : 'Update now'}
                 </button>
+            ) : (
+                found.download && (
+                    <button
+                        type="button"
+                        onClick={() => void openUrl(found.download!)}
+                        className="shrink-0 rounded-lg bg-accent px-2.5 py-1 font-semibold text-accent-foreground"
+                    >
+                        Get it
+                    </button>
+                )
             )}
 
             <button

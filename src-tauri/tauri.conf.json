@@ -50,6 +50,23 @@
             "desktop": {
                 "schemes": ["tmc"]
             }
+        },
+        "updater": {
+            "_comment": [
+                "BOTH FIELDS ARE FILLED IN AT RUNTIME, and both are empty here on purpose.",
+                "The plugin's Config requires a `pubkey` key to deserialise at all, so it",
+                "has to be present — but the REAL key is compiled in from TMC_UPDATER_PUBKEY",
+                "and overrides this one, and the plugin is not registered at all when there",
+                "is none (see src/lib.rs). A placeholder key would be a key nobody holds the",
+                "other half of: every update would fail its signature check after the",
+                "download, which is the hardest kind of failure to diagnose from outside.",
+                "",
+                "`endpoints` is empty because the update URL is built from api_base(): a",
+                "build pointed at the dev site has to ask the dev site, and this file is",
+                "static. commands::api::update_install supplies it."
+            ],
+            "pubkey": "",
+            "endpoints": []
         }
     },
     "bundle": {

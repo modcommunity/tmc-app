@@ -1298,6 +1298,86 @@ and report a connection error for a connection nobody asked for. Dropping the
 pair starts the game at its own menu, which is what "launch with no server"
 means.
 
+## Updating the app
+
+Two halves, and which one a build has depends on one compile-time value.
+
+| | `update_check` | `update_install` |
+| --- | --- | --- |
+| Asks | `/api/app/v1/version` | `/api/app/v1/update/:target/:arch/:current` |
+| Answers | a version and a download page | a signed artifact |
+| Needs | nothing | `TMC_UPDATER_PUBKEY` compiled in, and desktop |
+| Does | opens a browser | replaces the running program |
+
+**`installable` on the check is what the banner reads**, so it offers the button
+it can honour. An "Update" that turns out to open a browser is worse than a
+"Get it" that says what it does — and the link half is not dead code, because it
+is the answer on mobile and for a Linux package manager's own build.
+
+### The signature is the entire security model
+
+`tauri-plugin-updater` verifies a minisign signature against a public key
+compiled into the binary before it installs anything. TLS says who served the
+bytes; it says nothing about what they are. An unsigned self-updater converts a
+compromise of the website's database into a compromise of every machine running
+the app, which is a far larger blast radius than anything else in this tree.
+
+So:
+
+  * **There is no placeholder key.** `option_env!("TMC_UPDATER_PUBKEY")` and no
+    default — a build without one registers no updater and `update_install`
+    refuses with a sentence saying so. A placeholder would be a key nobody holds
+    the other half of, and the failure it produces (every update refused, after
+    the download) is the hardest kind to diagnose from outside.
+  * **`tauri.conf.json`'s `plugins.updater` block is empty on purpose.** The
+    plugin's own config requires a `pubkey` field to deserialise at all; the
+    compiled-in key overrides it, and `endpoints` is filled per call because the
+    URL comes from `api_base()` and that file is static.
+  * **`AppRelease.signature` is a required column** on the website, the
+    publishing script refuses without one and explains why, and there is no
+    "unsigned for now" branch — because that branch is the one somebody ships by
+    accident.
+
+### Setting it up
+
+```bash
+npm run tauri signer generate -- -w ~/.tauri/tmc.key   # once, by whoever releases
+```
+
+The **public** half goes into the build environment as `TMC_UPDATER_PUBKEY`
+(`src-tauri/build.rs` carries the `rerun-if-env-changed` that makes a rebuild
+notice it). The **private** half goes into the release pipeline as
+`TAURI_SIGNING_PRIVATE_KEY`, which is what makes `tauri build` emit a `.sig`
+beside each artifact, and nowhere else.
+
+Publishing a release is then, per platform:
+
+```bash
+npm run app:release:publish -- --version 1.2.0 --target LINUX_X86_64 \
+  --url https://…/tmc_1.2.0_amd64.AppImage --sig-file ./…​.AppImage.sig
+```
+
+…and once every platform is up, one more run with `--promote`, which moves
+`app.version.latest`. **That setting is the switch**, and it is deliberately the
+same one the banner already reads: two sources would mean a release that is
+announced and not installable, or installable and not announced, depending on
+which an operator moved. A release uploaded one platform at a time is invisible
+rather than handing a Windows user a 404, and a rollback is promoting the
+previous version rather than deleting rows.
+
+### Three refusals worth keeping
+
+  * **A running game blocks an install.** Restarting the app out from under a
+    supervisor thread holding a `Child` ends the play session with no duration
+    and loses whatever the game had printed.
+  * **It does not relaunch.** Deciding for somebody that now is the moment to
+    close their app is not the command's call, so the banner gains a third state
+    — "installed, restart to finish" — and keeps showing it even after the
+    notice was dismissed. Saying "done" and leaving them on the old version is
+    how an updater earns a reputation for not working.
+  * **`204` means current.** The plugin treats anything else as a manifest, so
+    an up-to-date client answered with a 200 would be cheerfully downgraded.
+
 ## Play sessions
 
 `spawn::run` used to `Command::spawn` and drop the `Child`, with a comment
@@ -2606,13 +2686,11 @@ changed it, and the lookup costs nothing.
 
 Honest list, so nothing here reads as finished when it is not:
 
-- **Self-updating.** The app CHECKS — `/api/app/v1/version` against two
-  `SiteSetting` rows, once per launch when `autoUpdateCheck` is on, with a
-  banner offering the download page in the user's browser. It does not install
-  anything. A real updater needs `tauri-plugin-updater`, a signing key held by
-  whoever cuts releases, and a manifest endpoint; shipping the client half
-  against none of those would be a feature naming a capability it does not have,
-  with a silently-installed binary as the consequence.
+- **A signing key for the app updater.** Everything else is built — see
+  "Updating the app" — and a build compiled without `TMC_UPDATER_PUBKEY`
+  registers no updater at all and keeps the browser-download banner. Generating
+  the pair and putting the private half in the release pipeline is a ceremony
+  nobody but the person who cuts releases can perform, and it is the last step.
 - **Writes.** The app is read-only against the API for publishing — no
   commenting or uploading. Reviews, review votes, reports, subscriptions,
   sandboxes and play-time reports DO write.

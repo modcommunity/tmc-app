@@ -55,6 +55,13 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
 tauri-plugin-deep-link = "2"
+# Self-updating, desktop only. Mobile updates come from a store, and a plugin
+# that could replace an app's own binary there would not be allowed to.
+#
+# Registered ONLY when a signing public key is compiled in — see `lib.rs`. The
+# plugin's entire security model is that signature check, so a build with no key
+# must have no updater rather than an updater that trusts whatever it downloads.
+tauri-plugin-updater = "2"
 
 # The injector. Windows-only here — `tmc-core` depends on the same crate on
 # every platform for the virtual tree, but `inject` is `#[cfg(windows)]` and

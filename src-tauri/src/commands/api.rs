@@ -136,21 +136,27 @@ pub struct UpdateCheck {
     pub download: Option<String>,
     /// Whether `latest` is actually ahead of `current`.
     pub outdated: bool,
+    /// Whether THIS build can install the update itself.
+    ///
+    /// False for a build compiled without `TMC_UPDATER_PUBKEY` and false on
+    /// mobile, where an app replacing its own binary is not a thing the OS
+    /// permits. Published so the banner offers the button it can actually
+    /// honour: "Update" that turns out to open a browser is worse than
+    /// "Download" that says what it does.
+    pub installable: bool,
 }
 
 /// Ask the site whether this build is out of date.
 ///
-/// **This does not update anything**, and the shape of the answer says so:
-/// there is no artifact, no signature and no checksum in it. A user who is
-/// behind is offered a link to the download page, which opens in their real
-/// browser.
+/// **This does not update anything.** The shape of the answer says so: no
+/// artifact, no signature, no checksum. A user who is behind is offered a link
+/// to the download page, which opens in their real browser.
 ///
-/// That is the whole feature, and it is deliberately not the other one. A
-/// self-updater needs a signing key held by whoever cuts releases and a
-/// manifest endpoint to serve; shipping the client half against neither is
-/// exactly the "setting that names a capability it does not have" problem this
-/// was written to fix, in a place where the consequence is a silently-installed
-/// binary rather than an unchecked plugin.
+/// It is deliberately not [`update_install`] with a different name. This is the
+/// answer every build can give — including one compiled without a signing key,
+/// which has no updater at all — so it stays the honest floor and the fallback
+/// for a platform the updater does not cover. `UpdateCheck::installable` is
+/// what tells the UI which of the two it is looking at.
 ///
 /// Unauthenticated, because a freshly-installed app that has not signed in yet
 /// is precisely the one most likely to be out of date.
@@ -195,5 +201,121 @@ pub async fn update_check(state: State<'_, AppState>) -> AppResult<UpdateCheck> 
         latest,
         download,
         outdated,
+        installable: updater_available(),
+    })
+}
+
+/// Whether this build carries a working updater.
+///
+/// Desktop, and a signing public key compiled in. The key is the whole security
+/// model — the plugin verifies a minisign signature before it installs anything
+/// — so a build without one is a build that cannot tell a real update from an
+/// attacker's, and the correct behaviour for it is to have no updater rather
+/// than a trusting one. See `lib.rs` for why there is no placeholder key.
+pub fn updater_available() -> bool {
+    cfg!(desktop)
+        && option_env!("TMC_UPDATER_PUBKEY")
+            .map(str::trim)
+            .is_some_and(|key| !key.is_empty())
+}
+
+/// Download the update, verify its signature, and install it.
+///
+/// **The signature is the only thing making this safe**, and it is checked by
+/// the plugin against the key compiled into this binary — not by the server,
+/// not by TLS. TLS says who served the bytes; it says nothing about what they
+/// are, and this call replaces the program the user is running.
+///
+/// Three refusals, all of them before anything is fetched:
+///
+///   * a build with no key compiled in has no updater and says so;
+///   * a check that finds nothing newer does nothing, rather than reinstalling
+///     the version already running;
+///   * a running game blocks it. Restarting the app out from under a supervisor
+///     thread that is holding a `Child` ends the play session with no duration
+///     and loses whatever the game had printed.
+///
+/// It does not relaunch. Tauri's installers take over on Windows and macOS, and
+/// deciding for somebody that now is the moment to close their app is not this
+/// command's call — the UI says the update is ready and they restart when they
+/// are done.
+#[cfg(desktop)]
+#[tauri::command]
+pub async fn update_install(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<UpdateCheck> {
+    use tauri_plugin_updater::UpdaterExt;
+
+    if !updater_available() {
+        return Err(AppError::invalid(
+            "This build cannot install updates itself. Use the download page.",
+        ));
+    }
+
+    if !state.sessions.running().is_empty() {
+        return Err(AppError::invalid(
+            "A game is running. Close it before updating the app.",
+        ));
+    }
+
+    /*
+     * Endpoints are set HERE rather than in `tauri.conf.json`, because the
+     * config is static and the base is not: a build pointed at the dev site has
+     * to ask the dev site. It is the same rule every other URL in this app
+     * follows, and `api_base()` has already validated the scheme and host.
+     */
+    let endpoint = format!(
+        "{}/api/app/v1/update/{{{{target}}}}/{{{{arch}}}}/{{{{current_version}}}}",
+        tmc_core::api::api_base().trim_end_matches('/')
+    )
+    .parse()
+    .map_err(|_| AppError::internal("the update endpoint did not parse"))?;
+
+    let updater = app
+        .updater_builder()
+        .endpoints(vec![endpoint])
+        .map_err(|e| AppError::internal(format!("updater: {e}")))?
+        .build()
+        .map_err(|e| AppError::internal(format!("updater: {e}")))?;
+
+    let found = updater
+        .check()
+        .await
+        .map_err(|e| AppError::internal(format!("update check: {e}")))?;
+
+    let current = state.version.clone();
+
+    let Some(update) = found else {
+        return Ok(UpdateCheck {
+            current,
+            latest: None,
+            download: None,
+            outdated: false,
+            installable: true,
+        });
+    };
+
+    let version = update.version.clone();
+
+    audit!(
+        state.audit,
+        Security,
+        App,
+        "app.update.install",
+        format!("{current} → {version}")
+    );
+
+    update
+        .download_and_install(|_, _| {}, || {})
+        .await
+        .map_err(|e| AppError::internal(format!("update install: {e}")))?;
+
+    Ok(UpdateCheck {
+        current,
+        latest: Some(version),
+        download: None,
+        outdated: true,
+        installable: true,
     })
 }

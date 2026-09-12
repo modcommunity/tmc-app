@@ -305,6 +305,15 @@ export const UpdateCheckSchema = z.object({
     /** Absolute https, validated server-side and again in Rust. */
     download: z.string().nullable(),
     outdated: z.boolean(),
+    /**
+     * Whether THIS build can install the update itself.
+     *
+     * False for a build compiled without a signing key and false on mobile.
+     * Published so the banner offers the button it can honour: an "Update" that
+     * turns out to open a browser is worse than a "Get it" that says what it
+     * does.
+     */
+    installable: z.boolean().default(false),
 })
 
 export type UpdateCheckT = z.infer<typeof UpdateCheckSchema>

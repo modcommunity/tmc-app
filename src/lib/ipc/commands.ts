@@ -215,6 +215,20 @@ export const ipc = {
      */
     updateCheck: () => call('update_check', UpdateCheckSchema),
 
+    /**
+     * Download the update, verify its signature and install it.
+     *
+     * Only ever called when `updateCheck` answered `installable`. The signature
+     * is verified against a key compiled into the binary — not by the server
+     * and not by TLS, which says who served the bytes and nothing about what
+     * they are. A build with no key refuses here rather than trusting what it
+     * downloads.
+     *
+     * It does not relaunch: deciding for somebody that now is the moment to
+     * close their app is not this command's call.
+     */
+    updateInstall: () => call('update_install', UpdateCheckSchema),
+
     /** Every publishing key the user trusts. */
     pluginTrustedKeys: () => call('plugin_trusted_keys', z.array(TrustedKeySchema)),
     /**
