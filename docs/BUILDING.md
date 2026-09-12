@@ -134,6 +134,71 @@ falling back to a `PACKAGES_TOKEN` secret (a PAT with `read:packages`) where
 the package does not grant this repository access. That is also the answer to
 "I cannot `npm install` on my own Windows machine": you do not have to.
 
+## The update signing key
+
+The app can install its own updates, and the only thing that makes that safe is
+a signature it checks against a public key compiled into the binary. **Both
+halves of that key belong to THIS repository.** Nothing about it goes into
+website-city — that side only ever stores the signature string, which is public.
+
+Without a key nothing breaks: the release is built unsigned, the app shows its
+"there is a newer version" banner, and the button opens the download page in a
+browser. With one, the same banner's button installs.
+
+### One-time setup
+
+Generate the pair on a machine you trust. It is never committed:
+
+```bash
+npm run tauri signer generate -- -w ~/.tauri/tmc-updater.key
+```
+
+That writes two files and prints the public key:
+
+| File | Which half | Where it goes |
+| --- | --- | --- |
+| `~/.tauri/tmc-updater.key.pub` | **public** | GitHub → this repo → Settings → Secrets and variables → Actions → **Variables** → `TMC_UPDATER_PUBKEY` |
+| `~/.tauri/tmc-updater.key` | **private** | the same page → **Secrets** → `TAURI_SIGNING_PRIVATE_KEY` |
+| the password you chose | — | **Secrets** → `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` |
+
+Paste the *contents* of each file, not its path. The public one is a variable
+rather than a secret deliberately: it is a public key, and hiding it would only
+mean nobody can read back what a build was signed against.
+
+**Keep the private key.** It is not recoverable, and losing it means every
+installed copy of the app stops accepting updates until its users reinstall by
+hand — a new key cannot sign for the old one.
+
+Building locally still needs nothing. `TMC_UPDATER_PUBKEY` is read through
+`option_env!`, so a developer build simply has no updater.
+
+### Publishing a release so the app will install it
+
+The workflow signs each bundle and uploads the `.sig` files beside it, then
+prints the exact commands into its own log. In **website-city**, once per
+platform:
+
+```bash
+npm run app:release:publish -- --version 0.2.0 --target LINUX_X86_64 \
+  --url https://github.com/…/releases/download/v0.2.0/tmc_0.2.0_amd64.AppImage \
+  --sig '<contents of tmc_0.2.0_amd64.AppImage.sig>'
+```
+
+Targets: `LINUX_X86_64`, `LINUX_AARCH64`, `WINDOWS_X86_64`, `WINDOWS_AARCH64`,
+`DARWIN_UNIVERSAL` (the `.app.tar.gz`, not the `.dmg` — a disk image is
+something a person mounts, not something an updater unpacks over a running app).
+
+Then **once, after every platform is up**:
+
+```bash
+npm run app:release:publish -- --version 0.2.0 --target LINUX_X86_64 --promote …
+```
+
+`--promote` moves the `app.version.latest` site setting, and that setting is
+what actually offers the release to anybody. Doing it first means a Windows user
+is told there is an update and handed a 404; a rollback is promoting the
+previous version rather than deleting anything.
+
 ## Installing
 
 **Linux**

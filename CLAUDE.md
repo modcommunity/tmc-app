@@ -1340,15 +1340,26 @@ So:
 
 ### Setting it up
 
-```bash
-npm run tauri signer generate -- -w ~/.tauri/tmc.key   # once, by whoever releases
-```
+**Both halves of the key belong to THIS repository.** Nothing about it goes into
+website-city — that side only ever stores the signature string, which is public.
+`docs/BUILDING.md` has the full walkthrough; the shape is:
 
-The **public** half goes into the build environment as `TMC_UPDATER_PUBKEY`
-(`src-tauri/build.rs` carries the `rerun-if-env-changed` that makes a rebuild
-notice it). The **private** half goes into the release pipeline as
-`TAURI_SIGNING_PRIVATE_KEY`, which is what makes `tauri build` emit a `.sig`
-beside each artifact, and nowhere else.
+| Half | Name | Where |
+| --- | --- | --- |
+| public | `TMC_UPDATER_PUBKEY` | a repository **variable**, read at build time by `option_env!` |
+| private | `TAURI_SIGNING_PRIVATE_KEY` | a repository **secret**, read by `tauri build` |
+| its password | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | a repository **secret** |
+
+`src-tauri/build.rs` carries the `rerun-if-env-changed` that makes a rebuild
+notice the first one changing — without it a build first made with no key keeps
+having no key forever, and the symptom is an app that silently has no updater
+after somebody configured one.
+
+**`createUpdaterArtifacts` is off in `tauri.conf.json` and turned on by the
+release workflow**, because with it on and no key `tauri build` FAILS — which
+would break `npm run desktop:build` for every developer. CI enables it exactly
+when both halves are present, and its absence is a warning rather than a failed
+job: a release nobody can auto-update is still a release people can download.
 
 Publishing a release is then, per platform:
 

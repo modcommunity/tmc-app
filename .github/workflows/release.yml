@@ -77,16 +77,55 @@ jobs:
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 
+            # THE SIGNING KEY DECIDES WHETHER THIS RELEASE CAN BE INSTALLED
+            # BY THE APP ITSELF.
+            #
+            # `createUpdaterArtifacts` is off in `tauri.conf.json` and turned on
+            # here instead, because with it on and no key `tauri build` fails —
+            # which would break `npm run desktop:build` for everybody who does
+            # not have one. So it is enabled exactly when both halves are
+            # present, and its absence is a warning rather than a failure: a
+            # release nobody can auto-update is still a release people can
+            # download, and failing the build would mean no release at all.
+            #
+            # TMC_UPDATER_PUBKEY is a repository VARIABLE, not a secret. It is a
+            # public key; storing it as a secret would only mean nobody can read
+            # back what a build was signed against.
             - name: Build
-              run: npx tauri build ${{ matrix.args }}
+              shell: bash
+              env:
+                  TMC_UPDATER_PUBKEY: ${{ vars.TMC_UPDATER_PUBKEY }}
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+              run: |
+                  extra=()
 
+                  if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ] && [ -n "${TMC_UPDATER_PUBKEY:-}" ]; then
+                      extra=(--config '{"bundle":{"createUpdaterArtifacts":true}}')
+                      echo "Signing updater artifacts."
+                  else
+                      echo "::warning::No updater key configured (needs the TMC_UPDATER_PUBKEY variable AND the TAURI_SIGNING_PRIVATE_KEY secret). This release will be download-only — the app will show its banner and open the download page rather than installing."
+                  fi
+
+                  npx tauri build ${{ matrix.args }} "${extra[@]}"
+
+            # The `.sig` files ride along with the artifacts, and the macOS
+            # updater bundle is the `.app.tar.gz` rather than the `.dmg` — a
+            # DMG is a disk image a person mounts, not something an updater can
+            # unpack over a running app.
+            #
+            # They are published on the release so `publish-app-release.ts`
+            # can be pointed at one with `--sig-file`. A signature is not a
+            # secret: it proves who built the artifact, and it is useless
+            # without the artifact it signs.
             - name: Collect
               shell: bash
               run: |
                   mkdir -p out
                   find src-tauri/target -type f \
                     \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
-                       -o -name '*-setup.exe' -o -name '*.msi' -o -name '*.dmg' \) \
+                       -o -name '*-setup.exe' -o -name '*.msi' -o -name '*.dmg' \
+                       -o -name '*.app.tar.gz' -o -name '*.sig' \) \
                     -exec cp {} out/ \;
                   ls -la out
 
@@ -111,9 +150,42 @@ jobs:
             # checksums.txt is not decoration: `scripts/install.sh` REFUSES to
             # install without it, so a release published without this step is a
             # release the one-line installer will not touch.
+            #
+            # The `.sig` files are excluded from it. They are not things anybody
+            # installs, and a checksum of a signature is a hash of a hash.
             - name: Checksums
               working-directory: artifacts
-              run: sha256sum * > checksums.txt && cat checksums.txt
+              run: |
+                  sha256sum $(ls | grep -v '\.sig$') > checksums.txt
+                  cat checksums.txt
+
+            # What to do next, printed into the run's own log so the person who
+            # cut the release does not have to go and find it. The app is not
+            # offered the release until `app.version.latest` moves, which is
+            # what `--promote` does — see `docs/BUILDING.md`.
+            - name: Next steps
+              shell: bash
+              working-directory: artifacts
+              env:
+                  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+              run: |
+                  if ! ls *.sig >/dev/null 2>&1; then
+                      echo "No .sig files: this release is download-only."
+                      exit 0
+                  fi
+
+                  echo "Signed. To make it installable from inside the app, run in website-city:"
+                  echo
+
+                  for sig in *.sig; do
+                      echo "  npm run app:release:publish -- --version ${TAG#v} \\"
+                      echo "    --target <TARGET> \\"
+                      echo "    --url https://github.com/${{ github.repository }}/releases/download/${TAG}/${sig%.sig} \\"
+                      echo "    --sig '<contents of ${sig}>'"
+                      echo
+                  done
+
+                  echo "…then once every platform is published, one more run with --promote."
 
             - name: Publish
               env:
