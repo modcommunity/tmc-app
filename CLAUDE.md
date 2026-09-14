@@ -126,6 +126,7 @@ genuinely need a window belongs on that side of the line.
 | `secure.rs` | Keychain / Credential Manager / Secret Service, file fallback on mobile. Keyed per API base |
 | `settings.rs` | App-local settings (`settings.json`), clamped on read |
 | `anchor.rs` | **What a jail anchor may be.** Guards `gameDirs` / `downloadDir` |
+| `canon.rs` | Resolving a path, in the spelling everything else uses. The one door to `canonicalize` |
 | `crypto.rs` | The device key, and what it does and does not buy |
 | `deeplink.rs` | The closed list of what a `tmc://` link may ask for |
 | `logging.rs` | Append-only JSONL audit log + `audit!` macro |
@@ -2660,6 +2661,19 @@ changed it, and the lookup costs nothing.
 - **`Path::join` with an absolute argument discards the base.** That single
   behaviour is why `join_relative` exists and why nothing in the plugin path
   should ever call `join` on untrusted input.
+- **`std::fs::canonicalize` on Windows returns `\\?\F:\Games`, not `F:\Games`.**
+  Every Steam path in the app carried that verbatim prefix, because
+  `detect::steam::dedupe` returned the canonical form it was only using as a
+  duplicate KEY and every game path is joined onto a library path. It is not
+  cosmetic: a verbatim path is one where `.` and `..` mean nothing and `/` is
+  not a separator, several game launchers refuse one, and — the dangerous half
+  — `\\?\F:\Games` and `F:\Games` are one directory and two strings, so a
+  `starts_with` with a resolved path on one side and a joined one on the other
+  answers "outside" for everything. `tmc_core::canon::canonicalize` is the only
+  way this tree resolves a path; `strip_verbatim` is pure string work so the
+  Windows rules are tested on every platform, and it declines the four cases
+  where the prefix is load-bearing (a volume GUID, a path past `MAX_PATH`, a
+  component Win32 would rewrite, a device name).
 - **A tRPC mutation cannot set a cookie on a streamed response.** Relevant when
   touching the website's device-approval router — see website-city's
   `src/trpc/react.tsx`.

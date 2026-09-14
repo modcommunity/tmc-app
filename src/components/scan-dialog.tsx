@@ -83,22 +83,40 @@ export default function ScanDialog({
     const [launcher, setLauncher] = useState<DetectedGameT[] | null>(null)
     const [chosen, setChosen] = useState<Set<string>>(new Set())
     const [outcomes, setOutcomes] = useState<ApplyOutcomeT[] | null>(null)
+    /*
+     * Paths this dialog has just pointed a game at.
+     *
+     * `alreadySet` is decided in Rust when the list is built and is not
+     * recomputed by applying — so without this, pressing "Set up" left the row
+     * ticked, enabled and unmarked, and the button still offering to set up the
+     * same game. The only sign anything had happened was a counter in the
+     * corner, which reads exactly like a button that does nothing.
+     */
+    const [applied, setApplied] = useState<Set<string>>(new Set())
     const [error, setError] = useState<string | null>(null)
     const [busy, setBusy] = useState(false)
+
+    const readLaunchers = useCallback(async (quiet = false) => {
+        try {
+            setLauncher(await ipc.detectGames())
+        } catch (err) {
+            // Quiet on the re-read after an apply: the apply itself already
+            // reported per row, and failing to re-annotate a list that is
+            // still on screen is not a reason to put a red box under it.
+            if (!quiet) setError(messageOf(err))
+        }
+    }, [])
 
     // The launcher read costs nothing and needs no input, so it happens on open
     // rather than behind a button somebody has to know to press.
     useEffect(() => {
-        void ipc
-            .detectGames()
-            .then(setLauncher)
-            .catch((err: unknown) => setError(messageOf(err)))
+        void readLaunchers()
 
         void ipc
             .fsRoots()
             .then(setRoots)
             .catch(() => undefined)
-    }, [])
+    }, [readLaunchers])
 
     useEffect(() => {
         let live = true
@@ -191,15 +209,41 @@ export default function ScanDialog({
             setError(null)
 
             try {
-                setOutcomes(await ipc.detectApplyMany(pairs))
+                const results = await ipc.detectApplyMany(pairs)
+                const landed = results.filter((o) => o.ok).map((o) => o.path)
+
+                setOutcomes(results)
+
+                /*
+                 * Ticked → set up, in one step. A row that succeeded stops
+                 * being a choice: it is unticked so the button's count falls,
+                 * and marked so the row says what happened. A row that was
+                 * REFUSED stays ticked with its reason under it, because that
+                 * one is still something the user might fix and retry.
+                 */
+                setApplied((prev) => new Set([...prev, ...landed]))
+
+                setChosen((prev) => {
+                    const next = new Set(prev)
+
+                    for (const path of landed) next.delete(path)
+
+                    return next
+                })
+
                 onApplied()
+
+                // And ask Rust again, so `alreadySet` and `replaces` describe
+                // the settings as they are now rather than as they were when
+                // the dialog opened.
+                void readLaunchers(true)
             } catch (err) {
                 setError(messageOf(err))
             } finally {
                 setBusy(false)
             }
         },
-        [chosen, onApplied]
+        [chosen, onApplied, readLaunchers]
     )
 
     /*
@@ -223,7 +267,9 @@ export default function ScanDialog({
         })
     }, [launcher, report])
 
-    const applicable = found.filter((g) => !g.alreadySet)
+    const isSet = (game: DetectedGameT) => game.alreadySet || applied.has(game.path)
+
+    const applicable = found.filter((g) => !isSet(g))
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -394,6 +440,8 @@ export default function ScanDialog({
                                         (o) => o.path === game.path
                                     )
 
+                                    const done = isSet(game)
+
                                     return (
                                         <label
                                             key={game.path}
@@ -402,10 +450,9 @@ export default function ScanDialog({
                                             <input
                                                 type="checkbox"
                                                 className="mt-0.5"
-                                                disabled={game.alreadySet}
+                                                disabled={done}
                                                 checked={
-                                                    game.alreadySet ||
-                                                    chosen.has(game.path)
+                                                    done || chosen.has(game.path)
                                                 }
                                                 onChange={(e) =>
                                                     setChosen((prev) => {
@@ -434,14 +481,24 @@ export default function ScanDialog({
                                                     {game.path}
                                                 </span>
 
-                                                {game.alreadySet && (
+                                                {done && (
                                                     <span className="flex items-center gap-1 text-[11px] text-success">
                                                         <FiCheck className="size-3" />
-                                                        Already set up
+                                                        {/* The apply wins over
+                                                            `alreadySet`: the
+                                                            re-read flips that
+                                                            flag true, and a row
+                                                            that just changed
+                                                            should not report
+                                                            itself as having been
+                                                            that way all along. */}
+                                                        {applied.has(game.path)
+                                                            ? 'Set up — it is in your library now'
+                                                            : 'Already set up'}
                                                     </span>
                                                 )}
 
-                                                {game.replaces && (
+                                                {game.replaces && !done && (
                                                     <span className="block text-[11px] text-warning">
                                                         Would replace{' '}
                                                         {game.replaces}
@@ -470,12 +527,25 @@ export default function ScanDialog({
                 </div>
 
                 <footer className="flex items-center justify-end gap-2 border-t border-border p-4">
-                    {outcomes && (
-                        <p className="mr-auto text-[11px] text-muted">
-                            Set up {outcomes.filter((o) => o.ok).length} of{' '}
-                            {outcomes.length}.
-                        </p>
-                    )}
+                    {outcomes &&
+                        (() => {
+                            const ok = outcomes.filter((o) => o.ok).length
+                            const failed = outcomes.length - ok
+
+                            return (
+                                <p
+                                    className={`mr-auto text-[11px] ${
+                                        failed > 0 ? 'text-warning' : 'text-success'
+                                    }`}
+                                >
+                                    {ok > 0 &&
+                                        `Set up ${ok} game${ok === 1 ? '' : 's'}. `}
+                                    {failed > 0
+                                        ? `${failed} could not be — see the rows above.`
+                                        : 'Close this to see them in your library.'}
+                                </p>
+                            )
+                        })()}
 
                     <button
                         type="button"

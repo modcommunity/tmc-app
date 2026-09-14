@@ -95,7 +95,7 @@ impl Jail {
              * through a symlink (a very common macOS `/var` → `/private/var`
              * situation) the comparison still works.
              */
-            let base = root.canonicalize().unwrap_or_else(|_| root.clone());
+            let base = crate::canon::canonicalize_or_keep(root);
 
             // The subdirectory in the grant is itself untrusted text.
             let prefix = if grant.path.is_empty() {
@@ -302,7 +302,14 @@ fn assert_real_ancestor_inside(target: &Path, root: &Path) -> AppResult<()> {
 
     loop {
         if cursor.exists() {
-            let real = cursor.canonicalize().map_err(|e| {
+            /*
+             * Through `canon`, and so is the root above — the two are compared
+             * with `starts_with`, and on Windows a canonicalised path carries
+             * a `\\?\` prefix that a lexically-joined one does not. One side
+             * resolved and the other not is a containment check that answers
+             * "outside" for every path in the jail.
+             */
+            let real = crate::canon::canonicalize(cursor).map_err(|e| {
                 AppError::jail(format!("Could not resolve {}: {e}", cursor.display()))
             })?;
 
@@ -492,7 +499,7 @@ mod tests {
         let link = root.path().join("escape");
         std::os::unix::fs::symlink(outside.path(), &link).expect("symlink");
 
-        let real_root = root.path().canonicalize().expect("canonicalize");
+        let real_root = crate::canon::canonicalize(root.path()).expect("canonicalize");
 
         // Lexically fine — `escape/file` has no `..` in it.
         let target = join_relative(&real_root, "escape/file").expect("joins");

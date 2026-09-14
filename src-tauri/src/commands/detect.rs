@@ -236,13 +236,7 @@ async fn learn_app_ids(state: &AppState, slugs: &[String]) {
 
 /// Are these the same directory, allowing for a symlink or a trailing slash?
 fn same_folder(a: &str, b: &str) -> bool {
-    let canon = |p: &str| {
-        std::path::Path::new(p)
-            .canonicalize()
-            .unwrap_or_else(|_| PathBuf::from(p))
-    };
-
-    canon(a) == canon(b)
+    tmc_core::canon::canonicalize_or_keep(a) == tmc_core::canon::canonicalize_or_keep(b)
 }
 
 fn protected(state: &AppState) -> Vec<PathBuf> {

@@ -25,7 +25,7 @@
 //! It lives in `tmc-core`, with no Tauri dependency, so the policy compiles and
 //! is tested on a CI runner with no display stack.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::error::{AppError, AppResult};
 
@@ -92,6 +92,11 @@ const SYSTEM_DIRS: &[&str] = &[
 /// `settings.json` is the same one `plugins::jail` will resolve to later —
 /// a stored path full of `..` and symlinks could pass this check and then
 /// canonicalise somewhere else when the jail is built.
+///
+/// Through [`crate::canon`] rather than `std::fs` directly, because this value
+/// does not only get compared: it is printed in the Library, in the sandbox
+/// editor and in every audit line, and it is handed to game launchers that do
+/// not accept a Windows verbatim path.
 pub fn validate_root(candidate: &str, protected: &[PathBuf]) -> AppResult<PathBuf> {
     let trimmed = candidate.trim();
 
@@ -99,8 +104,7 @@ pub fn validate_root(candidate: &str, protected: &[PathBuf]) -> AppResult<PathBu
         return Err(AppError::invalid("No folder was given."));
     }
 
-    let dir = Path::new(trimmed)
-        .canonicalize()
+    let dir = crate::canon::canonicalize(trimmed)
         .map_err(|_| AppError::invalid("That folder does not exist."))?;
 
     if !dir.is_dir() {
@@ -123,7 +127,7 @@ pub fn validate_root(candidate: &str, protected: &[PathBuf]) -> AppResult<PathBu
     for system in SYSTEM_DIRS {
         // Compared after canonicalising the system path too, so `/tmp` matching
         // a machine where it is a symlink to `/private/tmp` still holds.
-        let Ok(resolved) = Path::new(system).canonicalize() else {
+        let Ok(resolved) = crate::canon::canonicalize(system) else {
             continue;
         };
 
@@ -136,7 +140,7 @@ pub fn validate_root(candidate: &str, protected: &[PathBuf]) -> AppResult<PathBu
     }
 
     for owned in protected {
-        let Ok(resolved) = owned.canonicalize() else {
+        let Ok(resolved) = crate::canon::canonicalize(owned) else {
             continue;
         };
 
@@ -197,7 +201,7 @@ mod tests {
 
         let out = validate_root(games.to_str().expect("utf8"), &[]).expect("accepted");
 
-        assert_eq!(out, games.canonicalize().expect("canonical"));
+        assert_eq!(out, crate::canon::canonicalize(&games).expect("canonical"));
     }
 
     #[test]
@@ -216,8 +220,7 @@ mod tests {
     #[test]
     fn a_filesystem_root_is_refused() {
         // `/` on Unix, and the current drive's root on Windows.
-        let root = Path::new(".")
-            .canonicalize()
+        let root = crate::canon::canonicalize(".")
             .expect("cwd")
             .ancestors()
             .last()

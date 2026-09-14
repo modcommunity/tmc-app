@@ -267,8 +267,7 @@ fn dedupe(games: &mut Vec<DetectedGame>) {
     let mut seen: Vec<String> = Vec::new();
 
     games.retain(|game| {
-        let key = std::path::Path::new(&game.path)
-            .canonicalize()
+        let key = crate::canon::canonicalize(&game.path)
             .map(|p| p.to_string_lossy().into_owned())
             .unwrap_or_else(|_| game.path.clone());
 

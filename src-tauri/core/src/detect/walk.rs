@@ -489,8 +489,7 @@ fn dedupe_scan(games: &mut Vec<DetectedGame>) {
     let mut seen: std::collections::BTreeSet<(String, String)> = std::collections::BTreeSet::new();
 
     games.retain(|game| {
-        let path = Path::new(&game.path)
-            .canonicalize()
+        let path = crate::canon::canonicalize(&game.path)
             .map(|resolved| resolved.to_string_lossy().into_owned())
             .unwrap_or_else(|_| game.path.clone());
 

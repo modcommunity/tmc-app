@@ -183,21 +183,32 @@ fn scan_library(library: &Path, out: &mut Vec<DetectedGame>) {
 }
 
 /// Keep the first of each path, preserving order.
+///
+/// **The canonical form is the KEY, not the answer.** Pushing the resolved
+/// path instead of the one Steam wrote down is the difference between a
+/// library at `F:\SteamLibrary` and one at `\\?\F:\SteamLibrary`, because
+/// `canonicalize` on Windows returns the verbatim spelling — and every game
+/// path is built by joining onto this, so the prefix ends up on all of them,
+/// in the scan list, in `settings.json` and in front of the user. What is
+/// wanted from canonicalising here is only the ANSWER to "are these two the
+/// same directory?"; the path itself is already fine as Steam spelled it.
 fn dedupe(paths: Vec<PathBuf>) -> Vec<PathBuf> {
     let mut seen: Vec<PathBuf> = Vec::with_capacity(paths.len());
+    let mut out: Vec<PathBuf> = Vec::with_capacity(paths.len());
 
     for path in paths {
         // Canonicalise so `~/.steam/steam` and `~/.local/share/Steam` — which
         // are the same directory through a symlink on most Linux installs — do
         // not both get scanned.
-        let key = path.canonicalize().unwrap_or_else(|_| path.clone());
+        let key = crate::canon::canonicalize_or_keep(&path);
 
         if !seen.contains(&key) {
             seen.push(key);
+            out.push(path);
         }
     }
 
-    seen
+    out
 }
 
 #[cfg(test)]
@@ -274,6 +285,50 @@ mod tests {
             names.contains(&"Rust"),
             "a game on a second library must be found: {names:?}"
         );
+    }
+
+    /// A library is reported in the spelling Steam wrote down.
+    ///
+    /// `dedupe` canonicalises to answer "are these the same directory?", and
+    /// used to return that resolved form. On Windows that is `\\?\F:\…`, and
+    /// since every game path is joined onto a library path the prefix reached
+    /// the scan list, `settings.json`, the Library row and every audit line.
+    #[test]
+    fn a_library_keeps_the_spelling_it_was_written_with() {
+        let tmp = fixture();
+        let steam = tmp.path().join("Steam");
+
+        let found = scan(&roots_for(&tmp));
+
+        let gta = found
+            .iter()
+            .find(|g| g.name == "Grand Theft Auto V")
+            .expect("found");
+
+        assert_eq!(
+            gta.path,
+            steam
+                .join("steamapps/common/Grand Theft Auto V")
+                .to_string_lossy()
+                .into_owned()
+        );
+    }
+
+    /// The half of `dedupe` that canonicalising is actually for: two spellings
+    /// of one directory are one library, and the first one wins.
+    #[cfg(unix)]
+    #[test]
+    fn two_paths_to_one_directory_are_scanned_once() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let real = tmp.path().join("real");
+        let link = tmp.path().join("link");
+
+        std::fs::create_dir_all(&real).expect("mkdir");
+        std::os::unix::fs::symlink(&real, &link).expect("symlink");
+
+        let deduped = dedupe(vec![link.clone(), real.clone()]);
+
+        assert_eq!(deduped, vec![link]);
     }
 
     /// Steam leaves manifests behind after a failed uninstall. Offering one

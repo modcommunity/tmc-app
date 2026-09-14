@@ -181,8 +181,7 @@ pub fn fs_list_dirs(
      * with it here means the picker cannot show a path the jail would then
      * resolve somewhere else.
      */
-    let dir = start
-        .canonicalize()
+    let dir = tmc_core::canon::canonicalize(&start)
         .map_err(|_| AppError::invalid("That folder does not exist."))?;
 
     if !dir.is_dir() {

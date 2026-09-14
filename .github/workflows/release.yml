@@ -109,6 +109,53 @@ jobs:
 
                   npx tauri build ${{ matrix.args }} "${extra[@]}"
 
+            # WINDOWS ALSO SHIPS THE BARE EXE, AND NO BUNDLER PRODUCES IT.
+            #
+            # A Tauri app is one file — the webview comes from Windows — so the
+            # binary the compile already made runs on its own, and that is what
+            # somebody who does not want an installer is handed. README.md has
+            # offered it since before this workflow existed; without this step
+            # the releases it points at have only the two installers in them.
+            #
+            # The name is DERIVED from the NSIS output rather than rebuilt out
+            # of `tauri.conf.json`, so the product name, the version and the
+            # bundler's own spelling of the architecture cannot drift apart —
+            # the same reason `publish-release.mjs` is a script with a table in
+            # it rather than a glob in this file.
+            #
+            # `-portable.exe` also keeps it out of that table: the Windows rules
+            # match `-setup.exe` and `.msi`, so the updater is never offered a
+            # file that installs nothing and registers no `tmc://` scheme.
+            - name: Portable exe
+              if: matrix.name == 'windows'
+              shell: bash
+              run: |
+                  out=src-tauri/target/release
+                  setup="$(ls "$out"/bundle/nsis/*-setup.exe 2>/dev/null | head -1)"
+
+                  if [ -z "$setup" ]; then
+                      echo "::error::No NSIS setup under $out/bundle/nsis, so there is nothing to name the portable exe after."
+                      exit 1
+                  fi
+
+                  # The cargo binary is named after the crate and the file
+                  # people are handed is named after the product — the same
+                  # rename `build-windows.sh` does on the cross-build path.
+                  # The fallback is for the day Tauri starts renaming it
+                  # itself, which would otherwise fail the whole release job
+                  # over a file that is sitting right there under a new name.
+                  exe="$out/tmc-app.exe"
+                  [ -f "$exe" ] || exe="$(ls "$out"/*.exe 2>/dev/null | head -1)"
+
+                  if [ -z "$exe" ] || [ ! -f "$exe" ]; then
+                      echo "::error::No application exe under $out."
+                      exit 1
+                  fi
+
+                  mkdir -p "$out/bundle/portable"
+                  cp "$exe" "$out/bundle/portable/$(basename "${setup%-setup.exe}")-portable.exe"
+                  ls -la "$out/bundle/portable"
+
             # The `.sig` files ride along with the artifacts, and the macOS
             # updater bundle is the `.app.tar.gz` rather than the `.dmg` — a
             # DMG is a disk image a person mounts, not something an updater can
@@ -124,7 +171,8 @@ jobs:
                   mkdir -p out
                   find src-tauri/target -type f \
                     \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
-                       -o -name '*-setup.exe' -o -name '*.msi' -o -name '*.dmg' \
+                       -o -name '*-setup.exe' -o -name '*-portable.exe' \
+                       -o -name '*.msi' -o -name '*.dmg' \
                        -o -name '*.app.tar.gz' -o -name '*.sig' \) \
                     -exec cp {} out/ \;
                   ls -la out

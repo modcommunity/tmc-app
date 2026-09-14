@@ -168,6 +168,30 @@ impl AppSettings {
         if !theme_ok {
             self.theme = "system".into();
         }
+
+        /*
+         * The jail roots are not re-validated here — that is `set_game_dir`'s
+         * job and `patch` refuses to carry them at all — but they are RESPELT.
+         *
+         * These were stored straight from `std::fs::canonicalize`, which on
+         * Windows returns `\\?\F:\SteamLibrary`. It names the right folder and
+         * it is what every screen shows, so a settings file written before
+         * `crate::canon` existed puts a verbatim prefix in front of every game
+         * path in the Library. A directory is the same directory under both
+         * spellings, so fixing it on read costs nothing and saves everybody
+         * re-running the scan.
+         */
+        let respell = |dir: &mut String| {
+            *dir = crate::canon::simplify(PathBuf::from(&*dir))
+                .to_string_lossy()
+                .into_owned();
+        };
+
+        self.game_dirs.values_mut().for_each(respell);
+
+        if let Some(dir) = self.download_dir.as_mut() {
+            respell(dir);
+        }
     }
 }
 
