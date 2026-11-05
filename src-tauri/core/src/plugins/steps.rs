@@ -67,6 +67,18 @@ impl RunContext {
         self.0.get(key)
     }
 
+    /// The checksum to enforce: the step's own, else the server's for the release file
+    /// when the step downloads exactly that file.
+    pub(crate) fn expected_sha(&self, url: &str, step_sha: Option<&str>) -> Option<String> {
+        if let Some(sha) = step_sha {
+            return Some(sha.to_string());
+        }
+
+        let sha = self.get("fileSha256")?.trim();
+
+        (!sha.is_empty() && self.get("fileUrl").is_some_and(|f| f == url)).then(|| sha.to_string())
+    }
+
     /// Replace `{key}` occurrences. An unknown key is left as-is rather than
     /// erroring — the URL check afterwards is what decides whether the result
     /// is acceptable, and a literal `{foo}` is never a valid host.
@@ -197,7 +209,13 @@ impl Executor<'_> {
                 let target = self.resolve(to, ctx, true)?;
                 let resolved = ctx.fill(url);
 
-                self.download(&resolved, &target, sha256.as_deref(), *max_bytes, ctx)
+                self.download(
+                    &resolved,
+                    &target,
+                    ctx.expected_sha(&resolved, sha256.as_deref()).as_deref(),
+                    *max_bytes,
+                    ctx,
+                )
                     .await?;
 
                 applied.push(display(&target));
@@ -805,6 +823,18 @@ pub fn required_roots(steps: &[Step]) -> Vec<&'static str> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_release_file_download_is_checked_against_the_servers_digest() {
+        let ctx = RunContext(HashMap::from([
+            ("fileUrl".to_string(), "https://x/f".to_string()),
+            ("fileSha256".to_string(), "ab12".to_string()),
+        ]));
+
+        assert_eq!(ctx.expected_sha("https://x/f", None).as_deref(), Some("ab12"));
+        assert_eq!(ctx.expected_sha("https://x/other", None), None);
+        assert_eq!(ctx.expected_sha("https://x/f", Some("cd")).as_deref(), Some("cd"));
+    }
+
     use super::*;
 
     use std::path::PathBuf;
