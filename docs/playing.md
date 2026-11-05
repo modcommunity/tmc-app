@@ -104,6 +104,8 @@ The last two are the ones worth keeping. An archive that unpacked perfectly and 
 
 ### Keeping them current
 
+**Play updates a stale build first.** `game_native_target` reports `update` when the site publishes a newer build than the installed one, and the dialog runs `game_install` before `game_launch` (the card says so): a shell older than the site and its servers cannot read what they publish now, and the sync-pass auto-update below needs `auto_update` on and a signed-in sync.
+
 **Play updates a stale build first.** `game_native_target` reports `update` when the site publishes a newer build than the installed one, and the dialog runs `game_install` before `game_launch` (the card says so): a shell older than the site and its servers cannot read what they publish now, and the sync-pass auto-update below is off by default and needs a signed-in sync.
 
 `games::updates::run` on the library's sync pass, which is the device's own "am I online now?" heartbeat — the same place outstanding play time is drained. Four rules, all of them written down rather than implied: the install must have `auto_update` on, the game must not be running, only an install that already exists is updated, and **a version that cannot be ordered is not an update**.
