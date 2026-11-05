@@ -219,6 +219,13 @@ impl AppState {
 
         let library = Arc::new(LibraryDb::open(paths.library_file())?);
 
+        // Put back files an update moved aside before a crash, before anything installs.
+        let restored = tmc_core::library::install::recover_interrupted(&library);
+
+        if restored > 0 {
+            tracing::warn!("restored {restored} file(s) from an interrupted update");
+        }
+
         /*
          * Anything left mid-flight by a crash is reset here. A row stuck at
          * `installing` is not a state anything can act on — the process that
