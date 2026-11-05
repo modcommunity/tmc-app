@@ -120,6 +120,10 @@ fn context_for(entry: &LibraryEntry, ctx: &InstallCtx<'_>) -> RunContext {
      */
     map.insert("fileName".into(), safe_file_name(entry));
 
+    if let Some(sha) = entry.file_sha256.as_deref().filter(|s| !s.is_empty()) {
+        map.insert("fileSha256".into(), sha.to_string());
+    }
+
     if let Some(version) = &entry.latest_version {
         map.insert("version".into(), version.clone());
     }
