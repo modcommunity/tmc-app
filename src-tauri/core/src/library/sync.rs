@@ -198,6 +198,35 @@ pub struct SyncReport {
     pub to_forget: Vec<String>,
 }
 
+/// The most rows the server returns per request (its schema maximum).
+const PAGE_LIMIT: usize = 200;
+
+/// A bound on one sync, so a server that never shortens its page cannot loop us forever.
+const MAX_PAGES: usize = 50;
+
+fn page_path(since: Option<&str>) -> String {
+    match since {
+        Some(rev) if !rev.is_empty() => {
+            format!("/subscriptions?limit={PAGE_LIMIT}&since={}", urlencode(rev))
+        }
+        _ => format!("/subscriptions?limit={PAGE_LIMIT}"),
+    }
+}
+
+async fn fetch_page(api: &ApiClient, since: Option<&str>) -> AppResult<WireSyncResponse> {
+    let value = api
+        .request(Method::GET, &page_path(since), None, true)
+        .await?;
+
+    Ok(serde_json::from_value(value)?)
+}
+
+/// Where the next page starts, when the one just read was full and moved the watermark.
+fn next_since(page_len: usize, revision: &str, asked: Option<&str>) -> Option<String> {
+    (page_len >= PAGE_LIMIT && !revision.is_empty() && asked != Some(revision))
+        .then(|| revision.to_string())
+}
+
 /// Run one sync pass.
 ///
 /// `force_full` is what the launch pass and the "Sync now" button set. Every
@@ -210,16 +239,60 @@ pub async fn sync_once(api: &ApiClient, db: &LibraryDb, force_full: bool) -> App
         db.meta_get(REVISION_KEY)?
     };
 
-    let path = match &since {
-        Some(rev) if !rev.is_empty() => {
-            format!("/subscriptions?limit=200&since={}", urlencode(rev))
+    /*
+     * The server answers at most PAGE_LIMIT rows per request, oldest change first,
+     * and says `full: true` for any request without `since`. Treating that first
+     * page as the whole list made every subscription past the 200th look
+     * unsubscribed and uninstalled it. So keep asking from the last revision until
+     * a short page comes back.
+     */
+    let mut page = fetch_page(api, since.as_deref()).await?;
+    let mut full = page.full;
+    let mut revision = String::new();
+    let mut asked = since.clone();
+    let mut listed: Vec<WireSubscription> = Vec::new();
+    let mut complete = false;
+
+    for _ in 0..MAX_PAGES {
+        let len = page.items.len();
+
+        listed.append(&mut page.items);
+
+        if !page.revision.is_empty() {
+            revision = page.revision.clone();
         }
-        _ => "/subscriptions?limit=200".to_string(),
+
+        let Some(next) = next_since(len, &page.revision, asked.as_deref()) else {
+            complete = true;
+            break;
+        };
+
+        page = fetch_page(api, Some(&next)).await?;
+        asked = Some(next);
+    }
+
+    // A list we gave up reading is not the whole list, so it cannot prove a removal.
+    full = full && complete;
+
+    // The boundary row comes back at the start of the next page (`gte`); the later copy is newer.
+    let mut latest: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut ordered: Vec<WireSubscription> = Vec::with_capacity(listed.len());
+
+    for wire in listed {
+        match latest.get(&wire.id) {
+            Some(&at) => ordered[at] = wire,
+            None => {
+                latest.insert(wire.id.clone(), ordered.len());
+                ordered.push(wire);
+            }
+        }
+    }
+
+    let response = WireSyncResponse {
+        items: ordered,
+        revision,
+        full,
     };
-
-    let value = api.request(Method::GET, &path, None, true).await?;
-
-    let response: WireSyncResponse = serde_json::from_value(value)?;
 
     let mut report = SyncReport {
         received: response.items.len(),
@@ -566,5 +639,20 @@ mod tests {
     fn urlencode_leaves_a_plain_watermark_alone_and_escapes_the_rest() {
         assert_eq!(urlencode("1767225600000"), "1767225600000");
         assert_eq!(urlencode("a b&c"), "a%20b%26c");
+    }
+
+    #[test]
+    fn a_full_page_asks_for_the_next_one_and_a_short_page_stops() {
+        assert_eq!(next_since(200, "170", None).as_deref(), Some("170"));
+        assert_eq!(next_since(199, "170", None), None);
+        assert_eq!(next_since(200, "", None), None);
+        // The watermark did not move: every row shares one millisecond, stop.
+        assert_eq!(next_since(200, "170", Some("170")), None);
+    }
+
+    #[test]
+    fn every_page_asks_for_the_servers_maximum() {
+        assert_eq!(page_path(None), "/subscriptions?limit=200");
+        assert!(page_path(Some("170")).starts_with("/subscriptions?limit=200&since=170"));
     }
 }
