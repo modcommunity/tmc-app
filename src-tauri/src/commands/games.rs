@@ -308,6 +308,15 @@ pub async fn game_launch(
                 &plan.args,
                 base.as_deref(),
             ));
+            // A shell older than `--solo` ignores it and opens its menu: the
+            // "app opens and does nothing" report. Say so instead.
+            if game.is_some() && tmc_core::games::build::shell_predates_solo(&row.version) {
+                tmc_core::audit!(state.audit, Error, App, "game.launch.solo", &row.version);
+
+                return Err(AppError::invalid(
+                    "This game needs a newer TMC game build than the one installed, and the site has not published one yet. Update it in your library when it appears.",
+                ));
+            }
             // No bare `--` in the published template: the shell would start at
             // its own connect screen. Say so rather than opening it silently.
             let solo_args = match tmc_core::games::build::solo_args_or_why(&plan.args, &solo) {
