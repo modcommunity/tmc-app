@@ -314,14 +314,27 @@ pub async fn install_one(
     };
 
     /*
-     * An UPDATE removes the old version first.
-     *
-     * Not doing so is the classic mod-manager bug: `mods/` ends up holding
-     * `cool-1.3.jar` and `cool-1.4.jar`, the game loads both, and the crash
-     * that follows is blamed on the mod. The uninstall is best-effort — a file
-     * a user already deleted by hand is not a reason to refuse the update.
+     * An UPDATE takes the old version out of the way first, so `mods/` never
+     * holds `cool-1.3.jar` and `cool-1.4.jar` together. It is MOVED aside, not
+     * deleted: if the download, the checksum or any later step fails, the old
+     * files are put back and the user still has a working mod. The uninstall
+     * after that is best-effort - a file already deleted by hand is not a
+     * reason to refuse the update.
      */
+    let mut backup = UpdateBackup::default();
+
     if entry.installed_release_id.is_some() {
+        if let Err(err) = backup.stash(entry, &jail) {
+            backup.restore(&jail, &[]);
+
+            let message =
+                format!("The update did not start; the installed version was kept ({err}).");
+
+            let _ = db.set_state(&entry.id, "installed", Some(&message));
+
+            return InstallOutcome::failed(&entry.id, message);
+        }
+
         let _ = run_uninstall(entry, ctx, rule, &jail).await;
     }
 
@@ -349,6 +362,8 @@ pub async fn install_one(
     let report = executor.run(&manage.install, &run_ctx).await;
 
     if report.ok {
+        backup.discard();
+
         let _ = db.mark_installed(
             &entry.id,
             entry.latest_release_id,
@@ -371,7 +386,15 @@ pub async fn install_one(
             .clone()
             .unwrap_or_else(|| "The install did not finish.".into());
 
-        let _ = db.set_state(&entry.id, "failed", Some(&message));
+        if backup.is_empty() {
+            let _ = db.set_state(&entry.id, "failed", Some(&message));
+        } else {
+            backup.restore(&jail, &report.applied);
+
+            let kept = format!("Update failed, the installed version was kept: {message}");
+
+            let _ = db.set_state(&entry.id, "installed", Some(&kept));
+        }
 
         audit!(
             ctx.audit,
@@ -389,6 +412,75 @@ pub async fn install_one(
         rule: Some(rule.source.clone()),
         error: report.error.clone(),
         report: Some(report),
+    }
+}
+
+/// The files of the installed version, moved aside while its replacement installs.
+#[derive(Default)]
+struct UpdateBackup {
+    /// (original path, where it waits)
+    moved: Vec<(PathBuf, PathBuf)>,
+}
+
+impl UpdateBackup {
+    fn is_empty(&self) -> bool {
+        self.moved.is_empty()
+    }
+
+    /// Move every journaled file of the installed version beside itself as `<name>.tmc-old`.
+    ///
+    /// Same directory, so the rename is atomic and never crosses a volume. Paths are
+    /// re-checked against the jail like the uninstall sweep does: the journal sits in a
+    /// user-writable database.
+    fn stash(&mut self, entry: &LibraryEntry, jail: &Jail) -> std::io::Result<()> {
+        for recorded in &entry.installed_files {
+            if recorded.starts_with("removed ") {
+                continue;
+            }
+
+            let path = PathBuf::from(recorded);
+
+            if !jail.contains(&path) || !path.is_file() {
+                continue;
+            }
+
+            let mut waiting = path.clone().into_os_string();
+            waiting.push(".tmc-old");
+            let waiting = PathBuf::from(waiting);
+
+            let _ = std::fs::remove_file(&waiting);
+            std::fs::rename(&path, &waiting)?;
+
+            self.moved.push((path, waiting));
+        }
+
+        Ok(())
+    }
+
+    /// The update worked: the old files are no longer wanted.
+    fn discard(&mut self) {
+        for (_, waiting) in self.moved.drain(..) {
+            let _ = std::fs::remove_file(waiting);
+        }
+    }
+
+    /// The update failed: remove what it wrote, put the old files back.
+    fn restore(&mut self, jail: &Jail, written: &[String]) {
+        for recorded in written {
+            if recorded.starts_with("removed ") {
+                continue;
+            }
+
+            let path = PathBuf::from(recorded);
+
+            if jail.contains(&path) && path.is_file() {
+                let _ = std::fs::remove_file(&path);
+            }
+        }
+
+        for (original, waiting) in self.moved.drain(..).rev() {
+            let _ = std::fs::rename(waiting, original);
+        }
     }
 }
 
@@ -654,5 +746,136 @@ mod tests {
         let long = "a".repeat(300);
 
         assert_eq!(safe_file_name(&entry(Some(&long), None)), "mod-42.bin");
+    }
+
+    const RULE: &str = r#"{
+        "manifestVersion": 1,
+        "label": "test jar",
+        "match": { "extensions": ["jar"] },
+        "permissions": {
+            "fs": [
+                { "root": "pluginData", "path": "", "write": true },
+                { "root": "gameDir", "path": "mods", "write": true }
+            ],
+            "net": ["localhost"]
+        },
+        "manage": {
+            "install": [
+                { "action": "download", "url": "{fileUrl}",
+                  "to": { "root": "pluginData", "path": "staging/{fileName}" } },
+                { "action": "move",
+                  "from": { "root": "pluginData", "path": "staging/{fileName}" },
+                  "to": { "root": "gameDir", "path": "mods/{fileName}" } }
+            ],
+            "uninstall": [
+                { "action": "remove", "path": { "root": "gameDir", "path": "mods/{fileName}" } }
+            ]
+        }
+    }"#;
+
+    #[tokio::test]
+    async fn a_failed_update_keeps_the_installed_version() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let rules = tmp.path().join("rules");
+        let game = tmp.path().join("game");
+        let jar = game.join("mods").join("cool.jar");
+
+        std::fs::create_dir_all(rules.join("app/minecraft")).unwrap();
+        std::fs::write(rules.join("app/minecraft/manage_mod.json"), RULE).unwrap();
+        std::fs::create_dir_all(jar.parent().unwrap()).unwrap();
+        std::fs::write(&jar, b"old version").unwrap();
+
+        let plugins = AppPlugins::load(&rules);
+        let roots = JailRoots {
+            data: tmp.path().join("data"),
+            cache: tmp.path().join("cache"),
+        };
+        let mut settings = AppSettings::default();
+        settings
+            .game_dirs
+            .insert("1".into(), game.display().to_string());
+
+        let http = crate::http::client();
+        let audit = Audit::new(tmp.path().join("audit.jsonl"));
+        let ctx = InstallCtx {
+            plugins: &plugins,
+            roots: &roots,
+            settings: &settings,
+            http: &http,
+            audit: &audit,
+            downloads: None,
+            install_id: None,
+            install_dir: None,
+            loader: None,
+            game_version: None,
+            install_name: None,
+        };
+
+        // Nothing listens on port 1, so the download of the new version fails.
+        let mut e = entry(Some("cool.jar"), Some("https://localhost:1/cool.jar"));
+        e.installed_release_id = Some(0);
+        e.installed_version = Some("1.0".into());
+        e.installed_files = vec![jar.display().to_string()];
+
+        let db = LibraryDb::open_memory().expect("db");
+        db.upsert_remote(&e).expect("row");
+        db.mark_installed(&e.id, Some(0), Some("1.0"), None, &e.installed_files)
+            .expect("installed");
+
+        let outcome = install_one(&db, &e, &ctx).await;
+
+        assert!(!outcome.ok, "the download cannot succeed");
+        assert_eq!(std::fs::read(&jar).unwrap(), b"old version");
+        assert!(!jar.with_extension("jar.tmc-old").exists());
+
+        let row = db.get(&e.id).unwrap().unwrap();
+        assert_eq!(row.state, "installed");
+        assert_eq!(row.installed_version.as_deref(), Some("1.0"));
+        assert_eq!(row.installed_files, e.installed_files);
+    }
+
+    #[test]
+    fn a_backup_is_restored_over_what_the_failed_run_wrote() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let file = tmp.path().join("a.jar");
+        std::fs::write(&file, b"old").unwrap();
+
+        let mut available = std::collections::HashMap::new();
+        available.insert("gameDir", tmp.path().to_path_buf());
+        let m = crate::plugins::manifest::Manifest {
+            manifest_version: 1,
+            id: "app.test".into(),
+            name: "t".into(),
+            version: "1".into(),
+            author: "t".into(),
+            description: None,
+            homepage: None,
+            apps: vec![],
+            permissions: crate::plugins::manifest::Permissions {
+                fs: vec![crate::plugins::manifest::FsGrant {
+                    root: crate::plugins::manifest::FsRoot::GameDir,
+                    path: String::new(),
+                    write: true,
+                }],
+                ..Default::default()
+            },
+            installer: None,
+            server_query: None,
+            theme: None,
+            manager: None,
+        };
+        let jail = Jail::build(&m, &available).expect("jail");
+
+        let mut e = entry(Some("a.jar"), None);
+        e.installed_files = vec![file.display().to_string()];
+
+        let mut backup = UpdateBackup::default();
+        backup.stash(&e, &jail).expect("stash");
+        assert!(!file.exists());
+
+        std::fs::write(&file, b"half written new").unwrap();
+        backup.restore(&jail, &[file.display().to_string()]);
+
+        assert_eq!(std::fs::read(&file).unwrap(), b"old");
     }
 }
