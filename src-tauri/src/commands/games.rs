@@ -314,7 +314,10 @@ pub async fn game_launch(
                 tmc_core::audit!(state.audit, Error, App, "game.launch.solo", &row.version);
 
                 return Err(AppError::invalid(
-                    "This game needs a newer TMC game build than the one installed, and the site has not published one yet. Update it in your library when it appears.",
+                    match update_for(&state, &row).await {
+                        Some(v) => format!("This game needs a newer TMC game build than the installed {}. Update it to {v} first.", row.version),
+                        None => "This game needs a newer TMC game build than the one installed, and the site has not published one yet. Update it in your library when it appears.".to_owned(),
+                    },
                 ));
             }
             // No bare `--` in the published template: the shell would start at
@@ -383,6 +386,8 @@ struct EngineGame {
     engine_id: i64,
     slug: Option<String>,
     name: Option<String>,
+    /// The catalogue's `isOfficial`: a TMC game, so a pack game on its engine.
+    official: bool,
 }
 
 /// Which engine app `app_id` runs on, read from a `/apps?ids=` answer.
@@ -413,6 +418,10 @@ fn engine_of(answer: &serde_json::Value, app_id: i64) -> Option<EngineGame> {
             .get("name")
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned),
+        official: app
+            .get("isOfficial")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false),
     })
 }
 
@@ -485,9 +494,10 @@ const CATALOGUE_UNREACHABLE: &str =
 /// **Only a TMC pack game falls back.** A third-party game made with the same
 /// engine names the same engine, and starting the TMC shell for it would put the
 /// player at the shell's menu, or connect the shell to a server it cannot play.
-/// The site is what knows: it names a signed pack in `boot.solo` only for an app
-/// with one, so the fallback asks `/play/launch` and needs `boot.solo` back. The
-/// catalogue row has no such flag. The engine is read from the catalogue, never
+/// The site is what knows: an official app (`isOfficial`) is a TMC game, and
+/// otherwise the fallback asks `/play/launch` and needs `boot.solo` back. Not
+/// `boot.solo` alone: the site names none for a game with `directPlay` off, and
+/// that game must still be joinable on a server through the shell. The engine is read from the catalogue, never
 /// named by the caller, so the webview names one app id and Rust decides what
 /// runs.
 ///
@@ -509,6 +519,10 @@ async fn native_target(
         return Ok(NativeTarget::Nothing);
     };
 
+    if game.official {
+        return on_engine(&installed, game);
+    }
+
     let boot = match site.solo_boot(app_id, locale).await {
         Ok(answer) => answer.get("boot").cloned(),
         Err(e @ (AppError::Network(_) | AppError::Internal(_))) => {
@@ -526,6 +540,13 @@ async fn native_target(
         return Ok(NativeTarget::Nothing);
     }
 
+    on_engine(&installed, game)
+}
+
+fn on_engine(
+    installed: &impl Fn(i64) -> AppResult<Option<InstalledGame>>,
+    game: EngineGame,
+) -> AppResult<NativeTarget> {
     Ok(match installed(game.engine_id)? {
         Some(row) => NativeTarget::Engine { row, game },
         None => NativeTarget::EngineMissing {
@@ -550,6 +571,23 @@ pub struct NativeTargetView {
     /// The engine's build is not installed, and the site has one for this
     /// machine to install.
     pub engine_installable: bool,
+    /// A newer build of `installed` the site publishes, which Play installs
+    /// before it starts: an old shell joins nothing it cannot read.
+    pub update: Option<String>,
+}
+
+/// The version the site publishes when it is newer than the installed one.
+fn newer_version(installed: &str, available: Option<&str>) -> Option<String> {
+    available
+        .filter(|v| tmc_core::version::is_newer(v, installed))
+        .map(str::to_owned)
+}
+
+/// Best effort: no update is the answer when the site cannot say.
+async fn update_for(state: &AppState, row: &InstalledGame) -> Option<String> {
+    let build = state.games.resolve(row.app_id).await.ok().flatten()?;
+
+    newer_version(&row.version, Some(&build.version))
 }
 
 /// The Play dialog's native card and its "Install it" hint, from the same gate
@@ -570,11 +608,13 @@ pub async fn game_native_target(
 
     Ok(match target {
         NativeTarget::Own(row) => NativeTargetView {
+            update: update_for(&state, &row).await,
             installed: Some(row),
             engine_id: None,
             engine_installable: false,
         },
         NativeTarget::Engine { row, game } => NativeTargetView {
+            update: update_for(&state, &row).await,
             installed: Some(row),
             engine_id: Some(game.engine_id),
             engine_installable: false,
@@ -590,11 +630,13 @@ pub async fn game_native_target(
                 .ok()
                 .flatten()
                 .is_some(),
+            update: None,
         },
         NativeTarget::Nothing => NativeTargetView {
             installed: None,
             engine_id: None,
             engine_installable: false,
+            update: None,
         },
     })
 }
@@ -758,6 +800,7 @@ mod tests {
                 engine_id: 84,
                 slug: Some("arena".into()),
                 name: Some("Arena".into()),
+                official: false,
             })
         );
     }
@@ -862,6 +905,37 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn an_official_game_runs_on_its_engine_without_a_solo_pack() {
+        // directPlay off: the site names no `boot.solo`, and the game must still
+        // reach the shell to join a server.
+        let official = serde_json::json!({ "apps": [{
+            "id": 114, "slug": "arena", "isOfficial": true, "engine": { "id": 84 },
+        }]});
+        let s = site(Ok(official), Ok(serde_json::json!({ "boot": null })));
+
+        match native_target(&s, only(&[84]), 114, None).await {
+            Ok(NativeTarget::Engine { row, game }) => {
+                assert_eq!(row.app_id, 84);
+                assert!(game.official);
+            }
+            other => panic!("{other:?}"),
+        }
+        assert!(!s.asked_boot.get());
+    }
+
+    #[test]
+    fn only_a_newer_published_build_is_an_update() {
+        assert_eq!(
+            newer_version("1.20261010.0720", Some("1.20261105.1059")).as_deref(),
+            Some("1.20261105.1059")
+        );
+        assert_eq!(newer_version("1.20261105.1059", Some("1.20261105.1059")), None);
+        assert_eq!(newer_version("1.20261105.1059", Some("1.20261010.0720")), None);
+        assert_eq!(newer_version("1.20261010.0720", Some("nightly")), None);
+        assert_eq!(newer_version("1.20261010.0720", None), None);
     }
 
     #[tokio::test]

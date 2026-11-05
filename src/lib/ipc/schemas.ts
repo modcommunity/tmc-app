@@ -1426,6 +1426,8 @@ export const NativeTargetSchema = z.object({
     engineId: z.number().nullable(),
     /** The engine's build is missing here and the site has one to install. */
     engineInstallable: z.boolean(),
+    /** A newer published build of `installed`, which Play installs first. */
+    update: z.string().nullable().optional(),
 })
 
 export type NativeTargetT = z.infer<typeof NativeTargetSchema>

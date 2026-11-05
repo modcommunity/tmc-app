@@ -286,6 +286,8 @@ export default function PlayDialog({
     /** A TMC pack game whose engine's build this machine could install. */
     const [engineInstallable, setEngineInstallable] = useState(false)
     const [engineId, setEngineId] = useState<number | null>(null)
+    /** A newer build of the installed one; Play installs it before starting. */
+    const [update, setUpdate] = useState<string | null>(null)
     /** Whether this OS can run an installed build at all (false on mobile). */
     const [canInstallHere, setCanInstallHere] = useState(false)
     const [installing, setInstalling] = useState(false)
@@ -350,6 +352,7 @@ export default function PlayDialog({
                 setNative(target.installed)
                 setEngineInstallable(target.engineInstallable)
                 setEngineId(target.engineId)
+                setUpdate(target.update ?? null)
             })
             .catch(() => {
                 if (live) {
@@ -523,6 +526,17 @@ export default function PlayDialog({
         setError(null)
 
         try {
+            // An old shell cannot read what the site and servers publish now.
+            if (update && native) {
+                setInstalling(true)
+                await ipc.gameInstall({
+                    appId: native.appId,
+                    name: native.name,
+                    slug: native.slug ?? undefined,
+                })
+                setUpdate(null)
+            }
+
             /*
              * A server ID, never an address. The host and port are read from
              * the API in Rust, for the same reason `playConnect` reads a
@@ -542,9 +556,10 @@ export default function PlayDialog({
         } catch (err) {
             setError(messageOf(err))
         } finally {
+            setInstalling(false)
             setBusy(false)
         }
-    }, [app.id, server, values, locale, target.solo, onClose])
+    }, [app.id, server, values, locale, target.solo, onClose, update, native])
 
     /*
      * Install, then start. The build goes through the ordinary download queue
@@ -738,9 +753,11 @@ export default function PlayDialog({
                                     icon={FiCpu}
                                     title="Play natively"
                                     body={
-                                        server
-                                            ? `Starts version ${native.version} on this machine and joins the server.`
-                                            : `Starts version ${native.version} installed on this machine.`
+                                        update
+                                            ? `Updates version ${native.version} to ${update}, then starts it${server ? ' and joins the server' : ''}.`
+                                            : server
+                                              ? `Starts version ${native.version} on this machine and joins the server.`
+                                              : `Starts version ${native.version} installed on this machine.`
                                     }
                                 >
                                     {options.length > 0 && (
