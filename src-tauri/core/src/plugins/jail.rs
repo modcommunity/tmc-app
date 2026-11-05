@@ -192,6 +192,16 @@ impl Jail {
         self.roots.get(root_key(root)).map(|g| g.base.as_path())
     }
 
+    /// Is this path the edge of a grant (a root or a granted subtree itself)?
+    ///
+    /// Those folders are shared with everything else in the game, so nothing may
+    /// treat one as its own.
+    pub fn is_boundary(&self, path: &Path) -> bool {
+        self.roots
+            .values()
+            .any(|grant| path == grant.base || grant.allowed.iter().any(|a| path == a.prefix))
+    }
+
     /// Is an ALREADY-RESOLVED absolute path inside a writable subtree of this
     /// jail?
     ///

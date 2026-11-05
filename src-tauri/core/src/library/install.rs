@@ -30,8 +30,8 @@
 //! inside the same jail. A rule that was edited between install and
 //! uninstall would otherwise strand files forever.
 
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
@@ -343,14 +343,41 @@ pub async fn install_one(
     };
 
     /*
-     * An UPDATE removes the old version first.
-     *
-     * Not doing so is the classic mod-manager bug: `mods/` ends up holding
-     * `cool-1.3.jar` and `cool-1.4.jar`, the game loads both, and the crash
-     * that follows is blamed on the mod. The uninstall is best-effort — a file
-     * a user already deleted by hand is not a reason to refuse the update.
+     * An UPDATE takes the old version out of the way first, so `mods/` never
+     * holds `cool-1.3.jar` and `cool-1.4.jar` together. It is MOVED aside, not
+     * deleted: if the download, the checksum or any later step fails, the old
+     * files are put back and the user still has a working mod. The uninstall
+     * after that is best-effort - a file already deleted by hand is not a
+     * reason to refuse the update.
      */
+    let mut backup = UpdateBackup::new(db);
+
     if entry.installed_release_id.is_some() {
+        if let Err(err) = backup.stash(entry, &jail) {
+            let message = match backup.restore(&jail, &[]) {
+                Ok(()) => {
+                    let message = format!(
+                        "The update did not start; the installed version was kept ({err})."
+                    );
+
+                    let _ = db.set_state(&entry.id, "installed", Some(&message));
+
+                    message
+                }
+                Err(lost) => {
+                    let message = format!(
+                        "The update did not start ({err}) and the old files could not be put back: {lost}"
+                    );
+
+                    let _ = db.set_state(&entry.id, "failed", Some(&message));
+
+                    message
+                }
+            };
+
+            return InstallOutcome::failed(&entry.id, message);
+        }
+
         let _ = run_uninstall(entry, ctx, rule, &jail).await;
     }
 
@@ -386,6 +413,8 @@ pub async fn install_one(
             &report.applied,
         );
 
+        backup.discard();
+
         audit!(
             ctx.audit,
             Info,
@@ -400,7 +429,24 @@ pub async fn install_one(
             .clone()
             .unwrap_or_else(|| "The install did not finish.".into());
 
-        let _ = db.set_state(&entry.id, "failed", Some(&message));
+        if backup.is_empty() {
+            let _ = db.set_state(&entry.id, "failed", Some(&message));
+        } else {
+            match backup.restore(&jail, &report.applied) {
+                Ok(()) => {
+                    let kept = format!("Update failed, the installed version was kept: {message}");
+
+                    let _ = db.set_state(&entry.id, "installed", Some(&kept));
+                }
+                Err(lost) => {
+                    let broken = format!(
+                        "Update failed ({message}) and the previous version could not be put back: {lost}"
+                    );
+
+                    let _ = db.set_state(&entry.id, "failed", Some(&broken));
+                }
+            }
+        }
 
         audit!(
             ctx.audit,
@@ -418,6 +464,342 @@ pub async fn install_one(
         rule: Some(rule.source.clone()),
         error: report.error.clone(),
         report: Some(report),
+    }
+}
+
+const SUFFIX: &str = ".tmc-old";
+
+/// The meta key listing every stash that has not been resolved yet.
+const PENDING_KEY: &str = "install.pending_backups";
+
+static PENDING_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// One path moved aside by an update and not yet restored or deleted.
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
+struct Pending {
+    original: String,
+    waiting: String,
+    /// The new version is installed, so `waiting` is only garbage.
+    committed: bool,
+}
+
+fn waiting_for(path: &Path) -> PathBuf {
+    let mut waiting = path.as_os_str().to_os_string();
+    waiting.push(SUFFIX);
+    PathBuf::from(waiting)
+}
+
+fn pending_edit(db: &LibraryDb, edit: impl FnOnce(&mut Vec<Pending>)) -> AppResult<()> {
+    let _guard = PENDING_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+    let mut list: Vec<Pending> = db
+        .meta_get(PENDING_KEY)?
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default();
+
+    edit(&mut list);
+
+    db.meta_set(PENDING_KEY, &serde_json::to_string(&list)?)
+}
+
+fn remove_any(path: &Path) -> std::io::Result<()> {
+    match std::fs::symlink_metadata(path) {
+        Err(_) => Ok(()),
+        Ok(meta) if meta.is_dir() => std::fs::remove_dir_all(path),
+        Ok(_) => std::fs::remove_file(path),
+    }
+}
+
+/// Settle stashes an earlier run left behind (a crash, or a delete the OS refused).
+///
+/// Call once at startup, before anything installs. A path whose real file is
+/// gone gets its old copy back; one whose update finished has its copy deleted;
+/// an unfinished update that left a new file in place keeps the old copy
+/// beside it for the user rather than guessing. Returns how many were restored.
+pub fn recover_interrupted(db: &LibraryDb) -> usize {
+    let mut restored = 0;
+
+    let result = pending_edit(db, |list| {
+        let mut keep: Vec<Pending> = Vec::new();
+
+        // Newest first, so a directory comes back before the files stashed inside it.
+        for item in list.drain(..).rev() {
+            let original = PathBuf::from(&item.original);
+            let waiting = PathBuf::from(&item.waiting);
+
+            // The row is user-writable: only ever act on `<path>.tmc-old` next to `<path>`.
+            if waiting != waiting_for(&original) || !original.is_absolute() {
+                continue;
+            }
+
+            if std::fs::symlink_metadata(&waiting).is_err() {
+                continue;
+            }
+
+            if std::fs::symlink_metadata(&original).is_err() {
+                match std::fs::rename(&waiting, &original) {
+                    Ok(()) => restored += 1,
+                    Err(_) => keep.push(item),
+                }
+            } else if item.committed {
+                if remove_any(&waiting).is_err() {
+                    keep.push(item);
+                }
+            } else {
+                tracing::warn!(
+                    "an interrupted update left {} beside a newer file; kept for the user",
+                    waiting.display()
+                );
+            }
+        }
+
+        keep.reverse();
+        *list = keep;
+    });
+
+    if let Err(err) = result {
+        tracing::warn!("could not settle interrupted updates: {}", err.detail());
+    }
+
+    restored
+}
+
+/// The files of the installed version, moved aside while its replacement installs.
+#[derive(Default)]
+struct UpdateBackup<'a> {
+    db: Option<&'a LibraryDb>,
+    /// (original path, where it waits)
+    moved: Vec<(PathBuf, PathBuf)>,
+}
+
+impl<'a> UpdateBackup<'a> {
+    fn new(db: &'a LibraryDb) -> Self {
+        Self {
+            db: Some(db),
+            moved: Vec::new(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.moved.is_empty()
+    }
+
+    /// Is everything under `dir` one of the journaled paths (so nothing foreign moves with it)?
+    fn owned(dir: &Path, journal: &HashSet<PathBuf>, memo: &mut HashMap<PathBuf, bool>) -> bool {
+        if let Some(&known) = memo.get(dir) {
+            return known;
+        }
+
+        let mut ok = std::fs::read_dir(dir).is_ok();
+
+        if ok {
+            for child in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+                let path = child.path();
+                let is_dir = child.file_type().map(|t| t.is_dir()).unwrap_or(false);
+
+                let fine = if is_dir {
+                    Self::owned(&path, journal, memo)
+                } else {
+                    journal.contains(&path)
+                };
+
+                if !fine {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+
+        memo.insert(dir.to_path_buf(), ok);
+
+        ok
+    }
+
+    /// Move the installed version's files, and any folder holding only them, beside themselves as `<name>.tmc-old`.
+    ///
+    /// Same parent, so the rename is atomic and never crosses a volume. A folder goes whole
+    /// only when every file in it is journaled and it is not a shared grant folder: a rule
+    /// that removes a mod's folder would otherwise take the stashed copies with it. Paths
+    /// are re-checked against the jail like the uninstall sweep does: the journal sits in
+    /// a user-writable database. Each move is recorded in the library first, so a crash
+    /// between stash and restore is repaired by [`recover_interrupted`].
+    fn stash(&mut self, entry: &LibraryEntry, jail: &Jail) -> std::io::Result<()> {
+        let journal: HashSet<PathBuf> = entry
+            .installed_files
+            .iter()
+            .filter(|r| !r.starts_with("removed "))
+            .map(PathBuf::from)
+            .filter(|p| jail.contains(p))
+            .collect();
+
+        let mut memo: HashMap<PathBuf, bool> = HashMap::new();
+        let mut dirs: Vec<PathBuf> = Vec::new();
+        let mut files: Vec<PathBuf> = Vec::new();
+
+        for path in &journal {
+            let meta = std::fs::symlink_metadata(path);
+            let is_dir = meta.as_ref().map(|m| m.is_dir()).unwrap_or(false);
+            let is_file = meta.as_ref().map(|m| m.is_file()).unwrap_or(false);
+
+            if !is_dir && !is_file {
+                continue;
+            }
+
+            let mut top: Option<PathBuf> = None;
+            let mut cursor = if is_dir {
+                Some(path.clone())
+            } else {
+                path.parent().map(Path::to_path_buf)
+            };
+
+            while let Some(dir) = cursor {
+                if jail.is_boundary(&dir)
+                    || !jail.contains(&dir)
+                    || !Self::owned(&dir, &journal, &mut memo)
+                {
+                    break;
+                }
+
+                cursor = dir.parent().map(Path::to_path_buf);
+                top = Some(dir);
+            }
+
+            match top {
+                Some(dir) => dirs.push(dir),
+                None if is_file => files.push(path.clone()),
+                None => {}
+            }
+        }
+
+        dirs.sort_by_key(|d| d.components().count());
+        dirs.dedup();
+        files.sort();
+
+        let mut taken: Vec<PathBuf> = Vec::new();
+
+        for path in dirs.into_iter().chain(files) {
+            if taken.iter().any(|d| path.starts_with(d)) {
+                continue;
+            }
+
+            self.move_aside(&path)?;
+            taken.push(path);
+        }
+
+        Ok(())
+    }
+
+    fn move_aside(&mut self, path: &Path) -> std::io::Result<()> {
+        let waiting = waiting_for(path);
+
+        // The real file exists, so a copy already waiting is a leftover from an earlier
+        // update that could not delete it. Clear it; if that fails, refuse to start.
+        if std::fs::symlink_metadata(&waiting).is_ok() {
+            remove_any(&waiting).map_err(|e| {
+                std::io::Error::new(
+                    e.kind(),
+                    format!("an old backup {} cannot be removed: {e}", waiting.display()),
+                )
+            })?;
+        }
+
+        if let Some(db) = self.db {
+            let item = Pending {
+                original: path.display().to_string(),
+                waiting: waiting.display().to_string(),
+                committed: false,
+            };
+
+            pending_edit(db, |list| list.push(item))
+                .map_err(|e| std::io::Error::other(e.to_string()))?;
+        }
+
+        if let Err(err) = std::fs::rename(path, &waiting) {
+            self.forget(&waiting);
+
+            return Err(err);
+        }
+
+        self.moved.push((path.to_path_buf(), waiting));
+
+        Ok(())
+    }
+
+    fn forget(&self, waiting: &Path) {
+        if let Some(db) = self.db {
+            let key = waiting.display().to_string();
+            let _ = pending_edit(db, |list| list.retain(|p| p.waiting != key));
+        }
+    }
+
+    /// The update worked: the old files are no longer wanted.
+    ///
+    /// A copy the OS will not delete (a locked file on Windows) stays in the library's
+    /// pending list, marked finished, and [`recover_interrupted`] deletes it later.
+    fn discard(&mut self) {
+        if let Some(db) = self.db {
+            let waiting: HashSet<String> = self
+                .moved
+                .iter()
+                .map(|(_, w)| w.display().to_string())
+                .collect();
+
+            let _ = pending_edit(db, |list| {
+                for item in list.iter_mut().filter(|p| waiting.contains(&p.waiting)) {
+                    item.committed = true;
+                }
+            });
+        }
+
+        for (_, waiting) in std::mem::take(&mut self.moved) {
+            if remove_any(&waiting).is_ok() {
+                self.forget(&waiting);
+            } else {
+                tracing::warn!(
+                    "could not delete {}; it will be retried at next start",
+                    waiting.display()
+                );
+            }
+        }
+    }
+
+    /// The update failed: remove what it wrote, put the old files back.
+    ///
+    /// Whatever cannot be put back stays waiting, listed in the library, and the error
+    /// names it; the caller must not report the old version as intact.
+    fn restore(&mut self, jail: &Jail, written: &[String]) -> Result<(), String> {
+        let mut paths: Vec<PathBuf> = written
+            .iter()
+            .filter(|r| !r.starts_with("removed "))
+            .map(PathBuf::from)
+            .filter(|p| jail.contains(p))
+            .collect();
+
+        // Deepest first, so a folder is empty by the time it is tried.
+        paths.sort_by_key(|p| std::cmp::Reverse(p.components().count()));
+
+        for path in paths {
+            if path.is_dir() {
+                let _ = std::fs::remove_dir(&path);
+            } else if path.is_file() {
+                let _ = std::fs::remove_file(&path);
+            }
+        }
+
+        let mut errors: Vec<String> = Vec::new();
+
+        for (original, waiting) in std::mem::take(&mut self.moved).into_iter().rev() {
+            match std::fs::rename(&waiting, &original) {
+                Ok(()) => self.forget(&waiting),
+                Err(err) => errors.push(format!("{} ({err})", original.display())),
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join("; "))
+        }
     }
 }
 
@@ -696,5 +1078,274 @@ mod tests {
         let long = "a".repeat(300);
 
         assert_eq!(safe_file_name(&entry(Some(&long), None)), "mod-42.bin");
+    }
+
+    const RULE: &str = r#"{
+        "manifestVersion": 1,
+        "label": "test jar",
+        "match": { "extensions": ["jar"] },
+        "permissions": {
+            "fs": [
+                { "root": "pluginData", "path": "", "write": true },
+                { "root": "gameDir", "path": "mods", "write": true }
+            ],
+            "net": ["localhost"]
+        },
+        "manage": {
+            "install": [
+                { "action": "download", "url": "{fileUrl}",
+                  "to": { "root": "pluginData", "path": "staging/{fileName}" } },
+                { "action": "move",
+                  "from": { "root": "pluginData", "path": "staging/{fileName}" },
+                  "to": { "root": "gameDir", "path": "mods/{fileName}" } }
+            ],
+            "uninstall": [
+                { "action": "remove", "path": { "root": "gameDir", "path": "mods/{fileName}" } }
+            ]
+        }
+    }"#;
+
+    #[tokio::test]
+    async fn a_failed_update_keeps_the_installed_version() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let rules = tmp.path().join("rules");
+        let game = tmp.path().join("game");
+        let jar = game.join("mods").join("cool.jar");
+
+        std::fs::create_dir_all(rules.join("app/minecraft")).unwrap();
+        std::fs::write(rules.join("app/minecraft/manage_mod.json"), RULE).unwrap();
+        std::fs::create_dir_all(jar.parent().unwrap()).unwrap();
+        std::fs::write(&jar, b"old version").unwrap();
+
+        let plugins = AppPlugins::load(&rules);
+        let roots = JailRoots {
+            data: tmp.path().join("data"),
+            cache: tmp.path().join("cache"),
+        };
+        let mut settings = AppSettings::default();
+        settings
+            .game_dirs
+            .insert("1".into(), game.display().to_string());
+
+        let http = crate::http::client();
+        let audit = Audit::new(tmp.path().join("audit.jsonl"));
+        let ctx = InstallCtx {
+            plugins: &plugins,
+            roots: &roots,
+            settings: &settings,
+            http: &http,
+            audit: &audit,
+            downloads: None,
+            install_id: None,
+            install_dir: None,
+            loader: None,
+            game_version: None,
+            install_name: None,
+        };
+
+        // Nothing listens on port 1, so the download of the new version fails.
+        let mut e = entry(Some("cool.jar"), Some("https://localhost:1/cool.jar"));
+        e.installed_release_id = Some(0);
+        e.installed_version = Some("1.0".into());
+        e.installed_files = vec![jar.display().to_string()];
+
+        let db = LibraryDb::open_memory().expect("db");
+        db.upsert_remote(&e).expect("row");
+        db.mark_installed(&e.id, Some(0), Some("1.0"), None, &e.installed_files)
+            .expect("installed");
+
+        let outcome = install_one(&db, &e, &ctx).await;
+
+        assert!(!outcome.ok, "the download cannot succeed");
+        assert_eq!(std::fs::read(&jar).unwrap(), b"old version");
+        assert!(!jar.with_extension("jar.tmc-old").exists());
+
+        let row = db.get(&e.id).unwrap().unwrap();
+        assert_eq!(row.state, "installed");
+        assert_eq!(row.installed_version.as_deref(), Some("1.0"));
+        assert_eq!(row.installed_files, e.installed_files);
+    }
+
+    fn test_jail(root: &Path) -> Jail {
+        let mut available = std::collections::HashMap::new();
+        available.insert("gameDir", root.to_path_buf());
+        let m = crate::plugins::manifest::Manifest {
+            manifest_version: 1,
+            id: "app.test".into(),
+            name: "t".into(),
+            version: "1".into(),
+            author: "t".into(),
+            description: None,
+            homepage: None,
+            apps: vec![],
+            permissions: crate::plugins::manifest::Permissions {
+                fs: vec![crate::plugins::manifest::FsGrant {
+                    root: crate::plugins::manifest::FsRoot::GameDir,
+                    path: String::new(),
+                    write: true,
+                }],
+                ..Default::default()
+            },
+            installer: None,
+            server_query: None,
+            theme: None,
+            manager: None,
+        };
+
+        Jail::build(&m, &available).expect("jail")
+    }
+
+    #[test]
+    fn a_backup_is_restored_over_what_the_failed_run_wrote() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let file = tmp.path().join("a.jar");
+        std::fs::write(&file, b"old").unwrap();
+
+        let jail = test_jail(tmp.path());
+
+        let mut e = entry(Some("a.jar"), None);
+        e.installed_files = vec![file.display().to_string()];
+
+        let mut backup = UpdateBackup::default();
+        backup.stash(&e, &jail).expect("stash");
+        assert!(!file.exists());
+
+        std::fs::write(&file, b"half written new").unwrap();
+        backup
+            .restore(&jail, &[file.display().to_string()])
+            .expect("restore");
+
+        assert_eq!(std::fs::read(&file).unwrap(), b"old");
+    }
+
+    #[test]
+    fn a_folder_holding_only_the_mod_is_stashed_whole_and_restored() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let mods = tmp.path().join("mods");
+        let own = mods.join("Cool");
+        std::fs::create_dir_all(own.join("sub")).unwrap();
+        std::fs::write(own.join("a.txt"), b"a").unwrap();
+        std::fs::write(own.join("sub/b.txt"), b"b").unwrap();
+        std::fs::write(mods.join("other.jar"), b"theirs").unwrap();
+
+        let jail = test_jail(tmp.path());
+        let mut e = entry(Some("a.jar"), None);
+        e.installed_files = vec![
+            own.join("a.txt").display().to_string(),
+            own.join("sub/b.txt").display().to_string(),
+        ];
+
+        let db = LibraryDb::open_memory().expect("db");
+        let mut backup = UpdateBackup::new(&db);
+        backup.stash(&e, &jail).expect("stash");
+
+        // The folder moved as one, the neighbour stayed.
+        assert!(!own.exists());
+        assert!(waiting_for(&own).join("sub/b.txt").exists());
+        assert!(mods.join("other.jar").exists());
+        assert_eq!(backup.moved.len(), 1);
+
+        backup.restore(&jail, &[]).expect("restore");
+
+        assert_eq!(std::fs::read(own.join("sub/b.txt")).unwrap(), b"b");
+        assert!(!waiting_for(&own).exists());
+        assert!(pending_is_empty(&db));
+    }
+
+    fn pending_is_empty(db: &LibraryDb) -> bool {
+        db.meta_get(PENDING_KEY)
+            .unwrap()
+            .map(|t| t == "[]")
+            .unwrap_or(true)
+    }
+
+    #[test]
+    fn a_restore_that_fails_says_so_and_keeps_the_copy_listed() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let file = tmp.path().join("a.jar");
+        std::fs::write(&file, b"old").unwrap();
+
+        let jail = test_jail(tmp.path());
+        let mut e = entry(Some("a.jar"), None);
+        e.installed_files = vec![file.display().to_string()];
+
+        let db = LibraryDb::open_memory().expect("db");
+        let mut backup = UpdateBackup::new(&db);
+        backup.stash(&e, &jail).expect("stash");
+
+        // Something unremovable now sits where the old file belongs.
+        std::fs::create_dir_all(file.join("blocker")).unwrap();
+        std::fs::write(file.join("blocker/x"), b"x").unwrap();
+
+        let err = backup
+            .restore(&jail, &[])
+            .expect_err("must not claim success");
+
+        assert!(err.contains("a.jar"), "{err}");
+        assert!(waiting_for(&file).exists());
+        assert!(!pending_is_empty(&db));
+    }
+
+    #[test]
+    fn a_crash_between_stash_and_restore_is_repaired_at_startup() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let lost = tmp.path().join("lost.jar");
+        let done = tmp.path().join("done.jar");
+        let half = tmp.path().join("half.jar");
+
+        let jail = test_jail(tmp.path());
+        let db = LibraryDb::open_memory().expect("db");
+
+        for (file, bytes) in [
+            (&lost, "old lost"),
+            (&done, "old done"),
+            (&half, "old half"),
+        ] {
+            std::fs::write(file, bytes).unwrap();
+
+            let mut e = entry(Some("x.jar"), None);
+            e.installed_files = vec![file.display().to_string()];
+
+            let mut backup = UpdateBackup::new(&db);
+            backup.stash(&e, &jail).expect("stash");
+            // Dropped without restore or discard: the process died here.
+        }
+
+        // `done`: the new version landed and the update was committed; `half`: it did not commit.
+        std::fs::write(&done, b"new").unwrap();
+        std::fs::write(&half, b"partial").unwrap();
+        pending_edit(&db, |list| {
+            for item in list.iter_mut() {
+                item.committed = item.original.ends_with("done.jar");
+            }
+        })
+        .unwrap();
+
+        assert_eq!(recover_interrupted(&db), 1);
+
+        assert_eq!(std::fs::read(&lost).unwrap(), b"old lost");
+        assert!(!waiting_for(&lost).exists());
+        assert_eq!(std::fs::read(&done).unwrap(), b"new");
+        assert!(!waiting_for(&done).exists());
+        // Never guess over a newer file: the old copy is left for the user.
+        assert_eq!(std::fs::read(&half).unwrap(), b"partial");
+        assert!(waiting_for(&half).exists());
+    }
+
+    #[test]
+    fn a_stale_copy_beside_an_installed_file_is_cleared_not_trusted() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let file = tmp.path().join("a.jar");
+        std::fs::write(&file, b"current").unwrap();
+        std::fs::write(waiting_for(&file), b"stale").unwrap();
+
+        let jail = test_jail(tmp.path());
+        let mut e = entry(Some("a.jar"), None);
+        e.installed_files = vec![file.display().to_string()];
+
+        let mut backup = UpdateBackup::default();
+        backup.stash(&e, &jail).expect("stash");
+
+        assert_eq!(std::fs::read(waiting_for(&file)).unwrap(), b"current");
     }
 }

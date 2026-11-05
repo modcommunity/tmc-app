@@ -302,8 +302,22 @@ where
     }
 
     // Reconciling removals against a list that stopped early would uninstall what was never read.
+    // The boundary row comes back at the start of the next page (`gte`); the later copy is newer.
+    let mut latest: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut ordered: Vec<WireSubscription> = Vec::with_capacity(items.len());
+
+    for wire in items {
+        match latest.get(&wire.id) {
+            Some(&at) => ordered[at] = wire,
+            None => {
+                latest.insert(wire.id.clone(), ordered.len());
+                ordered.push(wire);
+            }
+        }
+    }
+
     let response = WireSyncResponse {
-        items,
+        items: ordered,
         revision,
         full: response_full && complete,
         has_more: None,
