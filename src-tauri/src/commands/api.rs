@@ -442,3 +442,11 @@ pub fn updater_status(state: State<'_, AppState>) -> UpdaterStatus {
         pubkey_override: settings.updater_pubkey,
     }
 }
+
+/// The link the app was started with, once; the webview calls this on mount.
+#[tauri::command]
+pub fn deep_link_take(app: tauri::AppHandle) -> Option<tmc_core::deeplink::DeepLink> {
+    use tauri::Manager;
+
+    app.try_state::<tmc_core::deeplink::PendingLink>()?.take()
+}

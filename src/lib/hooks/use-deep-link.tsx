@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 
-import { subscribe } from '~/lib/ipc'
+import { call, subscribe } from '~/lib/ipc'
 
 /**
  * What a `tmc://` link does once Rust has decided it is one.
@@ -67,7 +67,7 @@ export function useDeepLink() {
         let stop: (() => void) | null = null
         let live = true
 
-        void subscribe('tmc://open', OpenSchema, (link) => {
+        const handle = (link: z.infer<typeof OpenSchema>) => {
             switch (link.type) {
                 case 'install':
                     void navigate(`/view/${link.kind}/${link.id}?install=1`)
@@ -124,10 +124,21 @@ export function useDeepLink() {
                     // navigate to.
                     return
             }
-        })
-            .then((unlisten) => {
+        }
+
+        // Subscribe first, then ask for the link the app was started with: a
+        // cold start delivers it before this listener exists.
+        void subscribe('tmc://open', OpenSchema, handle)
+            .then(async (unlisten) => {
                 if (live) stop = unlisten
                 else unlisten()
+
+                const first = await call(
+                    'deep_link_take',
+                    OpenSchema.nullable()
+                )
+
+                if (live && first) handle(first)
             })
             .catch((err) => console.error('[deeplink] could not subscribe', err))
 

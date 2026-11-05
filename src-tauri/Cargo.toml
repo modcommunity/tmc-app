@@ -55,6 +55,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
 tauri-plugin-deep-link = "2"
+# A second launch (Windows and Linux start a new process per tmc:// link) hands
+# its link to the running app instead of opening a second window.
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 # Self-updating, desktop only. Mobile updates come from a store, and a plugin
 # that could replace an app's own binary there would not be allowed to.
 #

@@ -20,6 +20,33 @@ fn clear_cache(paths: &paths::AppPaths) {
     }
 }
 
+/// Routes each recognised link to the webview, or holds it until the webview asks.
+///
+/// An unrecognised link does nothing: any program can claim a custom scheme.
+#[cfg(desktop)]
+fn dispatch<'a>(app: &tauri::AppHandle, urls: impl Iterator<Item = &'a str>) {
+    use tauri::Emitter;
+    use tmc_core::deeplink::{parse, DeepLink, PendingLink};
+
+    for url in urls {
+        let Some(link) = parse(url) else {
+            tracing::debug!("ignoring unrecognised deep link");
+
+            continue;
+        };
+
+        if let DeepLink::Auth = link {
+            let _ = app.emit("tmc://auth-return", ());
+
+            continue;
+        }
+
+        if let Some(link) = app.state::<PendingLink>().offer(link) {
+            let _ = app.emit("tmc://open", &link);
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
@@ -59,7 +86,15 @@ pub fn run() {
      * mobile targets where this is compiled out.
      */
     #[cfg(desktop)]
-    let builder = builder.plugin(tauri_plugin_deep_link::init());
+    let builder = builder
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.unminimize();
+                let _ = w.show();
+                let _ = w.set_focus();
+            }
+        }))
+        .plugin(tauri_plugin_deep_link::init());
 
     /*
      * SELF-UPDATING. The plugin is ALWAYS registered on desktop; whether an
@@ -128,42 +163,16 @@ pub fn run() {
 
                 let emitter = app.handle().clone();
 
+                app.manage(tmc_core::deeplink::PendingLink::default());
+
                 app.deep_link().on_open_url(move |event| {
-                    use tauri::Emitter;
-                    use tmc_core::deeplink::{parse, DeepLink};
-
-                    for url in event.urls() {
-                        /*
-                         * A link the app does not understand does NOTHING. It
-                         * does not fall through to the auth wake-up and it does
-                         * not reach the webview — anything on the machine can
-                         * claim a custom scheme, and a default action is a
-                         * default action an attacker gets to trigger.
-                         */
-                        let Some(link) = parse(url.as_str()) else {
-                            tracing::debug!("ignoring unrecognised deep link");
-
-                            continue;
-                        };
-
-                        match link {
-                            // Still a wake-up carrying nothing: it makes the
-                            // app poll now instead of waiting out its interval.
-                            DeepLink::Auth => {
-                                let _ = emitter.emit("tmc://auth-return", ());
-                            }
-                            /*
-                             * Everything else asks the app to SHOW a screen.
-                             * Never to act — see `tmc_core::deeplink`. The
-                             * webview navigates and the user presses the button
-                             * themselves, or does not.
-                             */
-                            other => {
-                                let _ = emitter.emit("tmc://open", &other);
-                            }
-                        }
-                    }
+                    dispatch(&emitter, event.urls().iter().map(|u| u.as_str()));
                 });
+
+                // A cold start from a link: the plugin has already seen it.
+                if let Ok(Some(urls)) = app.deep_link().get_current() {
+                    dispatch(app.handle(), urls.iter().map(|u| u.as_str()));
+                }
             }
 
             app.manage(state);
@@ -276,6 +285,7 @@ pub fn run() {
             commands::api::api_get,
             commands::api::api_send,
             commands::api::api_env,
+            commands::api::deep_link_take,
             commands::api::update_check,
             #[cfg(desktop)]
             commands::api::update_install,

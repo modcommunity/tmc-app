@@ -42,6 +42,39 @@ const MAX_URL: usize = 2048;
 /// Cap on a numeric id, so an absurd one is refused before it becomes a request.
 const MAX_ID: i64 = 1_000_000_000;
 
+/// Holds the link that started the app until the webview can hear it.
+///
+/// A cold start from a `tmc://` link delivers the link before any listener
+/// exists, so an event emitted then is lost and the app just opens.
+#[derive(Debug, Default)]
+pub struct PendingLink {
+    state: std::sync::Mutex<(bool, Option<DeepLink>)>,
+}
+
+impl PendingLink {
+    /// Returns the link back when the webview is listening (emit it); else keeps it.
+    pub fn offer(&self, link: DeepLink) -> Option<DeepLink> {
+        let mut s = self.state.lock().unwrap_or_else(|e| e.into_inner());
+
+        if s.0 {
+            return Some(link);
+        }
+
+        s.1 = Some(link);
+
+        None
+    }
+
+    /// The webview is up: hand over what was held, and emit from now on.
+    pub fn take(&self) -> Option<DeepLink> {
+        let mut s = self.state.lock().unwrap_or_else(|e| e.into_inner());
+
+        s.0 = true;
+
+        s.1.take()
+    }
+}
+
 /// What a link resolved to.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
@@ -347,6 +380,17 @@ fn parse_id(raw: &str) -> Option<i64> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_link_before_the_webview_is_held_then_handed_over_once() {
+        let p = super::PendingLink::default();
+        let link = super::parse("tmc://play/app/arena?solo=tmc/arena").unwrap();
+
+        assert!(p.offer(link.clone()).is_none());
+        assert_eq!(p.take(), Some(link.clone()));
+        assert_eq!(p.take(), None);
+        assert_eq!(p.offer(link.clone()), Some(link));
+    }
+
     use super::*;
 
     #[test]
