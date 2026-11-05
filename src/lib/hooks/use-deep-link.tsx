@@ -60,6 +60,12 @@ const OpenSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('auth') }),
 ])
 
+const DeliverySchema = z.object({ seq: z.number(), link: OpenSchema })
+
+// Survives remounts that keep the JS context, so a link seen by both the
+// event and `deep_link_take` is handled once.
+let lastSeq = 0
+
 export function useDeepLink() {
     const navigate = useNavigate()
 
@@ -128,17 +134,27 @@ export function useDeepLink() {
 
         // Subscribe first, then ask for the link the app was started with: a
         // cold start delivers it before this listener exists.
-        void subscribe('tmc://open', OpenSchema, handle)
+        const deliver = (d: z.infer<typeof DeliverySchema>) => {
+            if (d.seq <= lastSeq) return
+
+            lastSeq = d.seq
+            handle(d.link)
+            void call('deep_link_ack', z.null().optional(), {
+                seq: d.seq,
+            }).catch(() => undefined)
+        }
+
+        void subscribe('tmc://open', DeliverySchema, deliver)
             .then(async (unlisten) => {
                 if (live) stop = unlisten
                 else unlisten()
 
                 const first = await call(
                     'deep_link_take',
-                    OpenSchema.nullable()
+                    DeliverySchema.nullable()
                 )
 
-                if (live && first) handle(first)
+                if (live && first) deliver(first)
             })
             .catch((err) => console.error('[deeplink] could not subscribe', err))
 

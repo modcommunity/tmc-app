@@ -41,9 +41,9 @@ fn dispatch<'a>(app: &tauri::AppHandle, urls: impl Iterator<Item = &'a str>) {
             continue;
         }
 
-        if let Some(link) = app.state::<PendingLink>().offer(link) {
-            let _ = app.emit("tmc://open", &link);
-        }
+        let delivery = app.state::<PendingLink>().offer(link);
+
+        let _ = app.emit("tmc://open", &delivery);
     }
 }
 
@@ -286,6 +286,7 @@ pub fn run() {
             commands::api::api_send,
             commands::api::api_env,
             commands::api::deep_link_take,
+            commands::api::deep_link_ack,
             commands::api::update_check,
             #[cfg(desktop)]
             commands::api::update_install,

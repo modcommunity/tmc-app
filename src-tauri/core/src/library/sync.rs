@@ -567,4 +567,13 @@ mod tests {
         assert_eq!(urlencode("1767225600000"), "1767225600000");
         assert_eq!(urlencode("a b&c"), "a%20b%26c");
     }
+
+    #[test]
+    fn the_revision_is_an_opaque_string_echoed_verbatim() {
+        let r: WireSyncResponse =
+            serde_json::from_value(serde_json::json!({ "revision": "1767225600000:abc-9" })).unwrap();
+
+        assert_eq!(r.revision, "1767225600000:abc-9");
+        assert_eq!(urlencode(&r.revision), "1767225600000%3Aabc-9");
+    }
 }

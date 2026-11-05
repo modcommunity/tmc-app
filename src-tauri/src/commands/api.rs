@@ -443,10 +443,20 @@ pub fn updater_status(state: State<'_, AppState>) -> UpdaterStatus {
     }
 }
 
-/// The link the app was started with, once; the webview calls this on mount.
+/// The pending link, if any; the webview calls this on every mount.
 #[tauri::command]
-pub fn deep_link_take(app: tauri::AppHandle) -> Option<tmc_core::deeplink::DeepLink> {
+pub fn deep_link_take(app: tauri::AppHandle) -> Option<tmc_core::deeplink::Delivery> {
     use tauri::Manager;
 
     app.try_state::<tmc_core::deeplink::PendingLink>()?.take()
+}
+
+/// The webview handled the emitted link `seq`; stop holding it.
+#[tauri::command]
+pub fn deep_link_ack(app: tauri::AppHandle, seq: u64) {
+    use tauri::Manager;
+
+    if let Some(p) = app.try_state::<tmc_core::deeplink::PendingLink>() {
+        p.ack(seq);
+    }
 }

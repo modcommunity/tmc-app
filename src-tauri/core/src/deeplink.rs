@@ -42,36 +42,59 @@ const MAX_URL: usize = 2048;
 /// Cap on a numeric id, so an absurd one is refused before it becomes a request.
 const MAX_ID: i64 = 1_000_000_000;
 
-/// Holds the link that started the app until the webview can hear it.
+/// A link with the sequence number the webview uses to handle it once.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Delivery {
+    pub seq: u64,
+    pub link: DeepLink,
+}
+
+#[derive(Debug, Default)]
+struct PendingState {
+    next: u64,
+    held: Option<Delivery>,
+}
+
+/// Holds the newest link until the webview acknowledges it.
 ///
-/// A cold start from a `tmc://` link delivers the link before any listener
-/// exists, so an event emitted then is lost and the app just opens.
+/// An event emitted while no listener exists is lost (cold start, or a webview
+/// reload or crash), so every link is kept pending as well as emitted; the
+/// webview drains it with `take` on every mount and `ack`s what an event gave it.
 #[derive(Debug, Default)]
 pub struct PendingLink {
-    state: std::sync::Mutex<(bool, Option<DeepLink>)>,
+    state: std::sync::Mutex<PendingState>,
 }
 
 impl PendingLink {
-    /// Returns the link back when the webview is listening (emit it); else keeps it.
-    pub fn offer(&self, link: DeepLink) -> Option<DeepLink> {
+    /// Stores the link as pending and returns it to emit.
+    pub fn offer(&self, link: DeepLink) -> Delivery {
         let mut s = self.state.lock().unwrap_or_else(|e| e.into_inner());
 
-        if s.0 {
-            return Some(link);
-        }
+        s.next += 1;
 
-        s.1 = Some(link);
+        let d = Delivery { seq: s.next, link };
 
-        None
+        s.held = Some(d.clone());
+
+        d
     }
 
-    /// The webview is up: hand over what was held, and emit from now on.
-    pub fn take(&self) -> Option<DeepLink> {
+    /// Hands over the pending link, if any, and clears it.
+    pub fn take(&self) -> Option<Delivery> {
+        self.state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .held
+            .take()
+    }
+
+    /// The webview handled an emitted link: it is no longer pending.
+    pub fn ack(&self, seq: u64) {
         let mut s = self.state.lock().unwrap_or_else(|e| e.into_inner());
 
-        s.0 = true;
-
-        s.1.take()
+        if s.held.as_ref().is_some_and(|d| d.seq == seq) {
+            s.held = None;
+        }
     }
 }
 
@@ -381,14 +404,34 @@ fn parse_id(raw: &str) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn a_link_before_the_webview_is_held_then_handed_over_once() {
+    fn a_link_is_pending_until_taken_on_every_mount() {
         let p = super::PendingLink::default();
         let link = super::parse("tmc://play/app/arena?solo=tmc/arena").unwrap();
 
-        assert!(p.offer(link.clone()).is_none());
-        assert_eq!(p.take(), Some(link.clone()));
+        let first = p.offer(link.clone());
+        assert_eq!(p.take(), Some(first));
         assert_eq!(p.take(), None);
-        assert_eq!(p.offer(link.clone()), Some(link));
+
+        // The webview reloads; a link arrives before it re-listens.
+        let later = p.offer(link.clone());
+        assert_eq!(p.take(), Some(later.clone()));
+        assert_eq!(p.take(), None);
+        assert_eq!(later.link, link);
+    }
+
+    #[test]
+    fn an_acked_event_is_not_replayed_to_the_next_mount() {
+        let p = super::PendingLink::default();
+        let link = super::parse("tmc://view/mod/5").unwrap();
+
+        let d = p.offer(link.clone());
+        p.ack(d.seq);
+        assert_eq!(p.take(), None);
+
+        let newer = p.offer(link);
+        p.ack(d.seq);
+        assert_eq!(p.take(), Some(newer.clone()));
+        assert!(newer.seq > d.seq);
     }
 
     use super::*;
