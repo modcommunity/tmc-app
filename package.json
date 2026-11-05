@@ -1,7 +1,7 @@
 {
     "name": "tmc-app",
     "private": true,
-    "version": "0.2.3",
+    "version": "0.2.4",
     "description": "The official The Modding Community app: mod installs, sandboxes, live server queries and RCON, for desktop and mobile",
     "license": "GPL-3.0-only",
     "repository": {

@@ -6,7 +6,7 @@ members = ["core", "usvfs"]
 
 [package]
 name = "tmc-app"
-version = "0.2.3"
+version = "0.2.4"
 description = "The official Modding Community app"
 authors = ["The Modding Community"]
 edition = "2021"
