@@ -459,6 +459,21 @@ pub fn solo_args_or_why(args: &[String], solo: &SoloPack) -> Result<Vec<String>,
     Ok(out)
 }
 
+/// The first shell build date (`1.YYYYMMDD.HHMM`) whose `--solo` flag starts a pack.
+pub const SOLO_SHELL_SINCE: u32 = 20261031;
+
+/// Whether a shell build predates `--solo`, which it would ignore and open its menu.
+///
+/// A version that does not read as `major.date.time` is not called old: only a
+/// build known to be stale is refused.
+pub fn shell_predates_solo(version: &str) -> bool {
+    version
+        .split('.')
+        .nth(1)
+        .and_then(|d| d.parse::<u32>().ok())
+        .is_some_and(|d| d >= 20000101 && d < SOLO_SHELL_SINCE)
+}
+
 /// The bare `--` (or Godot's `++`) that ends the engine's own arguments.
 ///
 /// **It is never the flag a missing value belonged to.** A Godot export reads
@@ -921,6 +936,15 @@ mod tests {
         }));
 
         assert_eq!(solo_args(&args, latest.as_ref()), ["--solo", "tmc/arena"]);
+    }
+
+    #[test]
+    fn a_shell_built_before_solo_is_known_to_be_stale() {
+        assert!(shell_predates_solo("1.20261010.0720"));
+        assert!(!shell_predates_solo("1.20261031.0001"));
+        assert!(!shell_predates_solo("1.20261104.0259"));
+        assert!(!shell_predates_solo("2.0"));
+        assert!(!shell_predates_solo("nightly"));
     }
 
     #[test]
