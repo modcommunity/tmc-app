@@ -116,6 +116,9 @@ struct WireSyncResponse {
     revision: String,
     #[serde(default)]
     full: bool,
+    /// Absent from older servers, which is why the page size is still the fallback.
+    #[serde(default)]
+    has_more: Option<bool>,
 }
 
 impl WireSubscription {
@@ -277,6 +280,7 @@ where
         }
 
         let count = response.items.len();
+        let more = response.has_more.unwrap_or(count >= PAGE_LIMIT);
         let next = response.revision.clone();
 
         items.extend(response.items);
@@ -285,8 +289,8 @@ where
             revision = next.clone();
         }
 
-        // A full page means there may be more behind it: walk on from its revision.
-        if count >= PAGE_LIMIT && !next.is_empty() && since.as_deref() != Some(next.as_str()) {
+        // The server says so when it can; otherwise a full page means there may be more.
+        if more && !next.is_empty() && since.as_deref() != Some(next.as_str()) {
             since = Some(next);
 
             continue;
@@ -302,6 +306,7 @@ where
         items,
         revision,
         full: response_full && complete,
+        has_more: None,
     };
 
     let mut report = SyncReport {
@@ -749,5 +754,50 @@ mod tests {
         assert_eq!(report.removed, 0);
         assert!(db.get("s-last").unwrap().is_some());
         assert_eq!(db.meta_get(REVISION_KEY).unwrap().as_deref(), Some("2:s-last"));
+    }
+
+    #[tokio::test]
+    async fn has_more_false_stops_even_on_a_full_page() {
+        let db = LibraryDb::open_memory().expect("db");
+        let ids: Vec<String> = (0..PAGE_LIMIT).map(|n| format!("s{n}")).collect();
+        let calls = std::sync::Mutex::new(0);
+
+        let report = sync_with(&db, true, |_| {
+            *calls.lock().unwrap() += 1;
+
+            let mut body = page(&ids, "1:s199", true);
+            body["hasMore"] = serde_json::json!(false);
+
+            async move { Ok(body) }
+        })
+        .await
+        .expect("sync");
+
+        assert_eq!(*calls.lock().unwrap(), 1);
+        assert_eq!(report.received, PAGE_LIMIT);
+        assert!(report.full);
+    }
+
+    #[tokio::test]
+    async fn has_more_true_continues_on_a_short_page() {
+        let db = LibraryDb::open_memory().expect("db");
+
+        let report = sync_with(&db, true, |path| {
+            let body = if path.contains("since=1%3As1") {
+                page(&["s-last".to_string()], "2:s-last", false)
+            } else {
+                let mut b = page(&["s1".to_string()], "1:s1", true);
+                b["hasMore"] = serde_json::json!(true);
+                b
+            };
+
+            async move { Ok(body) }
+        })
+        .await
+        .expect("sync");
+
+        assert_eq!(report.received, 2);
+        assert!(report.full);
+        assert!(db.get("s-last").unwrap().is_some());
     }
 }

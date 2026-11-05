@@ -873,6 +873,8 @@ export const SubscriptionSyncResponse = z.object({
     removed: z.array(z.string()),
     revision: z.string(),
     full: z.boolean(),
+    /** More pages follow. Absent on older servers; the client then guesses from the row count. */
+    hasMore: z.boolean().optional(),
 })
 
 export type SubscriptionSyncResponseT = z.infer<typeof SubscriptionSyncResponse>
