@@ -17,6 +17,7 @@ pub mod autoupdate;
 pub mod db;
 pub mod dependency;
 pub mod deploy;
+pub mod gate;
 pub mod install;
 pub mod sandbox;
 pub mod share;

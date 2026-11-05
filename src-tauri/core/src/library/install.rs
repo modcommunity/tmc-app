@@ -45,6 +45,7 @@ use crate::plugins::{jail_for, JailRoots};
 use crate::settings::AppSettings;
 
 use super::db::{LibraryDb, LibraryEntry};
+use super::gate;
 
 /// What one install or uninstall did.
 #[derive(Debug, Clone, Serialize)]
@@ -264,6 +265,34 @@ pub async fn install_one(
     entry: &LibraryEntry,
     ctx: &InstallCtx<'_>,
 ) -> InstallOutcome {
+    let (_turn, waited) = gate::enter(&entry.id).await;
+
+    let fresh = db.get(&entry.id).ok().flatten();
+
+    match gate::install_turn(
+        waited,
+        fresh
+            .as_ref()
+            .map(|e| (e.installed_release_id, e.latest_release_id)),
+    ) {
+        gate::Turn::Gone => {
+            return InstallOutcome::failed(&entry.id, "That item is no longer in your library.")
+        }
+        gate::Turn::AlreadyDone => {
+            return InstallOutcome {
+                id: entry.id.clone(),
+                ok: true,
+                rule: None,
+                report: None,
+                error: None,
+            }
+        }
+        gate::Turn::Go => {}
+    }
+
+    // The row as it is now, not as the caller read it before queueing.
+    let entry = &fresh.unwrap_or_else(|| entry.clone());
+
     if !entry.installable {
         return InstallOutcome::failed(
             &entry.id,
@@ -466,6 +495,19 @@ pub async fn uninstall_one(
     ctx: &InstallCtx<'_>,
     forget: bool,
 ) -> InstallOutcome {
+    let (_turn, _) = gate::enter(&entry.id).await;
+
+    // An install that held the gate first has recorded its files on the row by now.
+    let Some(entry) = &db.get(&entry.id).ok().flatten() else {
+        return InstallOutcome {
+            id: entry.id.clone(),
+            ok: true,
+            rule: None,
+            report: None,
+            error: None,
+        };
+    };
+
     let Some(rule) = rule_for(entry, ctx.plugins, ctx.loader.as_deref()) else {
         /*
          * No rule any more — the game lost support, or the file was moved into

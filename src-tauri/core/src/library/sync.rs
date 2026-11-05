@@ -31,7 +31,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::api::{ApiClient, Method};
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 
 use super::db::{InstallMirror, LibraryDb, LibraryEntry};
 
@@ -198,28 +198,111 @@ pub struct SyncReport {
     pub to_forget: Vec<String>,
 }
 
+/// Rows asked for per request; the server caps it at the same number.
+const PAGE_LIMIT: usize = 200;
+
+/// A ceiling on pages per pass, so a server that never runs dry cannot hold the loop.
+const MAX_PAGES: usize = 100;
+
+/// Set when a full pass was wanted and failed, so the next pass retries it as a full one.
+const NEED_FULL_KEY: &str = "subscriptions.need_full";
+
 /// Run one sync pass.
 ///
 /// `force_full` is what the launch pass and the "Sync now" button set. Every
 /// other pass is a delta unless the watermark is missing, which is what a fresh
 /// install and a re-login both look like.
 pub async fn sync_once(api: &ApiClient, db: &LibraryDb, force_full: bool) -> AppResult<SyncReport> {
-    let since = if force_full {
+    sync_with(db, force_full, |path| async move {
+        api.request(Method::GET, &path, None, true).await
+    })
+    .await
+}
+
+/// [`sync_once`] with the transport passed in, so the cursor handling can be tested without a server.
+pub async fn sync_with<F, Fut>(
+    db: &LibraryDb,
+    force_full: bool,
+    mut fetch: F,
+) -> AppResult<SyncReport>
+where
+    F: FnMut(String) -> Fut,
+    Fut: std::future::Future<Output = AppResult<serde_json::Value>>,
+{
+    let retry_full = db.meta_get(NEED_FULL_KEY)?.is_some_and(|v| v == "1");
+
+    let mut since = if force_full || retry_full {
         None
     } else {
-        db.meta_get(REVISION_KEY)?
+        db.meta_get(REVISION_KEY)?.filter(|r| !r.is_empty())
     };
 
-    let path = match &since {
-        Some(rev) if !rev.is_empty() => {
-            format!("/subscriptions?limit=200&since={}", urlencode(rev))
+    let mut wanted_full = since.is_none();
+    let mut items: Vec<WireSubscription> = Vec::new();
+    let mut response_full = false;
+    let mut revision = String::new();
+    let mut complete = false;
+
+    for _ in 0..MAX_PAGES {
+        let path = match &since {
+            Some(rev) => format!("/subscriptions?limit={PAGE_LIMIT}&since={}", urlencode(rev)),
+            None => format!("/subscriptions?limit={PAGE_LIMIT}"),
+        };
+
+        let value = match fetch(path).await {
+            Ok(v) => v,
+            // The stored position is unusable (edited, or from an older format). Starting from
+            // empty is the only way out; retrying the same cursor would fail every minute forever.
+            Err(AppError::InvalidCursor) if since.is_some() => {
+                db.meta_delete(REVISION_KEY)?;
+                since = None;
+                wanted_full = true;
+                items.clear();
+
+                continue;
+            }
+            Err(err) => {
+                if wanted_full {
+                    db.meta_set(NEED_FULL_KEY, "1")?;
+                }
+
+                return Err(err);
+            }
+        };
+
+        let response: WireSyncResponse = serde_json::from_value(value)?;
+
+        if since.is_none() {
+            response_full = response.full;
         }
-        _ => "/subscriptions?limit=200".to_string(),
+
+        let count = response.items.len();
+        let next = response.revision.clone();
+
+        items.extend(response.items);
+
+        if !next.is_empty() {
+            revision = next.clone();
+        }
+
+        // A full page means there may be more behind it: walk on from its revision.
+        if count >= PAGE_LIMIT && !next.is_empty() && since.as_deref() != Some(next.as_str()) {
+            since = Some(next);
+
+            continue;
+        }
+
+        complete = true;
+
+        break;
+    }
+
+    // Reconciling removals against a list that stopped early would uninstall what was never read.
+    let response = WireSyncResponse {
+        items,
+        revision,
+        full: response_full && complete,
     };
-
-    let value = api.request(Method::GET, &path, None, true).await?;
-
-    let response: WireSyncResponse = serde_json::from_value(value)?;
 
     let mut report = SyncReport {
         received: response.items.len(),
@@ -296,6 +379,10 @@ pub async fn sync_once(api: &ApiClient, db: &LibraryDb, force_full: bool) -> App
 
     if !response.revision.is_empty() {
         db.meta_set(REVISION_KEY, &response.revision)?;
+    }
+
+    if wanted_full && complete {
+        db.meta_delete(NEED_FULL_KEY)?;
     }
 
     Ok(report)
@@ -575,5 +662,92 @@ mod tests {
 
         assert_eq!(r.revision, "1767225600000:abc-9");
         assert_eq!(urlencode(&r.revision), "1767225600000%3Aabc-9");
+    }
+
+    fn page(ids: &[String], revision: &str, full: bool) -> serde_json::Value {
+        serde_json::json!({
+            "items": ids.iter().map(|id| wire(id, Some(7))).collect::<Vec<_>>(),
+            "revision": revision,
+            "full": full,
+        })
+    }
+
+    #[tokio::test]
+    async fn an_invalid_cursor_restarts_from_empty_instead_of_failing_forever() {
+        let db = LibraryDb::open_memory().expect("db");
+        db.meta_set(REVISION_KEY, "garbage").expect("meta");
+
+        let paths = std::sync::Mutex::new(Vec::new());
+
+        let report = sync_with(&db, false, |path| {
+            paths.lock().unwrap().push(path.clone());
+
+            let result = if path.contains("since=") {
+                Err(AppError::InvalidCursor)
+            } else {
+                Ok(page(&["s1".to_string()], "5:s1", true))
+            };
+
+            async move { result }
+        })
+        .await
+        .expect("recovers");
+
+        assert_eq!(paths.lock().unwrap().len(), 2);
+        assert!(report.full);
+        assert_eq!(report.added, 1);
+        assert_eq!(db.meta_get(REVISION_KEY).unwrap().as_deref(), Some("5:s1"));
+    }
+
+    #[tokio::test]
+    async fn a_failed_full_pass_is_retried_as_a_full_one() {
+        let db = LibraryDb::open_memory().expect("db");
+        db.meta_set(REVISION_KEY, "5:s1").expect("meta");
+
+        let failed = sync_with(&db, true, |_| async { Err(AppError::Network("offline".into())) }).await;
+
+        assert!(failed.is_err());
+
+        let paths = std::sync::Mutex::new(Vec::new());
+
+        let report = sync_with(&db, false, |path| {
+            paths.lock().unwrap().push(path);
+
+            async { Ok(page(&["s1".to_string()], "6:s1", true)) }
+        })
+        .await
+        .expect("sync");
+
+        assert!(report.full);
+        assert!(!paths.lock().unwrap()[0].contains("since="));
+
+        // Cleared once the full pass lands, so the next one is a delta again.
+        assert_eq!(db.meta_get(NEED_FULL_KEY).unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn a_full_list_longer_than_one_page_is_read_to_the_end_before_removals() {
+        let db = LibraryDb::open_memory().expect("db");
+
+        let first: Vec<String> = (0..PAGE_LIMIT).map(|n| format!("s{n}")).collect();
+        let second = vec!["s-last".to_string()];
+
+        let report = sync_with(&db, true, |path| {
+            let body = if path.contains("since=1%3As199") {
+                page(&second, "2:s-last", false)
+            } else {
+                page(&first, "1:s199", true)
+            };
+
+            async move { Ok(body) }
+        })
+        .await
+        .expect("sync");
+
+        assert_eq!(report.received, PAGE_LIMIT + 1);
+        assert!(report.full);
+        assert_eq!(report.removed, 0);
+        assert!(db.get("s-last").unwrap().is_some());
+        assert_eq!(db.meta_get(REVISION_KEY).unwrap().as_deref(), Some("2:s-last"));
     }
 }

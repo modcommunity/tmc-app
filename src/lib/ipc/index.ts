@@ -20,6 +20,7 @@ export const IpcErrorSchema = z.object({
         'network',
         'api',
         'invalid',
+        'invalid_cursor',
         'jail',
         'internal',
     ]),

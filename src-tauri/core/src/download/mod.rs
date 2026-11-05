@@ -952,7 +952,7 @@ impl DownloadManager {
             control.limiter.take(chunk.len()).await;
 
             std::io::Write::write_all(&mut file, &chunk)
-                .map_err(|e| TransferError::fatal(format!("Could not write to disk: {e}")))?;
+                .map_err(|e| TransferError::fatal(write_failure(&e)))?;
 
             state.done += chunk.len() as u64;
             since_tick += chunk.len() as u64;
@@ -1100,6 +1100,16 @@ enum Stop {
 struct TransferError {
     message: String,
     retryable: bool,
+}
+
+/// ENOSPC and ERROR_DISK_FULL by number, which `ErrorKind` only names on newer toolchains.
+fn write_failure(e: &std::io::Error) -> String {
+    if matches!(e.raw_os_error(), Some(28 | 112)) {
+        "There is not enough free disk space. Free some and resume; what was downloaded is kept."
+            .to_string()
+    } else {
+        format!("Could not write to disk: {e}")
+    }
 }
 
 impl TransferError {
@@ -1493,6 +1503,14 @@ fn validate(request: &DownloadRequest) -> AppResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_full_disk_says_so_instead_of_an_os_error_number() {
+        let full = std::io::Error::from_raw_os_error(if cfg!(windows) { 112 } else { 28 });
+
+        assert!(write_failure(&full).contains("free disk space"));
+        assert!(write_failure(&std::io::Error::other("boom")).contains("boom"));
+    }
 
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;

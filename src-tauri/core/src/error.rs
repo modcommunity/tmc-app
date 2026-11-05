@@ -25,6 +25,10 @@ pub enum AppError {
     #[error("{0}")]
     Invalid(String),
 
+    /// The server refused a sync position (`invalid_cursor`). The caller starts over from empty.
+    #[error("The server did not accept the saved sync position.")]
+    InvalidCursor,
+
     /// A plugin asked for a file its manifest does not permit it to touch.
     /// Always surfaced verbatim: the user needs to know which plugin and which
     /// permission, otherwise "install failed" is unactionable.
@@ -64,6 +68,7 @@ impl AppError {
             Self::Network(_) => "network",
             Self::Api(_) => "api",
             Self::Invalid(_) => "invalid",
+            Self::InvalidCursor => "invalid_cursor",
             Self::Jail(_) => "jail",
             Self::Internal(_) => "internal",
         }

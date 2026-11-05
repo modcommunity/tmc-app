@@ -323,6 +323,7 @@ impl ApiClient {
         Err(match code.as_str() {
             "unauthorized" | "token_expired" => AppError::NotAuthenticated,
             "token_reuse" | "invalid_grant" => AppError::AuthRejected,
+            "invalid_cursor" => AppError::InvalidCursor,
             _ => AppError::Api(message),
         })
     }
@@ -455,6 +456,16 @@ impl ApiClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_servers_invalid_cursor_code_is_its_own_error() {
+        let body = r#"{"ok":false,"code":"invalid_cursor","message":"bad since"}"#;
+
+        assert!(matches!(
+            ApiClient::unwrap(StatusCode::BAD_REQUEST, body),
+            Err(AppError::InvalidCursor)
+        ));
+    }
 
     #[test]
     fn paths_that_could_name_another_host_are_refused() {

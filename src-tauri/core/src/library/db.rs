@@ -909,6 +909,14 @@ impl LibraryDb {
         })
     }
 
+    pub fn meta_delete(&self, key: &str) -> AppResult<()> {
+        self.with(|conn| {
+            conn.execute("DELETE FROM meta WHERE key = ?1", params![key])?;
+
+            Ok(())
+        })
+    }
+
     /// Forget everything. Used on sign-out: the library is another account's
     /// business and must not survive into the next session.
     pub fn clear(&self) -> AppResult<()> {
