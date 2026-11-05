@@ -382,12 +382,18 @@ where
         }
     }
 
-    if !response.revision.is_empty() {
-        db.meta_set(REVISION_KEY, &response.revision)?;
-    }
+    // A full list cut off at MAX_PAGES is not a baseline: keep the old revision and demand another
+    // full pass, or later deltas would carry no tombstones for what was never reconciled.
+    if wanted_full && !complete {
+        db.meta_set(NEED_FULL_KEY, "1")?;
+    } else {
+        if !response.revision.is_empty() {
+            db.meta_set(REVISION_KEY, &response.revision)?;
+        }
 
-    if wanted_full && complete {
-        db.meta_delete(NEED_FULL_KEY)?;
+        if wanted_full {
+            db.meta_delete(NEED_FULL_KEY)?;
+        }
     }
 
     Ok(report)
@@ -754,6 +760,32 @@ mod tests {
         assert_eq!(report.removed, 0);
         assert!(db.get("s-last").unwrap().is_some());
         assert_eq!(db.meta_get(REVISION_KEY).unwrap().as_deref(), Some("2:s-last"));
+    }
+
+    #[tokio::test]
+    async fn a_full_pass_cut_off_at_max_pages_is_retried_as_full_without_a_new_baseline() {
+        let db = LibraryDb::open_memory().expect("db");
+        let calls = std::sync::Mutex::new(0usize);
+
+        let report = sync_with(&db, true, |_| {
+            let n = {
+                let mut c = calls.lock().unwrap();
+                *c += 1;
+                *c
+            };
+            let ids = vec![format!("s{n}")];
+            let mut body = page(&ids, &format!("{n}:s{n}"), true);
+            body["hasMore"] = serde_json::json!(true);
+
+            async move { Ok(body) }
+        })
+        .await
+        .expect("sync");
+
+        assert_eq!(*calls.lock().unwrap(), MAX_PAGES);
+        assert!(!report.full);
+        assert_eq!(db.meta_get(NEED_FULL_KEY).unwrap().as_deref(), Some("1"));
+        assert_eq!(db.meta_get(REVISION_KEY).unwrap(), None);
     }
 
     #[tokio::test]
