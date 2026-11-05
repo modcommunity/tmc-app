@@ -221,10 +221,26 @@ async fn fetch_page(api: &ApiClient, since: Option<&str>) -> AppResult<WireSyncR
     Ok(serde_json::from_value(value)?)
 }
 
-/// Where the next page starts, when the one just read was full and moved the watermark.
-fn next_since(page_len: usize, revision: &str, asked: Option<&str>) -> Option<String> {
-    (page_len >= PAGE_LIMIT && !revision.is_empty() && asked != Some(revision))
-        .then(|| revision.to_string())
+/// What to do after a page.
+#[derive(Debug, PartialEq, Eq)]
+enum Paging {
+    /// A short page: the list is complete.
+    Done,
+    /// A full page that moved the watermark: ask from here.
+    Next(String),
+    /// A full page that cannot be continued (the watermark did not move, as when
+    /// 200+ rows share one millisecond, or there is none). The rest is unread.
+    Stalled,
+}
+
+fn next_since(page_len: usize, revision: &str, asked: Option<&str>) -> Paging {
+    if page_len < PAGE_LIMIT {
+        Paging::Done
+    } else if revision.is_empty() || asked == Some(revision) {
+        Paging::Stalled
+    } else {
+        Paging::Next(revision.to_string())
+    }
 }
 
 /// Run one sync pass.
@@ -262,9 +278,14 @@ pub async fn sync_once(api: &ApiClient, db: &LibraryDb, force_full: bool) -> App
             revision = page.revision.clone();
         }
 
-        let Some(next) = next_since(len, &page.revision, asked.as_deref()) else {
-            complete = true;
-            break;
+        let next = match next_since(len, &page.revision, asked.as_deref()) {
+            Paging::Next(next) => next,
+            Paging::Done => {
+                complete = true;
+                break;
+            }
+            // Unread rows remain, so this list cannot prove a removal.
+            Paging::Stalled => break,
         };
 
         page = fetch_page(api, Some(&next)).await?;
@@ -643,11 +664,12 @@ mod tests {
 
     #[test]
     fn a_full_page_asks_for_the_next_one_and_a_short_page_stops() {
-        assert_eq!(next_since(200, "170", None).as_deref(), Some("170"));
-        assert_eq!(next_since(199, "170", None), None);
-        assert_eq!(next_since(200, "", None), None);
-        // The watermark did not move: every row shares one millisecond, stop.
-        assert_eq!(next_since(200, "170", Some("170")), None);
+        assert_eq!(next_since(200, "170", None), Paging::Next("170".into()));
+        assert_eq!(next_since(199, "170", None), Paging::Done);
+        assert_eq!(next_since(200, "", None), Paging::Stalled);
+        // The watermark did not move: every row shares one millisecond, so the
+        // rest is unread and must not count as a complete list.
+        assert_eq!(next_since(200, "170", Some("170")), Paging::Stalled);
     }
 
     #[test]
