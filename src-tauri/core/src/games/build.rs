@@ -318,6 +318,48 @@ pub fn browser_site_args(args: &[String], site: &str, env_set: bool) -> Vec<Stri
     vec!["--browser-backbone-url".into(), site.into()]
 }
 
+/// A sign-in for the game shell: `--auth-code <code>` (and the site it redeems
+/// at, `--auth-backbone-url`), so a signed-in player joins as themselves rather
+/// than a guest. Only for a TMC shell (the bare `--`), only for a well-formed
+/// `tmc_gh_` handoff (the site's 60 s single-use code; the shell redeems it at
+/// its own backbone and never at a URL we name), and an explicit
+/// `--auth-code` / `--auth-backbone-url` already in the arguments wins.
+pub fn auth_code_args(args: &[String], code: Option<&str>, site: &str) -> Vec<String> {
+    let Some(code) = code.map(str::trim) else {
+        return Vec::new();
+    };
+
+    let well_formed = code.len() > 7
+        && code.len() <= 128
+        && code.starts_with("tmc_gh_")
+        && code
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+
+    if !well_formed
+        || !args.iter().any(|a| is_separator(a))
+        || args
+            .iter()
+            .any(|a| a == "--auth-code" || a.starts_with("--auth-code="))
+    {
+        return Vec::new();
+    }
+
+    let mut out = vec!["--auth-code".to_string(), code.to_string()];
+    let site = site.trim();
+
+    if !site.is_empty()
+        && !args
+            .iter()
+            .any(|a| a == "--auth-backbone-url" || a.starts_with("--auth-backbone-url="))
+    {
+        out.push("--auth-backbone-url".into());
+        out.push(site.into());
+    }
+
+    out
+}
+
 /// The Solo pack a serverless launch should run: the game pack's
 /// `<owner>/<repo>` id and the version to mount, `None` for the newest.
 /// From the site's boot descriptor (`boot.solo`) or a `tmc://` launch link.
@@ -525,6 +567,25 @@ fn substitute(element: &str, ctx: &LaunchContext) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn auth_code_args_need_a_shell_and_a_wellformed_code() {
+        let shell: Vec<String> = vec!["--".into(), "--connect".into(), "h:1".into()];
+        let site = "https://moddingcommunity.com";
+
+        assert_eq!(
+            auth_code_args(&shell, Some("tmc_gh_Ab-_9"), site),
+            vec!["--auth-code", "tmc_gh_Ab-_9", "--auth-backbone-url", site]
+        );
+        assert!(auth_code_args(&shell, None, site).is_empty());
+        assert!(auth_code_args(&shell, Some("tmc_gh_a b"), site).is_empty());
+        assert!(auth_code_args(&shell, Some("--evil"), site).is_empty());
+        assert!(auth_code_args(&["--connect".into()], Some("tmc_gh_x1"), site).is_empty());
+        // An explicit flag wins.
+        let mut own = shell.clone();
+        own.extend(["--auth-code".into(), "tmc_gh_mine".into()]);
+        assert!(auth_code_args(&own, Some("tmc_gh_x1"), site).is_empty());
+    }
 
     fn ctx() -> LaunchContext {
         LaunchContext {

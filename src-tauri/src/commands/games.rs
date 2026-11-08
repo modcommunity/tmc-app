@@ -330,6 +330,16 @@ pub async fn game_launch(
             );
         }
     }
+    // Signed in as themselves: a 60 s single-use handoff the site mints for
+    // this launch, redeemed by the shell at its own backbone. Best effort; any
+    // failure leaves the guest launch this was before.
+    if let Some(code) = launch_auth_code(&state, request.app_id, request.server_id).await {
+        plan.args.extend(tmc_core::games::build::auth_code_args(
+            &plan.args,
+            Some(code.as_str()),
+            tmc_core::api::api_base(),
+        ));
+    }
     // UDP or not: the player's choice for a network that drops it.
     plan.args.extend(tmc_core::games::build::transport_args(
         &plan.args,
@@ -666,6 +676,37 @@ async fn launch_boot(
         .ok()?;
 
     answer.get("boot").cloned()
+}
+
+/// A sign-in handoff for this launch, from `POST /play/launch` in `app` mode as
+/// the signed-in player, or `None` (signed out, a server that does not sign in
+/// through TMC, a refusal, a site older than the field, or a network error).
+async fn launch_auth_code(
+    state: &AppState,
+    app_id: i64,
+    server_id: Option<i64>,
+) -> Option<String> {
+    let mut payload = serde_json::json!({ "appId": app_id, "mode": "app" });
+
+    if let Some(id) = server_id {
+        payload["serverId"] = serde_json::json!(id);
+    }
+
+    let answer = state
+        .api
+        .request(
+            tmc_core::api::Method::POST,
+            "/play/launch",
+            Some(payload),
+            false,
+        )
+        .await
+        .ok()?;
+
+    answer
+        .get("authCode")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string)
 }
 
 /// The one folder TMC games keep downloaded content in. Fixed, and inside the

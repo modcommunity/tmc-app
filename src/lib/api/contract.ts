@@ -2040,6 +2040,8 @@ export const PlayLaunchResponseSchema = z
                     version: z.string().nullable(),
                 })
                 .nullish(),
+            /** A 60 s single-use sign-in code for the native shell (`--auth-code`). */
+            authCode: z.string().nullish(),
         }),
     ])
     .nullable()
