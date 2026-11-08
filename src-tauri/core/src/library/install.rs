@@ -508,8 +508,20 @@ pub async fn uninstall_one(
 
     let report = run_uninstall(entry, ctx, rule, &jail).await;
 
+    /*
+     * A failed uninstall step must not wipe the journal. `mark_uninstalled`
+     * clears `installed_files`, so doing it after a failure strands whatever the
+     * steps did not reach with no record left to remove it by, and the UI would
+     * report the item as gone. Keep the row `failed` with its journal so the
+     * user can retry. `forget` removes the row regardless: the subscription is
+     * gone elsewhere and a retry has nothing to hang off.
+     */
+    let kept = uninstall_leaves_row(&report, forget);
+
     if forget {
         let _ = db.delete(&entry.id);
+    } else if kept {
+        let _ = db.set_state(&entry.id, "failed", report.error.as_deref());
     } else {
         let _ = db.mark_uninstalled(&entry.id);
     }
@@ -518,18 +530,29 @@ pub async fn uninstall_one(
         ctx.audit,
         Info,
         Install,
-        "library.uninstall.ok",
+        if kept {
+            "library.uninstall.failed"
+        } else {
+            "library.uninstall.ok"
+        },
         entry.name.clone(),
         plugin = rule.source
     );
 
     InstallOutcome {
         id: entry.id.clone(),
-        ok: true,
+        ok: !kept,
         rule: Some(rule.source.clone()),
         error: report.error.clone(),
         report: Some(report),
     }
+}
+
+/// Whether an uninstall run leaves the subscription row (and its journal) in
+/// place for a retry: it does when a step failed, unless the row is being
+/// forgotten anyway.
+fn uninstall_leaves_row(report: &RunReport, forget: bool) -> bool {
+    !forget && report.error.is_some()
 }
 
 /// A refusal the UI can render before anything runs.
@@ -600,6 +623,22 @@ mod tests {
             state: "idle".into(),
             last_error: None,
         }
+    }
+
+    #[test]
+    fn a_failed_uninstall_keeps_the_row_and_its_journal() {
+        let report = |error: Option<&str>| RunReport {
+            ok: error.is_none(),
+            steps_total: 1,
+            steps_run: 1,
+            applied: Vec::new(),
+            failed_at: None,
+            error: error.map(str::to_string),
+        };
+
+        assert!(!uninstall_leaves_row(&report(None), false));
+        assert!(uninstall_leaves_row(&report(Some("boom")), false));
+        assert!(!uninstall_leaves_row(&report(Some("boom")), true));
     }
 
     #[test]
