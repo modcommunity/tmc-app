@@ -216,7 +216,7 @@ impl Executor<'_> {
                     *max_bytes,
                     ctx,
                 )
-                    .await?;
+                .await?;
 
                 applied.push(display(&target));
             }
@@ -830,9 +830,15 @@ mod tests {
             ("fileSha256".to_string(), "ab12".to_string()),
         ]));
 
-        assert_eq!(ctx.expected_sha("https://x/f", None).as_deref(), Some("ab12"));
+        assert_eq!(
+            ctx.expected_sha("https://x/f", None).as_deref(),
+            Some("ab12")
+        );
         assert_eq!(ctx.expected_sha("https://x/other", None), None);
-        assert_eq!(ctx.expected_sha("https://x/f", Some("cd")).as_deref(), Some("cd"));
+        assert_eq!(
+            ctx.expected_sha("https://x/f", Some("cd")).as_deref(),
+            Some("cd")
+        );
     }
 
     use super::*;
