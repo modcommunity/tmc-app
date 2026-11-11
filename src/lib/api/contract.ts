@@ -2666,6 +2666,13 @@ export const WorkshopScopeRequest = z
         game: z.string().min(3).max(200).optional(),
         on: z.boolean().optional(),
         all: z.boolean().optional(),
+        /**
+         * What the client is, as on `GET /workshop`: the `revision` in the
+         * answer is read for this platform's code-review policy, so a browser
+         * client gets the revision its own next list will carry. ABSENT reads
+         * as native, the strict case.
+         */
+        platform: z.enum(['web', 'desktop', 'mobile']).optional(),
     })
     .refine(
         (v) =>
