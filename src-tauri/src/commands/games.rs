@@ -816,7 +816,7 @@ mod tests {
     fn with_pack() -> serde_json::Value {
         serde_json::json!({ "boot": {
             "solo": { "contentId": "gamemann/game-arena", "version": "0.1.16" },
-            "game": { "origin": "https://dotgames.org" },
+            "game": { "origin": "https://content.gamespice.net" },
         }})
     }
 
@@ -893,7 +893,7 @@ mod tests {
         // A third-party game made with the engine: the site boots it with no
         // pack, refuses it, or has nothing for it.
         for boot in [
-            Ok(serde_json::json!({ "boot": { "game": { "origin": "https://dotgames.org" } } })),
+            Ok(serde_json::json!({ "boot": { "game": { "origin": "https://content.gamespice.net" } } })),
             Ok(serde_json::json!({ "boot": { "solo": null } })),
             Ok(serde_json::Value::Null),
             Err(AppError::Api("refused".into())),

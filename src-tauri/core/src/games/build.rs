@@ -827,12 +827,12 @@ mod tests {
         let boot = |origin: &str| serde_json::json!({ "game": { "origin": origin } });
 
         assert_eq!(
-            content_url_from_boot(&boot("https://dotgames.org")),
-            Some("https://dotgames.org/content".to_string())
+            content_url_from_boot(&boot("https://content.gamespice.net")),
+            Some("https://content.gamespice.net/content".to_string())
         );
         assert_eq!(
-            content_url_from_boot(&boot("https://dotgames.org/")),
-            Some("https://dotgames.org/content".to_string())
+            content_url_from_boot(&boot("https://content.gamespice.net/")),
+            Some("https://content.gamespice.net/content".to_string())
         );
 
         // A port is part of the origin, so it is kept.
@@ -843,18 +843,18 @@ mod tests {
         // A backslash is a path separator to a URL parser, so it cannot smuggle
         // a second host in: the host stays the first one and the path refuses it.
         assert_eq!(
-            content_url_from_boot(&boot("https:\\\\dotgames.org")),
-            Some("https://dotgames.org/content".to_string())
+            content_url_from_boot(&boot("https:\\\\content.gamespice.net")),
+            Some("https://content.gamespice.net/content".to_string())
         );
 
         for bad in [
-            "https://dotgames.org\\godot",
-            "https://dotgames.org\\@evil.example",
-            "https://evil.example\\.dotgames.org",
-            "http://dotgames.org",
-            "https://dotgames.org/godot",
-            "https://dotgames.org?x=1",
-            "https://user@dotgames.org",
+            "https://content.gamespice.net\\godot",
+            "https://content.gamespice.net\\@evil.example",
+            "https://evil.example\\.content.gamespice.net",
+            "http://content.gamespice.net",
+            "https://content.gamespice.net/godot",
+            "https://content.gamespice.net?x=1",
+            "https://user@content.gamespice.net",
             "file:///etc",
             "-x",
             "",
@@ -865,12 +865,12 @@ mod tests {
         assert_eq!(content_url_from_boot(&serde_json::json!({})), None);
 
         let shell: Vec<String> = vec!["--".into()];
-        let base = Some("https://dotgames.org/content");
+        let base = Some("https://content.gamespice.net/content");
         assert_eq!(
             content_url_args(&shell, base),
             vec![
                 "--content-url".to_string(),
-                "https://dotgames.org/content".into()
+                "https://content.gamespice.net/content".into()
             ]
         );
         assert!(content_url_args(&shell, None).is_empty());
