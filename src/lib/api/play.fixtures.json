@@ -96,7 +96,7 @@
       },
       {
         "id": 4,
-        "name": "G2GFast",
+        "name": "Airdrift",
         "url": "https://tmcdev.net/apps/4",
         "iconUrl": "https://cdn.example.test/icon/4.png",
         "bannerUrl": "https://cdn.example.test/banner/4.png",
@@ -457,7 +457,7 @@
         "name": "TMC Surf #1 | Fast DL",
         "url": "https://tmcdev.net/servers/101",
         "appId": 4,
-        "appName": "G2GFast",
+        "appName": "Airdrift",
         "modes": [
           "web",
           "app"
@@ -569,7 +569,7 @@
         "name": "Bhop Practice",
         "url": "https://tmcdev.net/servers/107",
         "appId": 4,
-        "appName": "G2GFast",
+        "appName": "Airdrift",
         "modes": [
           "web",
           "app"
