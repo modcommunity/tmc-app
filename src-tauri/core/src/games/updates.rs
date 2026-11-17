@@ -201,11 +201,11 @@ mod tests {
     fn installed(name: &str, version: &str, auto_update: bool) -> InstalledGame {
         InstalledGame {
             app_id: 42,
-            slug: Some("arena".into()),
+            slug: Some("fatal-contact".into()),
             name: name.into(),
             platform: "LINUX_X64".into(),
             version: version.into(),
-            dir: "/games/arena/1.0.0".into(),
+            dir: "/games/fatal-contact/1.0.0".into(),
             entry: Some("game.x86_64".into()),
             args: Vec::new(),
             size_bytes: 512,
@@ -231,7 +231,7 @@ mod tests {
 
     #[test]
     fn a_newer_build_on_an_auto_updating_game_is_installed() {
-        let s = status(installed("Arena", "1.0.0", true), Some("1.1.0"));
+        let s = status(installed("Fatal Contact", "1.0.0", true), Some("1.1.0"));
 
         assert!(s.update_available);
         assert_eq!(decide(&s, false), UpdateDecision::Update);
@@ -243,7 +243,7 @@ mod tests {
         // the second is the case that matters: a rollback published by
         // mistake must not be installed as though it were an upgrade.
         for available in ["1.0.0", "0.9.0"] {
-            let s = status(installed("Arena", "1.0.0", true), Some(available));
+            let s = status(installed("Fatal Contact", "1.0.0", true), Some(available));
 
             assert!(!s.update_available, "{available} should not be an update");
             assert_eq!(decide(&s, false), UpdateDecision::Leave);
@@ -255,7 +255,7 @@ mod tests {
         // Rule 4. `nightly` is not after `1.2.0` — it is not anywhere — and a
         // build published under a name like that must not replace a release.
         for available in ["nightly", "main", "", "latest"] {
-            let s = status(installed("Arena", "1.2.0", true), Some(available));
+            let s = status(installed("Fatal Contact", "1.2.0", true), Some(available));
 
             assert!(
                 !s.update_available,
@@ -270,7 +270,7 @@ mod tests {
         // The reason `version::is_newer` exists at all. A string compare puts
         // "1.10.0" before "1.9.0", which would pin every game on the ninth
         // point release for ever and report nothing wrong.
-        let s = status(installed("Arena", "1.9.0", true), Some("1.10.0"));
+        let s = status(installed("Fatal Contact", "1.9.0", true), Some("1.10.0"));
 
         assert!(s.update_available);
         assert_eq!(decide(&s, false), UpdateDecision::Update);
@@ -278,11 +278,11 @@ mod tests {
 
     #[test]
     fn a_game_with_automatic_updates_off_is_skipped_with_that_reason() {
-        let s = status(installed("Arena", "1.0.0", false), Some("1.1.0"));
+        let s = status(installed("Fatal Contact", "1.0.0", false), Some("1.1.0"));
 
         assert_eq!(
             decide(&s, false),
-            UpdateDecision::Skip("Arena: automatic updates are off".into())
+            UpdateDecision::Skip("Fatal Contact: automatic updates are off".into())
         );
     }
 
@@ -290,11 +290,11 @@ mod tests {
     fn a_running_game_is_never_touched() {
         // Rule 2, and the one with a real cost behind it: the new files would
         // land on top of ones a live process has mapped.
-        let s = status(installed("Arena", "1.0.0", true), Some("1.1.0"));
+        let s = status(installed("Fatal Contact", "1.0.0", true), Some("1.1.0"));
 
         assert_eq!(
             decide(&s, true),
-            UpdateDecision::Skip("Arena: it is running".into())
+            UpdateDecision::Skip("Fatal Contact: it is running".into())
         );
     }
 
@@ -303,11 +303,11 @@ mod tests {
         // The order in `decide` is load-bearing. "It is running" invites
         // somebody to close the game and try again; with automatic updates off
         // that would change nothing, so the stable reason is the one to give.
-        let s = status(installed("Arena", "1.0.0", false), Some("1.1.0"));
+        let s = status(installed("Fatal Contact", "1.0.0", false), Some("1.1.0"));
 
         assert_eq!(
             decide(&s, true),
-            UpdateDecision::Skip("Arena: automatic updates are off".into())
+            UpdateDecision::Skip("Fatal Contact: automatic updates are off".into())
         );
     }
 
@@ -316,7 +316,7 @@ mod tests {
         // `check` reports a failed lookup as `available: None` rather than
         // dropping the game. "We could not ask" must not act like "there is
         // something newer".
-        let s = status(installed("Arena", "1.0.0", true), None);
+        let s = status(installed("Fatal Contact", "1.0.0", true), None);
 
         assert!(!s.update_available);
         assert_eq!(decide(&s, false), UpdateDecision::Leave);

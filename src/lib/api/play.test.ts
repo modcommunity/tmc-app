@@ -48,7 +48,7 @@ describe('responses', () => {
         expect(page?.apps.length).toBeGreaterThan(0)
         expect(page?.servers).toEqual([])
         expect(page?.nextCursor).toBe(40)
-        expect(page?.party?.app.name).toBe('Arena')
+        expect(page?.party?.app.name).toBe('Fatal Contact')
     })
 
     it('reads the feature being off as null, not as an error', () => {
@@ -198,18 +198,18 @@ describe('row facts', () => {
 
 describe('app-mode launch response', () => {
     it('carries the solo pack, and an older answer without it still parses', () => {
-        const uri = 'tmc://play/app/arena?solo=tmc/arena&solo-version=1.2.0'
+        const uri = 'tmc://play/app/fatal-contact?solo=tmc/fatal-contact&solo-version=1.2.0'
         const withSolo = PlayLaunchResponseSchema.parse({
             mode: 'app',
             uri,
-            solo: { contentId: 'tmc/arena', version: '1.2.0' },
+            solo: { contentId: 'tmc/fatal-contact', version: '1.2.0' },
         })
-        expect(withSolo).toMatchObject({ solo: { contentId: 'tmc/arena', version: '1.2.0' } })
+        expect(withSolo).toMatchObject({ solo: { contentId: 'tmc/fatal-contact', version: '1.2.0' } })
 
         const latest = PlayLaunchResponseSchema.parse({
             mode: 'app',
             uri,
-            solo: { contentId: 'tmc/arena', version: null },
+            solo: { contentId: 'tmc/fatal-contact', version: null },
         })
         expect(latest).toMatchObject({ solo: { version: null } })
 

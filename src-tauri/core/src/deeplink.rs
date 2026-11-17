@@ -464,25 +464,25 @@ mod tests {
 
         // A pack named in the query rides along; a bad one is dropped.
         assert_eq!(
-            parse("tmc://play/app/arena?solo=tmc/arena&solo_version=1.2.0"),
+            parse("tmc://play/app/fatal-contact?solo=tmc/fatal-contact&solo_version=1.2.0"),
             Some(DeepLink::PlayApp {
-                app: "arena".into(),
-                solo: Some("tmc/arena".into()),
+                app: "fatal-contact".into(),
+                solo: Some("tmc/fatal-contact".into()),
                 solo_version: Some("1.2.0".into())
             })
         );
         assert_eq!(
-            parse("tmc://play/app/arena?solo=tmc/arena&solo-version=2.0.1"),
+            parse("tmc://play/app/fatal-contact?solo=tmc/fatal-contact&solo-version=2.0.1"),
             Some(DeepLink::PlayApp {
-                app: "arena".into(),
-                solo: Some("tmc/arena".into()),
+                app: "fatal-contact".into(),
+                solo: Some("tmc/fatal-contact".into()),
                 solo_version: Some("2.0.1".into())
             })
         );
         assert_eq!(
-            parse("tmc://play/app/arena?solo=--evil&solo_version=1"),
+            parse("tmc://play/app/fatal-contact?solo=--evil&solo_version=1"),
             Some(DeepLink::PlayApp {
-                app: "arena".into(),
+                app: "fatal-contact".into(),
                 solo: None,
                 solo_version: None
             })

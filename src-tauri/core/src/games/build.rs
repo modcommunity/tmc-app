@@ -923,19 +923,19 @@ mod tests {
     fn a_solo_pack_adds_solo_args_after_the_separator() {
         let args: Vec<String> = vec!["--".into()];
         let solo = SoloPack::from_boot(&serde_json::json!({
-            "solo": { "contentId": "tmc/arena", "version": "1.2.0" }
+            "solo": { "contentId": "tmc/fatal-contact", "version": "1.2.0" }
         }));
 
         assert_eq!(
             solo_args(&args, solo.as_ref()),
-            ["--solo", "tmc/arena", "--solo-version", "1.2.0"]
+            ["--solo", "tmc/fatal-contact", "--solo-version", "1.2.0"]
         );
 
         let latest = SoloPack::from_boot(&serde_json::json!({
-            "solo": { "contentId": "tmc/arena", "version": null }
+            "solo": { "contentId": "tmc/fatal-contact", "version": null }
         }));
 
-        assert_eq!(solo_args(&args, latest.as_ref()), ["--solo", "tmc/arena"]);
+        assert_eq!(solo_args(&args, latest.as_ref()), ["--solo", "tmc/fatal-contact"]);
     }
 
     #[test]
@@ -949,14 +949,14 @@ mod tests {
 
     #[test]
     fn a_template_without_the_separator_is_refused_with_a_reason() {
-        let solo = SoloPack::new("tmc/arena", None).unwrap();
+        let solo = SoloPack::new("tmc/fatal-contact", None).unwrap();
 
         let err = solo_args_or_why(&["--connect".to_string()], &solo).unwrap_err();
         assert!(err.contains("--"));
         assert!(err.contains("republishing"));
         assert_eq!(
             solo_args_or_why(&["--".to_string()], &solo).unwrap(),
-            ["--solo", "tmc/arena"]
+            ["--solo", "tmc/fatal-contact"]
         );
     }
 
@@ -964,7 +964,7 @@ mod tests {
     fn no_solo_or_no_separator_or_a_bad_id_adds_nothing() {
         let args: Vec<String> = vec!["--".into()];
         let ok = SoloPack::from_boot(&serde_json::json!({
-            "solo": { "contentId": "tmc/arena", "version": null }
+            "solo": { "contentId": "tmc/fatal-contact", "version": null }
         }));
 
         assert!(solo_args(&args, None).is_empty());

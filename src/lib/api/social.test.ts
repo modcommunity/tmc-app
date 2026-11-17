@@ -40,7 +40,7 @@ describe('friends', () => {
                 presence: {
                     status: 'in_game',
                     appId: 3,
-                    appName: 'Arena',
+                    appName: 'Fatal Contact',
                     serverId: 4821,
                     serverName: 'EU #1',
                     partyId: '4471',

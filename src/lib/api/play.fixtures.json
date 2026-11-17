@@ -4,7 +4,7 @@
     "apps": [
       {
         "id": 1,
-        "name": "Arena",
+        "name": "Fatal Contact",
         "url": "https://tmcdev.net/apps/1",
         "iconUrl": "https://cdn.example.test/icon/1.png",
         "bannerUrl": "https://cdn.example.test/banner/1.png",
@@ -291,7 +291,7 @@
       "maxUsers": 8,
       "app": {
         "id": 1,
-        "name": "Arena",
+        "name": "Fatal Contact",
         "url": "https://tmcdev.net/apps/1",
         "iconUrl": "https://cdn.example.test/icon/1.png",
         "modes": [
@@ -301,7 +301,7 @@
       },
       "server": {
         "id": 102,
-        "name": "Arena Official EU West",
+        "name": "Fatal Contact Official EU West",
         "online": true,
         "curUsers": 14,
         "maxUsers": 16
@@ -313,7 +313,7 @@
           "name": "Mira",
           "avatarUrl": null,
           "confident": true,
-          "gameName": "Arena"
+          "gameName": "Fatal Contact"
         },
         {
           "userId": "b",
@@ -345,7 +345,7 @@
     "apps": [
       {
         "id": 1,
-        "name": "Arena",
+        "name": "Fatal Contact",
         "url": "https://tmcdev.net/apps/1",
         "iconUrl": "https://cdn.example.test/icon/1.png",
         "bannerUrl": "https://cdn.example.test/banner/1.png",
@@ -473,10 +473,10 @@
       },
       {
         "id": 102,
-        "name": "Arena Official EU West",
+        "name": "Fatal Contact Official EU West",
         "url": "https://tmcdev.net/servers/102",
         "appId": 1,
-        "appName": "Arena",
+        "appName": "Fatal Contact",
         "modes": [
           "web",
           "app"
@@ -511,10 +511,10 @@
       },
       {
         "id": 104,
-        "name": "Arena Late Night",
+        "name": "Fatal Contact Late Night",
         "url": "https://tmcdev.net/servers/104",
         "appId": 1,
-        "appName": "Arena",
+        "appName": "Fatal Contact",
         "modes": [
           "app"
         ],
@@ -596,7 +596,7 @@
       "maxUsers": 8,
       "app": {
         "id": 1,
-        "name": "Arena",
+        "name": "Fatal Contact",
         "url": "https://tmcdev.net/apps/1",
         "iconUrl": "https://cdn.example.test/icon/1.png",
         "modes": [
@@ -606,7 +606,7 @@
       },
       "server": {
         "id": 102,
-        "name": "Arena Official EU West",
+        "name": "Fatal Contact Official EU West",
         "online": true,
         "curUsers": 14,
         "maxUsers": 16
@@ -618,7 +618,7 @@
           "name": "Mira",
           "avatarUrl": null,
           "confident": true,
-          "gameName": "Arena"
+          "gameName": "Fatal Contact"
         },
         {
           "userId": "b",
@@ -655,7 +655,7 @@
         "name": "Friday scrims",
         "url": "https://tmcdev.net/parties/9001",
         "appId": 1,
-        "appName": "Arena",
+        "appName": "Fatal Contact",
         "modes": [
           "web",
           "app"
@@ -722,7 +722,7 @@
       "maxUsers": 8,
       "app": {
         "id": 1,
-        "name": "Arena",
+        "name": "Fatal Contact",
         "url": "https://tmcdev.net/apps/1",
         "iconUrl": "https://cdn.example.test/icon/1.png",
         "modes": [
@@ -732,7 +732,7 @@
       },
       "server": {
         "id": 102,
-        "name": "Arena Official EU West",
+        "name": "Fatal Contact Official EU West",
         "online": true,
         "curUsers": 14,
         "maxUsers": 16
@@ -744,7 +744,7 @@
           "name": "Mira",
           "avatarUrl": null,
           "confident": true,
-          "gameName": "Arena"
+          "gameName": "Fatal Contact"
         },
         {
           "userId": "b",
@@ -787,7 +787,7 @@
       "maxUsers": 8,
       "app": {
         "id": 1,
-        "name": "Arena",
+        "name": "Fatal Contact",
         "url": "https://tmcdev.net/apps/1",
         "iconUrl": "https://cdn.example.test/icon/1.png",
         "modes": [
@@ -797,7 +797,7 @@
       },
       "server": {
         "id": 102,
-        "name": "Arena Official EU West",
+        "name": "Fatal Contact Official EU West",
         "online": true,
         "curUsers": 14,
         "maxUsers": 16
@@ -809,7 +809,7 @@
           "name": "Mira",
           "avatarUrl": null,
           "confident": true,
-          "gameName": "Arena"
+          "gameName": "Fatal Contact"
         },
         {
           "userId": "b",
@@ -891,7 +891,7 @@
     ]
   },
   "quick": {
-    "appName": "Arena",
+    "appName": "Fatal Contact",
     "country": {
       "code": "DE",
       "region": "Europe"
@@ -904,7 +904,7 @@
     "top": [
       {
         "id": 102,
-        "name": "Arena Official EU West",
+        "name": "Fatal Contact Official EU West",
         "curUsers": 14,
         "maxUsers": 16,
         "map": "dm_foundry",
@@ -918,7 +918,7 @@
       },
       {
         "id": 104,
-        "name": "Arena Late Night",
+        "name": "Fatal Contact Late Night",
         "curUsers": 3,
         "maxUsers": 16,
         "map": "dm_rooftops",
@@ -933,10 +933,10 @@
     ],
     "best": {
       "id": 102,
-      "name": "Arena Official EU West",
+      "name": "Fatal Contact Official EU West",
       "url": "https://tmcdev.net/servers/102",
       "appId": 1,
-      "appName": "Arena",
+      "appName": "Fatal Contact",
       "modes": [
         "web",
         "app"

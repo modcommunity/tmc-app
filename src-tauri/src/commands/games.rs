@@ -478,9 +478,9 @@ const CATALOGUE_UNREACHABLE: &str =
 ///
 /// A TMC game is a pack the shell downloads, and the shell is published once,
 /// under the engine app (dot-server-deploy's `export-native`), because a server
-/// can change which game it runs while its players stay connected. So Arena has
-/// no build and Godot does, and pressing Play on Arena means starting Godot's
-/// build with Arena's pack (`boot.solo`) or Arena's server.
+/// can change which game it runs while its players stay connected. So Fatal Contact has
+/// no build and Godot does, and pressing Play on Fatal Contact means starting Godot's
+/// build with Fatal Contact's pack (`boot.solo`) or Fatal Contact's server.
 ///
 /// **Only a TMC pack game falls back.** A third-party game made with the same
 /// engine names the same engine, and starting the TMC shell for it would put the
@@ -748,7 +748,7 @@ mod tests {
     #[test]
     fn a_game_runs_on_the_engine_the_catalogue_names() {
         let answer = serde_json::json!({ "apps": [{
-            "id": 114, "slug": "Arena", "name": "Arena",
+            "id": 114, "slug": "Fatal Contact", "name": "Fatal Contact",
             "engine": { "id": 84, "name": "Godot", "url": "godot" },
         }]});
 
@@ -756,8 +756,8 @@ mod tests {
             engine_of(&answer, 114),
             Some(EngineGame {
                 engine_id: 84,
-                slug: Some("arena".into()),
-                name: Some("Arena".into()),
+                slug: Some("fatal-contact".into()),
+                name: Some("Fatal Contact".into()),
             })
         );
     }
@@ -807,9 +807,9 @@ mod tests {
         }
     }
 
-    fn arena_on_godot() -> serde_json::Value {
+    fn fc_on_godot() -> serde_json::Value {
         serde_json::json!({ "apps": [{
-            "id": 114, "slug": "arena", "name": "Arena", "engine": { "id": 84 },
+            "id": 114, "slug": "fatal-contact", "name": "Fatal Contact", "engine": { "id": 84 },
         }]})
     }
 
@@ -852,13 +852,13 @@ mod tests {
 
     #[tokio::test]
     async fn a_pack_game_runs_on_its_installed_engine() {
-        let s = site(Ok(arena_on_godot()), Ok(with_pack()));
+        let s = site(Ok(fc_on_godot()), Ok(with_pack()));
 
         match native_target(&s, only(&[84]), 114, None).await {
             Ok(NativeTarget::Engine { row, game }) => {
                 assert_eq!(row.app_id, 84);
-                assert_eq!(game.slug.as_deref(), Some("arena"));
-                assert_eq!(game.name.as_deref(), Some("Arena"));
+                assert_eq!(game.slug.as_deref(), Some("fatal-contact"));
+                assert_eq!(game.name.as_deref(), Some("Fatal Contact"));
             }
             other => panic!("{other:?}"),
         }
@@ -880,7 +880,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_pack_game_without_its_engine_installed_says_so() {
-        let s = site(Ok(arena_on_godot()), Ok(with_pack()));
+        let s = site(Ok(fc_on_godot()), Ok(with_pack()));
 
         match native_target(&s, only(&[]), 114, None).await {
             Ok(NativeTarget::EngineMissing { engine_id }) => assert_eq!(engine_id, 84),
@@ -898,7 +898,7 @@ mod tests {
             Ok(serde_json::Value::Null),
             Err(AppError::Api("refused".into())),
         ] {
-            let s = site(Ok(arena_on_godot()), boot);
+            let s = site(Ok(fc_on_godot()), boot);
 
             match native_target(&s, only(&[84]), 114, None).await {
                 Ok(NativeTarget::Nothing) => {}
@@ -927,7 +927,7 @@ mod tests {
         for s in [
             site(Err(AppError::Network("down".into())), Ok(with_pack())),
             site(Err(AppError::internal("http: 502")), Ok(with_pack())),
-            site(Ok(arena_on_godot()), Err(AppError::Network("down".into()))),
+            site(Ok(fc_on_godot()), Err(AppError::Network("down".into()))),
         ] {
             match native_target(&s, only(&[84]), 114, None).await {
                 Err(AppError::Network(m)) => assert_eq!(m, CATALOGUE_UNREACHABLE),
