@@ -244,6 +244,13 @@ g.__TAURI_INTERNALS__.invoke = async (cmd, args, opts) => {
         const seeded = await apiSeed((args ?? {}) as Obj, real)
         return seeded === undefined ? scrub(await real()) : seeded
     }
+    if (cmd === 'avatar_asset') {
+        // Keep the asset's host (vite.config.ts, /__shots-asset).
+        const u = new URL(String((args as Obj).url))
+        const res = await fetch(`/__shots-asset/${u.host}${u.pathname}${u.search}`)
+        if (!res.ok) throw { code: 'api', message: `HTTP ${res.status}` }
+        return res.arrayBuffer()
+    }
     const fn = extra?.[cmd] ?? seeds[cmd]
     if (!fn) return inner(cmd, args, opts)
     return fn(g.__reviewSchema, (args ?? {}) as Record<string, unknown>)

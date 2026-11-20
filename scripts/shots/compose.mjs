@@ -256,7 +256,11 @@ if (site) {
     mkdirSync(pres, { recursive: true })
     // Only the slots the site already shows; adding one there is a site change.
     for (const f of (await import('node:fs')).readdirSync(join(out, 'site'))) {
-        if (existsSync(join(shots, f))) copyFileSync(join(out, 'site', f), join(shots, f))
+        if (existsSync(join(shots, f))) {
+            // Replace, not overwrite: the checkout's files may belong to another user.
+            rmSync(join(shots, f))
+            copyFileSync(join(out, 'site', f), join(shots, f))
+        }
     }
     for (const s of slides) {
         copyFileSync(join(out, 'slides', `${s.slot}-1280.webp`), join(pres, `${s.slot}-1280.webp`))

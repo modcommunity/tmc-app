@@ -24,6 +24,7 @@ npm run shots:marketing -- --site ~/wt/website-gs-shots
   - The mod catalogue: the packs, their names and counts, and the demo owners (NovaRift, KiteRunner and others).
   - The server browse: six invented servers on `*.example.net`.
   - The latency trace: a deterministic series, not a measured ping.
+- **Avatar model:** the real one, fetched from the host its manifest names (`/__shots-asset` in `vite.config.ts`, dev hosts only). The review harness would send it to the API host, where it is a 404.
 - **Clock:** pinned to 2026-11-20 18:00 UTC.
 - **Hidden:** the title bar's dev-API badge. It exists so that dev screenshots are not mistaken for bug reports about live data, and these shots are product shots.
 - **Art:** the pack art (`art/*.webp`) is 640x360 crops of the banners of our own map packs (`<name>-maps/docs/banner.png`).
