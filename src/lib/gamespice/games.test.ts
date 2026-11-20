@@ -9,10 +9,14 @@ describe('platform games', () => {
         expect(isPlatformSlug('g2gfast')).toBe(true)
         expect(isPlatformSlug('rust')).toBe(false)
         expect(isPlatformSlug(null)).toBe(false)
+        // the site may store an app url with its leading slash
+        expect(isPlatformSlug('/fatal-contact')).toBe(true)
+        expect(isPlatformSlug('/Playlot/')).toBe(true)
     })
 
     it('maps a former url to the current one', () => {
         expect(canonicalSlug('arena')).toBe('fatal-contact')
+        expect(canonicalSlug('/g2gfast')).toBe('airdrift')
         expect(canonicalSlug('unknown-game')).toBe('unknown-game')
     })
 

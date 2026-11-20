@@ -37,14 +37,22 @@ export const PLATFORM_GAMES: readonly PlatformGame[] = [
 
 const ALL_SLUGS: ReadonlySet<string> = new Set(PLATFORM_GAMES.flat())
 
+/**
+ * A slug from an app `url` as the site stores it: `/fatal-contact` on some
+ * sites, `fatal-contact` on others, so slashes are trimmed before any lookup.
+ */
+export function slugOf(url: string): string {
+    return url.trim().replace(/^\/+|\/+$/g, '').toLowerCase()
+}
+
 /** Whether a url slug (current or former) is a platform game. */
 export function isPlatformSlug(slug: string | null | undefined): boolean {
-    return slug != null && ALL_SLUGS.has(slug.toLowerCase())
+    return slug != null && ALL_SLUGS.has(slugOf(slug))
 }
 
 /** The current url of a game given any of its urls; the input when unknown. */
 export function canonicalSlug(slug: string): string {
-    const lower = slug.toLowerCase()
+    const lower = slugOf(slug)
 
     return PLATFORM_GAMES.find((g) => g.includes(lower))?.[0] ?? lower
 }

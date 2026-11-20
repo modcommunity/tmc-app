@@ -6,7 +6,7 @@ import { FiAlertTriangle, FiSearch, FiServer, FiUser, FiUsers } from 'react-icon
 import { api } from '~/lib/api/client'
 import { messageOf } from '~/lib/ipc'
 import { compact, pageQuery, DEFAULT_FILTERS } from '~/lib/api/play'
-import { gameHeadingStyle, gameLook, isPlatformSlug } from '~/lib/gamespice/games'
+import { canonicalSlug, gameHeadingStyle, gameLook, isPlatformSlug } from '~/lib/gamespice/games'
 import GameServers from '~/components/game-servers'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
 import { BTN_GHOST, BTN_PRIMARY, type PlayAppRowT } from '~/components/play-center'
@@ -109,7 +109,11 @@ export default function GamesRoute() {
                             onPlay={() =>
                                 setTarget({
                                     appId: game.id,
-                                    fallback: { name: game.name, icon: game.iconUrl, slug: game.url },
+                                    fallback: {
+                                        name: game.name,
+                                        icon: game.iconUrl,
+                                        slug: game.url && canonicalSlug(game.url),
+                                    },
                                 })
                             }
                         />
@@ -129,7 +133,7 @@ export default function GamesRoute() {
 function PlatformGameCard({ game, onPlay }: { game: PlayAppRowT; onPlay: () => void }) {
     const look = gameLook(game.url ?? game.name)
     const art = game.bannerUrl ?? game.iconUrl
-    const slug = game.url ?? String(game.id)
+    const slug = game.url ? canonicalSlug(game.url) : String(game.id)
 
     return (
         <article

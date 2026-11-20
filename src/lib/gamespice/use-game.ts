@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '~/lib/api/client'
 import { DEFAULT_FILTERS, pageQuery } from '~/lib/api/play'
 import type { PlayAppRowT } from '~/components/play-center'
-import { isPlatformSlug } from './games'
+import { canonicalSlug, isPlatformSlug } from './games'
 
 /**
  * One platform game by slug, from the same `GET /play/page` read the catalogue
@@ -17,10 +17,12 @@ export function useGameBySlug(slug: string | undefined) {
             let cursor = 0
 
             for (;;) {
-                const page = await api.playPage(
-                    pageQuery({ ...DEFAULT_FILTERS, tab: 'games', q: slug ?? '' }, cursor)
+                // No `q`: the site searches NAMES, so a slug (`fatal-contact`)
+                // or a former url (`arena`) never matches. The list is short.
+                const page = await api.playPage(pageQuery({ ...DEFAULT_FILTERS, tab: 'games' }, cursor))
+                const hit = page?.apps.find(
+                    (a) => a.url !== null && slug !== undefined && canonicalSlug(a.url) === canonicalSlug(slug)
                 )
-                const hit = page?.apps.find((a) => a.url === slug)
 
                 if (hit) return hit
                 if (!page || page.nextCursor === null) return null
