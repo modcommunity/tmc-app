@@ -135,8 +135,113 @@ function front(appId: number): Json | null {
 
 const wallet = () => ({ points: state.points, pointsApp: 0, pointsSite: state.points, credits: 12, appPoints: null })
 
+// ---- Workshop: a three-pack catalog, the member's subscriptions and own packs.
+const wsGames = [
+    { id: 101, url: 'fatal-contact', contentId: 'app:101', name: 'Fatal Contact' },
+    { id: 87, url: 'airdrift', contentId: 'app:87', name: 'Airdrift' },
+]
+const pack = (id: number, name: string, summary: string, compat: 'any' | 'listed', subscribers: number) => ({
+    id,
+    name,
+    summary,
+    body: null,
+    image: null,
+    owner: { name: id === 501 ? 'Rook' : 'Vexa', url: null },
+    official: false,
+    kinds: ['weapons'],
+    compat,
+    games: compat === 'listed' ? [wsGames[0]!] : [],
+    appId: null,
+    version: '1.2.0',
+    bytes: 2_400_000,
+    runsCode: false,
+    subscribers,
+    createdAt: '2026-10-01T00:00:00Z',
+    updatedAt: '2026-11-10T00:00:00Z',
+    webUrl: `https://tmcdev.net/asset/${id}`,
+})
+const packs = [
+    pack(501, 'Neon Rifles', 'Glowing rifle skins.', 'any', 42),
+    pack(502, 'Desert Maps', 'Three sandy arenas.', 'listed', 17),
+    pack(503, 'Retro Sounds', 'Old-school weapon sounds.', 'any', 8),
+]
+const ws = {
+    subs: new Map<number, { paused: boolean; autoUpdate: boolean; scope: 'all' | 'listed'; games: string[] }>([
+        [502, { paused: false, autoUpdate: true, scope: 'all', games: [] }],
+    ]),
+    owned: [{ id: 501, name: 'Neon Rifles', summary: 'Glowing rifle skins.', compat: 'any' as 'none' | 'any' | 'listed', games: [] as number[] }],
+}
+const wsMine = () => ({
+    items: [...ws.subs].map(([id, s]) => ({
+        subscriptionId: `sub-${id}`,
+        assetId: id,
+        name: packs.find((p) => p.id === id)?.name ?? `Pack ${id}`,
+        image: null,
+        webUrl: `https://tmcdev.net/asset/${id}`,
+        scope: s.scope,
+        games: wsGames.filter((g) => s.games.includes(g.contentId)),
+        paused: s.paused,
+        autoUpdate: s.autoUpdate,
+        via: null,
+        available: true,
+        unavailable: null,
+    })),
+})
+const wsCatalog = (q: URLSearchParams) => {
+    const needle = (q.get('q') ?? '').toLowerCase()
+    const hit = packs.filter((p) => p.name.toLowerCase().includes(needle))
+    return { items: hit, total: hit.length, page: 1, per: Number(q.get('per') ?? 24), facets: { kinds: ['weapons'], games: wsGames }, subscribed: [...ws.subs.keys()] }
+}
+const wsOwned = () => ({
+    items: ws.owned.map((o) => ({ ...o, image: null, webUrl: `https://tmcdev.net/asset/${o.id}`, hidden: false, subscribers: 42, version: { version: '1.2.0', runsCode: false, approved: true, kinds: ['weapons'] }, listable: true, canList: true })),
+    choices: wsGames.map((g) => ({ id: g.id, contentId: g.contentId, name: g.name })),
+})
+
+/** Workshop calls; `undefined` when the call is not a Workshop one. */
+function workshop(method: string, path: string, q: URLSearchParams, body: Json | undefined): unknown {
+    const id = Number(body?.itemId ?? body?.id ?? 0)
+    if (method === 'GET' && path === '/workshop/catalog') return wsCatalog(q)
+    if (method === 'GET' && path === '/workshop/mine') return wsMine()
+    if (method === 'GET' && path === '/workshop/owned') return wsOwned()
+    if (method === 'POST' && path === '/subscriptions') {
+        if (body?.subscribed === false) ws.subs.delete(id)
+        else ws.subs.set(id, { paused: false, autoUpdate: true, scope: 'all', games: [] })
+        return { subscribed: ws.subs.has(id), propagated: 0, skipped: 0 }
+    }
+    if (method === 'POST' && path === '/subscriptions/prefs') {
+        const s = ws.subs.get(id)
+        if (s && typeof body?.paused === 'boolean') s.paused = body.paused
+        if (s && typeof body?.autoUpdate === 'boolean') s.autoUpdate = body.autoUpdate
+        return { ok: true }
+    }
+    if (method === 'POST' && path === '/workshop/scope') {
+        const sid = String(body?.subscriptionId)
+        const s = ws.subs.get(Number(sid.replace('sub-', '')))
+        if (!s) throw { code: 'api', message: 'No such subscription.' }
+        if (typeof body?.all === 'boolean') s.scope = body.all ? 'all' : 'listed'
+        if (typeof body?.game === 'string') s.games = body.on ? [...new Set([...s.games, body.game])] : s.games.filter((g) => g !== body.game)
+        return { subscriptionId: sid, scope: s.scope, games: s.games }
+    }
+    if (method === 'PATCH' && path === '/workshop/item') {
+        const o = ws.owned.find((x) => x.id === id)
+        if (!o) throw { code: 'api', message: 'Not your pack.' }
+        if (typeof body?.name === 'string') o.name = body.name
+        if (typeof body?.summary === 'string') o.summary = body.summary
+        if (body?.compat) o.compat = body.compat as typeof o.compat
+        if (Array.isArray(body?.games)) o.games = body.games.map(Number)
+        return { ok: true, id }
+    }
+    if (method === 'DELETE' && path === '/workshop/item') {
+        ws.owned = ws.owned.filter((x) => x.id !== id)
+        return { ok: true, id }
+    }
+    return undefined
+}
+
 /** Answers one API call, or `undefined` when the real backend should. */
 export function fixture(method: string, path: string, q: URLSearchParams, body: Json | undefined): unknown {
+    const w = workshop(method, path, q, body)
+    if (w !== undefined) return w
     const app = Number(q.get('app') ?? q.get('appId') ?? body?.appId ?? 0)
 
     if (method === 'GET') {
