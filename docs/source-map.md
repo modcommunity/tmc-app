@@ -139,6 +139,11 @@ What each file owns, per crate. The shape and the rule behind it are in [archite
 | `routes/game.tsx` | **One game** (`/apps/:id`): play, its busiest servers, leaderboards and the member's own figures |
 | `routes/friends.tsx` | Friends, requests, presence, party invites and the current party — the routes a Dot game's `dot-friends`/`dot-party` speak |
 | `lib/api/social.ts` | UI names + helpers (`presenceLabel`, `formatStat`, `isStatKey`) for the friends/party/presence/stats routes; their schemas are the contract's "Social" section |
+| `lib/gamespice/store.ts` | Store helpers: `itemState` (buy, short, owned, checkout on the website, closed...), `filterItems`, `slotFor`/`slotLabel`, `equippedSlot`, `newIdemKey` for points purchases |
+| `lib/gamespice/stats.ts` | Stats helpers: streaks, `playShare`, `completion`, `sparkPath`, day and last-played labels |
+| `components/gs-charts.tsx` | The GS-theme charts the Stats screens draw: activity bars, share bar, completion ring, sparkline |
+| `routes/store.tsx` | Store directory, per-game store (search, kind/currency/show filters, sort), item dialog (points buy with confirm, credits open the website externally, equip), loadout panel, inventory tab |
+| `routes/stats.tsx` | Stats overview (totals, 30-day activity, play share, per-game cards) and per-game drill-down (my stats, achievements, leaderboards) |
 | `components/add-friend-button.tsx` | "Add friend" on a member's page |
 | `routes/library.tsx` | Three views: the games on this machine, the games TMC published here, and what the account subscribed to |
 | `components/library-tmc.tsx` | TMC's own games: install, update, auto-update, remove |

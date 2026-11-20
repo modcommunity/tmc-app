@@ -56,7 +56,7 @@ function front(over: Partial<StoreFrontResponseT> = {}): StoreFrontResponseT {
         held: {},
         subscribed: [],
         ...over,
-    } as StoreFrontResponseT
+    }
 }
 
 describe('itemState', () => {

@@ -53,3 +53,13 @@ Two components, and the split between them is where the picture comes from:
 **Node, not jsdom.** Nothing under test needs a DOM; the two things that touch `window` stub the four methods they use. A DOM implementation would be a dependency carried for tests that never asked for one.
 
 The one test that is genuinely security-relevant is `lib/api/offline-cache.test.ts`. Its allow-list decides what gets written to disk in cleartext, and `me`, `log` and `plugins` are excluded by NOT being on a list — a property a comment cannot enforce.
+
+### The review harness (`e2e/review/`)
+
+Playwright against the vite build with the IPC bridge mocked (`mock.ts`): `api_get`/`api_send` go to tmcdev.net through vite's `/__api` proxy, so a run is a real loader call against the dev site. A page that sets `globalThis.__reviewFixtures = true` before load gets `fixtures.ts` instead for the routes it covers (the signed-in session, Store, Stats, Workshop), which are stateful within one page, so a buy lowers the wallet and a subscribe shows up under Subscribed. Each script prints PASS/FAIL per step, exits 1 on any FAIL or page error, and writes screenshots to `docs/review/`:
+
+- `store-stats.mjs`: the signed-out Fatal Contact store on the dev backend, then browse, search, points buy, equip, credits checkout (asserts `openUrl`, never a purchase), inventory, the Stats overview and drill-down, and the `/me` summary, at 1280 and 760 px.
+- `workshop.mjs`: browse, search, subscribe, pause and resume, scope to picked games and back, unsubscribe, owner edit and delete.
+- `flows.mjs`: the Workshop scope round trip on the dev backend, and the sandbox dialog.
+
+Run it as the user that owns Playwright: start vite with `e2e/review/vite.config.ts`, then `TMC_REVIEW_PORT=<port> node e2e/review/<script>.mjs`.
