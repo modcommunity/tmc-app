@@ -18,6 +18,8 @@ import {
     FiUser,
     FiUsers,
     FiBookOpen,
+    FiAward,
+    FiSmile,
 } from 'react-icons/fi'
 import type { IconType } from 'react-icons'
 
@@ -70,6 +72,31 @@ export const PLAY: NavNode = {
     label: 'Play',
     icon: FiPlay,
     description: 'Jump into a game.',
+}
+
+export const GAMES: NavNode = {
+    id: 'games',
+    to: '/games',
+    label: 'Games',
+    icon: FiGrid,
+    description: 'GameSpice games: play, join servers, set up your avatar.',
+}
+
+/** Slot for the avatar studio (gs-app-avatar-1 replaces the route's element). */
+export const AVATAR: NavNode = {
+    id: 'avatar',
+    to: '/avatar',
+    label: 'Avatar',
+    icon: FiSmile,
+    description: 'Your figure and outfits.',
+}
+
+export const GAMESPICE_ACCOUNT: NavNode = {
+    id: 'gamespice-account',
+    to: '/me',
+    label: 'My GameSpice',
+    icon: FiAward,
+    description: 'Points and saved outfits.',
 }
 
 export const DISCOVER: NavNode = {
@@ -190,6 +217,13 @@ export const LIBRARY: NavNode = {
             description: 'Mod profiles you can deploy, share and switch between.',
         },
         {
+            id: 'workshop',
+            to: '/workshop',
+            label: 'Workshop',
+            icon: FiPackage,
+            description: 'Packs you subscribed to, across every GameSpice game.',
+        },
+        {
             id: 'downloads',
             to: '/downloads',
             label: 'Downloads',
@@ -234,7 +268,17 @@ export const SETTINGS: NavNode = {
 }
 
 /** Top to bottom, as the rail draws them. */
-export const RAIL: NavNode[] = [PLAY, DISCOVER, LIBRARY, FRIENDS, CONSOLE, SETTINGS]
+export const RAIL: NavNode[] = [
+    PLAY,
+    GAMES,
+    DISCOVER,
+    LIBRARY,
+    AVATAR,
+    GAMESPICE_ACCOUNT,
+    FRIENDS,
+    CONSOLE,
+    SETTINGS,
+]
 
 /**
  * The bottom bar: at most five, because past that the labels stop being

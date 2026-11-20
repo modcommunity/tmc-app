@@ -26,6 +26,11 @@ import SandboxesRoute from '~/routes/sandboxes'
 import DownloadsRoute from '~/routes/downloads'
 import RconRoute from '~/routes/rcon'
 import ViewRoute from '~/routes/view'
+import GameCatalogueRoute from '~/routes/games'
+import GameHubRoute from '~/routes/game-hub'
+import AvatarSlotRoute from '~/routes/avatar-slot'
+import WorkshopRoute from '~/routes/workshop'
+import GameSpiceAccountRoute from '~/routes/gamespice-account'
 import AccountRoute from '~/routes/account'
 import SettingsLayout from '~/routes/settings'
 import AppSettingsRoute from '~/routes/settings/app'
@@ -49,6 +54,12 @@ const router = createHashRouter([
         children: [
             { index: true, element: <Navigate to="/play" replace /> },
             { path: 'play', element: <PlayRoute /> },
+            { path: 'games', element: <GameCatalogueRoute /> },
+            { path: 'games/:slug', element: <GameHubRoute /> },
+            { path: 'games/:slug/avatar', element: <AvatarSlotRoute /> },
+            { path: 'avatar', element: <AvatarSlotRoute /> },
+            { path: 'workshop', element: <WorkshopRoute /> },
+            { path: 'me', element: <GameSpiceAccountRoute /> },
             { path: 'discover', element: <DiscoverRoute /> },
             { path: 'apps', element: <AppsRoute /> },
             { path: 'apps/:id', element: <GameRoute /> },
