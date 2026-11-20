@@ -18,8 +18,10 @@ export const screens = [
         title: 'Play', caption: 'Your games, sandboxes and friends online, one click from launch.',
     },
     {
-        slot: 'hub', route: '/play', wait: 'main', tour: false,
-        title: 'Home', caption: 'Everything you play and build, in one place.',
+        // The website's hero; a different screen from `play` so the /app page
+        // does not show the same picture twice.
+        slot: 'hub', route: '/games', wait: 'main', tour: false,
+        title: 'Games', caption: 'Every GameSpice game, its servers and your avatar, one click away.',
     },
     {
         slot: 'mods', route: '/browse/mod', wait: 'main',
