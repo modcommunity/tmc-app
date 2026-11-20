@@ -278,6 +278,11 @@ pub fn run() {
             commands::api::api_get,
             commands::api::api_send,
             commands::api::api_env,
+            commands::avatar::avatar_manifest,
+            commands::avatar::avatar_library,
+            commands::avatar::avatar_me,
+            commands::avatar::avatar_me_put,
+            commands::avatar::avatar_asset,
             commands::api::update_check,
             #[cfg(desktop)]
             commands::api::update_install,

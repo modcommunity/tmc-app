@@ -11,6 +11,7 @@ use serde_json::Value;
 use tokio::sync::Mutex;
 
 use crate::auth::AuthState;
+use crate::avatar::AvatarRoute;
 use crate::error::{AppError, AppResult};
 use crate::secure::SecureStore;
 
@@ -444,6 +445,110 @@ impl ApiClient {
         ))
     }
 
+    /// A call to TMC's avatar API, `/api/avatar/v1/<route>` (docs/avatar.md).
+    ///
+    /// The route is one of [`AvatarRoute`]'s fixed names and the only
+    /// parameter is a numeric app id, so the webview cannot steer it. These
+    /// routes answer a raw document rather than the `/api/app/v1` envelope
+    /// (`{ error }` with a 4xx); an envelope is still unwrapped if one comes.
+    /// `Ok(None)` is a 404: avatars are off for that game, or none is saved.
+    /// Same bearer and one-refresh retry as [`Self::request`].
+    pub async fn avatar(
+        &self,
+        method: Method,
+        route: AvatarRoute,
+        app_id: Option<u64>,
+        body: Option<Value>,
+        require_auth: bool,
+    ) -> AppResult<Option<Value>> {
+        let mut url = format!("{}/api/avatar/v1/{}", api_base(), route.path());
+
+        if let Some(id) = app_id {
+            url.push_str(&format!("?app={id}"));
+        }
+
+        let mut token = self.access_token(require_auth).await?;
+
+        for attempt in 0..2 {
+            let mut req = self
+                .http
+                .request(method.clone(), &url)
+                .header(reqwest::header::ACCEPT, "application/json");
+
+            if let Some(t) = &token {
+                req = req.bearer_auth(t);
+            }
+
+            if let Some(b) = &body {
+                req = req.json(b);
+            }
+
+            let res = req.send().await?;
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+
+            if status == StatusCode::UNAUTHORIZED && attempt == 0 && self.auth.has_refresh() {
+                token = Some(self.refresh().await?);
+                continue;
+            }
+
+            return Self::unwrap_raw(status, &text);
+        }
+
+        Err(AppError::NotAuthenticated)
+    }
+
+    fn unwrap_raw(status: StatusCode, text: &str) -> AppResult<Option<Value>> {
+        if status == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        let body: Option<Value> = serde_json::from_str(text).ok();
+
+        if body
+            .as_ref()
+            .and_then(|b| b.get("ok"))
+            .is_some_and(Value::is_boolean)
+        {
+            return Self::unwrap(status, text).map(Some);
+        }
+
+        if status == StatusCode::UNAUTHORIZED {
+            return Err(AppError::NotAuthenticated);
+        }
+
+        if !status.is_success() {
+            let message = body
+                .as_ref()
+                .and_then(|b| b.get("error"))
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("HTTP {}", status.as_u16()));
+
+            return Err(AppError::Api(message));
+        }
+
+        body.map(Some).ok_or_else(|| {
+            AppError::Network(format!("Unexpected response from the server ({status})."))
+        })
+    }
+
+    /// One avatar model file's bytes, WITHOUT the bearer: the URL may be on a
+    /// CDN. Callers must have checked `url` against
+    /// [`crate::avatar::allowlist`] first; this function does not.
+    pub async fn avatar_file(&self, url: &str) -> AppResult<Vec<u8>> {
+        let res = self.http.get(url).send().await?;
+        let status = res.status();
+
+        if !status.is_success() {
+            return Err(AppError::Network(format!(
+                "The avatar file could not be loaded ({status})."
+            )));
+        }
+
+        Ok(res.bytes().await?.to_vec())
+    }
+
     /// Shared HTTP client for plugin downloads, so they inherit the same
     /// timeouts and TLS stack. Never carries the bearer — see
     /// [`crate::plugins::steps`], which builds its own request.
@@ -455,6 +560,32 @@ impl ApiClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn avatar_documents_are_raw_and_a_404_means_off() {
+        let ok = ApiClient::unwrap_raw(StatusCode::OK, r#"{"appId":7}"#).unwrap();
+        assert_eq!(ok.unwrap()["appId"], 7);
+
+        assert!(ApiClient::unwrap_raw(StatusCode::NOT_FOUND, "{}")
+            .unwrap()
+            .is_none());
+
+        let env = ApiClient::unwrap_raw(StatusCode::OK, r#"{"ok":true,"data":{"a":1}}"#).unwrap();
+        assert_eq!(env.unwrap()["a"], 1);
+
+        assert!(matches!(
+            ApiClient::unwrap_raw(StatusCode::BAD_REQUEST, r#"{"error":"bad body"}"#),
+            Err(AppError::Api(m)) if m == "bad body"
+        ));
+        assert!(matches!(
+            ApiClient::unwrap_raw(StatusCode::UNAUTHORIZED, "{}"),
+            Err(AppError::NotAuthenticated)
+        ));
+        assert!(matches!(
+            ApiClient::unwrap_raw(StatusCode::OK, "<html>"),
+            Err(AppError::Network(_))
+        ));
+    }
 
     #[test]
     fn paths_that_could_name_another_host_are_refused() {
