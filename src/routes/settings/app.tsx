@@ -6,6 +6,7 @@ import { ipc } from '~/lib/ipc/commands'
 import { useApiEnv } from '~/lib/api/env'
 import { useSettings } from '~/lib/settings/provider'
 import { Row, Section, Select, Toggle } from '~/components/form'
+import { GsLogo } from '~/components/gs-logo'
 import UpdaterSettings from '~/components/updater-settings'
 
 /**
@@ -432,6 +433,18 @@ export default function AppSettingsRoute() {
              */}
             {env && (
                 <Section title="About">
+                    <div className="flex items-center gap-3 py-1">
+                        <GsLogo size={40} id="about" className="shrink-0" />
+                        <div>
+                            <p className="text-sm font-semibold">
+                                GameSpice App
+                            </p>
+                            <p className="text-xs text-muted">
+                                Games, mods, sandboxes and servers, powered by
+                                TMC
+                            </p>
+                        </div>
+                    </div>
                     <Row
                         label="Version"
                         control={

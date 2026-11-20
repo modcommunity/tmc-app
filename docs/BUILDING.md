@@ -76,6 +76,17 @@ Two things that bite on a current distribution, both handled by the script and b
 
 So macOS builds come from the `macos-latest` runner in `.github/workflows/release.yml`, as a universal binary. Signing and notarisation are still to be wired up there: it needs an Apple Developer ID certificate in the repository secrets, at which point `tauri-action`'s existing environment variables (`APPLE_CERTIFICATE`, `APPLE_ID`, `APPLE_TEAM_ID`, …) do the rest.
 
+## The app icon
+
+The icon is the GameSpice website's: the GS potion mark on the ember tile, from website-gs `public/brand/icon-1024.png`. `src-tauri/icons/app-icon.png` is the 1024 master: that tile with rounded corners. Every size and format in `src-tauri/icons/` comes from it:
+
+```bash
+npx tauri icon src-tauri/icons/app-icon.png -o src-tauri/icons
+cp src-tauri/icons/icon.png public/icon.png      # the webview favicon
+```
+
+The one exception is `ios/`. App Store icons must be opaque, and iOS rounds them itself, so that folder comes from the square, unrounded `icon-1024.png` (`npx tauri icon <website>/public/brand/icon-1024.png -o <tmp>`, then copy its `ios/`). Inside the UI (the sidebar rail, the title bar beside the wordmark, Settings → App → About) the mark is drawn inline with no tile, by `src/components/gs-logo.tsx`; keep its paths in step with the website's `gamespice-mark.svg`.
+
 ## Cutting a release
 
 ```bash
