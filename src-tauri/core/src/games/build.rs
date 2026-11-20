@@ -935,7 +935,10 @@ mod tests {
             "solo": { "contentId": "tmc/fatal-contact", "version": null }
         }));
 
-        assert_eq!(solo_args(&args, latest.as_ref()), ["--solo", "tmc/fatal-contact"]);
+        assert_eq!(
+            solo_args(&args, latest.as_ref()),
+            ["--solo", "tmc/fatal-contact"]
+        );
     }
 
     #[test]

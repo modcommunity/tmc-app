@@ -748,7 +748,7 @@ mod tests {
     #[test]
     fn a_game_runs_on_the_engine_the_catalogue_names() {
         let answer = serde_json::json!({ "apps": [{
-            "id": 114, "slug": "Fatal Contact", "name": "Fatal Contact",
+            "id": 114, "slug": "fatal-contact", "name": "Fatal Contact",
             "engine": { "id": 84, "name": "Godot", "url": "godot" },
         }]});
 
@@ -893,7 +893,9 @@ mod tests {
         // A third-party game made with the engine: the site boots it with no
         // pack, refuses it, or has nothing for it.
         for boot in [
-            Ok(serde_json::json!({ "boot": { "game": { "origin": "https://content.gamespice.net" } } })),
+            Ok(
+                serde_json::json!({ "boot": { "game": { "origin": "https://content.gamespice.net" } } }),
+            ),
             Ok(serde_json::json!({ "boot": { "solo": null } })),
             Ok(serde_json::Value::Null),
             Err(AppError::Api("refused".into())),
