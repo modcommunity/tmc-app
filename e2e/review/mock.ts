@@ -61,7 +61,7 @@ export function fake(schema: unknown, depth = 0): unknown {
 
 async function json(res: Response): Promise<unknown> {
     const text = await res.text()
-    let body: { ok?: boolean; data?: unknown; error?: { code?: string; message?: string } | string } | null = null
+    let body: { ok?: boolean; data?: unknown; message?: string; error?: { code?: string; message?: string } | string } | null = null
 
     try { body = JSON.parse(text) } catch { /* not JSON */ }
 
@@ -70,7 +70,8 @@ async function json(res: Response): Promise<unknown> {
     if (body && typeof body.ok === 'boolean') {
         if (body.ok) return body.data
         const e = body.error
-        throw { code: 'api', message: typeof e === 'string' ? e : (e?.message ?? `HTTP ${res.status}`) }
+        // `{ ok: false, code, message }` as the bridge's `unwrap` reads it; older routes nest an `error`.
+        throw { code: 'api', message: body.message ?? (typeof e === 'string' ? e : (e?.message ?? `HTTP ${res.status}`)) }
     }
     if (!res.ok) throw { code: 'api', message: `HTTP ${res.status}` }
 
