@@ -358,7 +358,7 @@ mod tests {
             "install/mod/1234",
             "sandbox/3",
             "play/example.com:6064",
-            "play/app/arena",
+            "play/app/fatal-contact",
         ] {
             assert_eq!(
                 parse(&format!("gs://{path}")),
