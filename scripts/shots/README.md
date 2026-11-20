@@ -48,3 +48,7 @@ Store and Stats are already in the list with `enabled: false`. They are on branc
 | `presentation/slides.json` | order, titles and captions; the site's slideshow reads it |
 
 The compose step is deterministic: the fonts are the app's own (`src/assets/fonts`, OFL), and there is no clock in the output. Chromium's PDF dates and the pptx zip and docProps times are pinned. Fonts are Plus Jakarta Sans for titles and DM Sans for body text. The mark is `brand/gamespice-mark.svg`, a copy of website-gs `public/brand/gamespice-mark.svg`.
+
+## README images
+
+`node scripts/shots/make-banner.mjs` (needs the dark raws in `out/raw`, so run `capture` first) writes `docs/banner.png` (1280x640, the same size as the other GameSpice repos) and the six `docs/screenshots/*.webp` the README Previews table uses. The banner is HTML rendered by Chromium: the Workshop capture as the background, a dark gradient over it, the mark and name at the top left and the feature pills at the bottom. Edit `PILLS` and `SHOTS` at the top of the script when the feature list or the table changes, and re-run it after any UI change. `--no-banner` and `--no-shots` build one half.

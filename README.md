@@ -1,4 +1,15 @@
+[![GameSpice App](docs/banner.png)](https://gamespice.net/app)
+
 The **official** GameSpice App (Powered by TMC), the desktop home for GameSpice games and the Modding Community: Play, Library, Discover and Servers in one app, built with [Tauri 2](https://tauri.app/), [Rust](https://rust-lang.org/) and [React](https://react.dev/). Its deep links use `gs://` and `gs://`.
+
+## Previews
+Shot from the running app in its dark theme, with a demo account on the dev site. Sandboxes, game folders and downloads are seeded, so what you see on your own machine will differ. The screenshots and the banner are rebuilt with `scripts/shots/make-banner.mjs`, see [`scripts/shots/README.md`](scripts/shots/README.md).
+
+| | |
+| --- | --- |
+| ![The Play screen with the game cards](docs/screenshots/home.webp)<br>Play: your games, with quick play and solo | ![The avatar editor with a 3D preview](docs/screenshots/avatar-editor.webp)<br>Avatar editor: pick parts, wearables and emotes |
+| ![The Workshop pack browser](docs/screenshots/workshop.webp)<br>Workshop: subscribe to content packs | ![The Store](docs/screenshots/store.webp)<br>Store: outfits and packs for each game |
+| ![The server browser](docs/screenshots/server-browser.webp)<br>Server browser: players and latency from your machine | ![The Stats page](docs/screenshots/stats.webp)<br>Stats: playtime and progress across games |
 
 ## What It Does
 ### Mod Management
@@ -10,17 +21,17 @@ The **official** GameSpice App (Powered by TMC), the desktop home for GameSpice 
 - **RCON**: Remote console access to your servers, with a full command history and logging. You can also send commands to multiple servers at once, and even schedule commands to be sent at a later time.
 - **Connect**: One-click connect to servers that support it, with the ability to save your login credentials for future use.
 ### Gaming Platform
-- **Integrated Game Launcher**: Launch external games from the app, or launch integrated games right within the built-in Game Player — in a window of its own or full screen.
+- **Integrated Game Launcher**: Launch external games from the app, or launch integrated games right within the built-in Game Player, in a window of its own or full screen.
 - **Install TMC's own games**: Games we publish are downloaded and installed by the app for whatever machine you are on, kept up to date automatically, and started as real programs rather than in a browser. You can turn automatic updates off per game, and remove one at any time.
 - **UDP or TCP**: TMC games join over UDP by default; Settings → Games → *Connect over UDP* off switches to TCP (WebSocket) for networks that drop UDP. Both kinds of player share the same server.
-- **Join from a link**: A `gs://play/<host>:<port>` link from the website opens the app on that server — showing which game is running there and the latency measured from *your* machine — with the ways you can actually join it. It never joins on its own.
+- **Join from a link**: A `gs://play/<host>:<port>` link from the website opens the app on that server, showing which game is running there and the latency measured from *your* machine, with the ways you can actually join it. It never joins on its own.
 - **Find fun games or servers**: Our gaming platform relies on third-party communities creating games and servers. Browse these games and servers right through our app and connect to them with one click!
 - **Assets**: Automatically download and install game assets onto servers where the game supports it (integrated games only).
-- **Game pages**: Every game has its own page — play it, see its busiest servers, and browse its **leaderboards** for any stat its servers record, with your own rank and figures beside them.
-- **Friends & parties**: Your friends list with who is online and which game and server they are on (one click to their server), friend requests, "Add friend" on any profile, party invites, and the party you are in — the same friends and parties the games themselves show.
+- **Game pages**: Every game has its own page, play it, see its busiest servers, and browse its **leaderboards** for any stat its servers record, with your own rank and figures beside them.
+- **Friends & parties**: Your friends list with who is online and which game and server they are on (one click to their server), friend requests, "Add friend" on any profile, party invites, and the party you are in, the same friends and parties the games themselves show.
 
 ### Staying Up To Date
-- **Automatic updates**: The app checks for a new version on launch and installs it itself — every update is signature-checked against a key built into the app before anything is replaced. Pick the **Stable** or **Beta** channel, or press **Check for updates**, under Settings → App → Updates. Administrators can point the updater at a different source and key there too. See [`docs/RELEASING.md`](docs/RELEASING.md).
+- **Automatic updates**: The app checks for a new version on launch and installs it itself, every update is signature-checked against a key built into the app before anything is replaced. Pick the **Stable** or **Beta** channel, or press **Check for updates**, under Settings → App → Updates. Administrators can point the updater at a different source and key there too. See [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## Device Support
 | Platform | Status |
@@ -74,7 +85,7 @@ Linux desktop builds need `webkit2gtk-4.1`, `libsoup-3.0` and `pkg-config`, or `
 ### Targeting Platforms
 ```bash
 npm run build:linux      # AppImage + deb
-npm run build:windows    # portable exe, .exe setup and .msi — FROM LINUX
+npm run build:windows    # portable exe, .exe setup and .msi, FROM LINUX
 ```
 
 The Windows build cross-compiles: `cargo-xwin` for the compile, `makensis` for
@@ -145,7 +156,7 @@ Five of those need a word of warning before you point a sandbox at a folder:
 - **The Sims 3, The Sims 4 and Baldur's Gate 3** read their mods out of your
   documents folder, not out of the install. Point those sandboxes at
   `Documents/Electronic Arts/The Sims 4` (or the Larian folder for BG3), not at
-  the folder Steam knows about — the install folder holds no mods at all.
+  the folder Steam knows about, the install folder holds no mods at all.
 - **Rust is server-side only.** EasyAntiCheat runs in the kernel, there is no
   client-side Rust modding, and this app will not invent one. Point a Rust
   sandbox at a dedicated server folder.
@@ -171,5 +182,5 @@ deliberate (RCON reaching private addresses is the usual one).
 [GPL-3.0-only](LICENSE). The game names, trademarks and mod-manager names used
 throughout are their respective owners'; they appear here to say which game a
 rule is for and which manager a folder layout belongs to, and nothing in this
-repository is a derivative work of any of them — see
+repository is a derivative work of any of them, see
 [`docs/prior-art.md`](docs/prior-art.md).
