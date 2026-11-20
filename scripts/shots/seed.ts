@@ -74,6 +74,12 @@ const seeds: Record<string, (schema: unknown, a: Record<string, unknown>) => unk
         const res = queryResult((el._zod.def.shape.result as Sch)._zod.def.innerType, i, r.host) as Record<string, unknown>
         return { id: r.id ?? String(i), key: r.key ?? String(i), result: { ...res, queriedPort: r.port ?? 27015 } }
     }),
+    // The expanded row asks again on its own (with the roster): unseeded, it read "TO".
+    query_server: (schema, a) => {
+        const r = (a.request ?? {}) as Req
+        const res = queryResult(((schema as { _zod: { def: { shape: Record<string, unknown> } } })._zod.def.shape.result as Sch)._zod.def.innerType, 0, r.host) as Record<string, unknown>
+        return { id: r.id ?? '0', key: r.key ?? '0', result: { ...res, queriedPort: r.port ?? 27015 } }
+    },
     latency_series: (schema, a) => ((a.keys as string[]) ?? []).map((key, i) => {
         const p = server(i, SERVERS.map((_, j) => hostOf(j)).find((h) => key.includes(h))).ping
         return { ...(fake(element(schema)) as object), key, samples: trace(p), last: p, min: p - 3, max: p + 6, avg: p + 1, jitter: 2.1, reliability: 100 }
@@ -178,8 +184,10 @@ async function apiSeed(a: Obj, real: () => Promise<unknown>): Promise<unknown> {
         const sum = r.summary as Obj
         return {
             ...r,
+            // The pack art carries its own title, which doubled the page's heading
+            // under a dark banner: the page gets a text-free strip of the same banner.
             summary: { ...sum, name: p.name, url: p.art, description: p.desc, app: PLAYLOT, community: null,
-                images: { card: art(p.art), banner: art(p.art), icon: null },
+                images: { card: art(p.art), banner: art(`${p.art}-banner`), icon: null },
                 owner: { id: `demo-${p.owner}`, name: p.who, username: p.owner, avatar: null },
                 tags: p.tags.map((n, k) => ({ id: 9000 + k, name: n, url: null })),
                 stats: { ...(sum.stats as Obj), views: 55260, downloads: p.dl, likes: p.likes, favorites: 770, comments: 256, reviews: 115, rating: 4.8 } },
@@ -194,6 +202,49 @@ async function apiSeed(a: Obj, real: () => Promise<unknown>): Promise<unknown> {
             links: [], dependencies: [], media: [],
             releases: ((r.releases as Obj[]) ?? []).slice(0, 1).map((x) => ({ ...x, version: '2.3.0', createdAt: iso(60 * 30) })),
         }
+    }
+    // The review account has played nothing, earned nothing and its friends are
+    // all offline: Stats, Store and Friends were empty states in the tour.
+    if (path === '/me/stats') {
+        // Days are YYYY-MM-DD; a realistic month has rest days in it.
+        const day = (minsAgo: number) => iso(minsAgo).slice(0, 10)
+        const pl = [1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1]
+        const fc = [0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0]
+        const recent = pl.map((v, d) => v + fc[d])
+        return {
+            since: day(60 * 24 * 29),
+            totals: { games: 2, daysPlayed: 64, activeDays: 51, achievements: 23, achievementPoints: 1840 },
+            recent,
+            games: [
+                { appId: 100, daysPlayed: 41, firstPlayed: day(60 * 24 * 120), lastPlayed: day(0), recent: pl, achievements: { unlocked: 15, points: 1210, total: 32 } },
+                { appId: 101, daysPlayed: 23, firstPlayed: day(60 * 24 * 75), lastPlayed: day(60 * 24), recent: fc, achievements: { unlocked: 8, points: 630, total: 24 } },
+            ],
+        }
+    }
+    if (path === '/me/points') {
+        return {
+            site: { earned: 2400, spent: 600, available: 1800 },
+            apps: [
+                { appId: 100, trusted: true, earned: 1650, spent: 400, available: 1250 },
+                { appId: 101, trusted: true, earned: 980, spent: 280, available: 700 },
+            ],
+            total: 3750,
+        }
+    }
+    if (path === '/store/directory') {
+        const r = (await real()) as { stores?: Obj[] } | null
+        const have = new Set((r?.stores ?? []).map((s) => s.appId))
+        return { stores: [...(r?.stores ?? []), ...(have.has(100) ? [] : [{ appId: 100, name: 'Playlot', items: 36 }])] }
+    }
+    if (path === '/friends') {
+        const r = (await real()) as Obj[] | null
+        if (!Array.isArray(r)) return r
+        const live: Obj[] = [
+            { status: 'in_game', appId: 101, appName: 'Fatal Contact', serverId: null, serverName: SERVERS[0].name, partyId: null, joinable: true, detail: SERVERS[0].map, updatedAt: iso(4) },
+            { status: 'online', appId: null, appName: null, serverId: null, serverName: null, partyId: null, joinable: false, detail: null, updatedAt: iso(1) },
+            { status: 'in_game', appId: 100, appName: 'Playlot', serverId: null, serverName: null, partyId: null, joinable: false, detail: null, updatedAt: iso(12) },
+        ]
+        return r.map((f, i) => (live[i] ? { ...f, presence: live[i] } : f))
     }
     if (path === '/play/page') {
         // A dev game with no art yet is a blank card in a marketing shot
