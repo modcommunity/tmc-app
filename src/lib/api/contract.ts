@@ -2842,6 +2842,15 @@ export const WorkshopMineItemSchema = z.object({
     via: z.object({ collectionId: z.number().int(), name: z.string() }).nullable().default(null),
     /** False when nothing would load right now. */
     available: z.boolean().default(true),
+    /**
+     * Why `available` is false: the pack is gone, hidden, has subscriptions
+     * off, has no READY version with a manifest, or every version runs code
+     * that still waits on review. Null when it loads.
+     */
+    unavailable: z
+        .enum(['missing', 'hidden', 'disabled', 'no_version', 'awaiting_review'])
+        .nullable()
+        .default(null),
 })
 
 export const WorkshopMineResponse = z.object({
@@ -2880,6 +2889,126 @@ export const AvatarOutfitsResponse = z.object({
     outfits: z.array(AvatarOutfitSchema),
 })
 
+// ------------------------------------------------------------- Workshop owner
+//
+// Browse the whole Workshop and manage the member's own packs from the app.
+// Written from what `ReadAppWorkshopCatalog`, `WorkshopOwnedFor`,
+// `PatchWorkshopItem` and `DeleteWorkshopItem` send and take.
+
+export const WORKSHOP_CATALOG_SORTS = ['popular', 'new', 'updated', 'name'] as const
+
+/** `GET /workshop/catalog`: the same query the hotspot catalog takes. */
+export const WorkshopCatalogQuery = z.object({
+    id: z.coerce.number().int().positive().optional(),
+    q: z.string().trim().max(100).optional(),
+    kind: z.string().trim().min(1).max(64).optional(),
+    /** An app url or numeric id. */
+    game: z.string().trim().min(1).max(200).optional(),
+    sort: z.enum(WORKSHOP_CATALOG_SORTS).default('popular'),
+    page: z.coerce.number().int().min(1).default(1),
+    per: z.coerce.number().int().min(1).max(100).default(24),
+})
+
+export const WorkshopCatalogGameSchema = z.object({
+    id: z.number().int(),
+    url: z.string().nullable(),
+    /** What `POST /workshop/scope` takes as `game`. */
+    contentId: z.string(),
+    name: z.string(),
+})
+
+export const WorkshopCatalogItemSchema = z.object({
+    id: z.number().int(),
+    name: z.string(),
+    summary: z.string().nullable(),
+    /** Markdown, only on a single-item (`id=`) read. */
+    body: z.string().nullable().default(null),
+    image: z.string().nullable(),
+    owner: z.object({ name: z.string(), url: z.string().nullable() }).nullable(),
+    official: z.boolean().default(false),
+    kinds: z.array(z.string()).default([]),
+    compat: z.enum(['any', 'listed']),
+    games: z.array(WorkshopCatalogGameSchema).default([]),
+    appId: z.number().int().nullable().default(null),
+    version: z.string(),
+    bytes: z.number(),
+    runsCode: z.boolean().default(false),
+    subscribers: z.number().int().default(0),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    webUrl: z.string(),
+})
+
+export const WorkshopCatalogResponse = z.object({
+    items: z.array(WorkshopCatalogItemSchema),
+    total: z.number().int(),
+    page: z.number().int(),
+    per: z.number().int(),
+    facets: z.object({
+        kinds: z.array(z.string()),
+        games: z.array(WorkshopCatalogGameSchema),
+    }),
+    /** Asset ids on this page the member subscribes to (empty signed out). */
+    subscribed: z.array(z.number().int()).default([]),
+})
+
+/** One of the member's own packs in `GET /workshop/owned`. */
+export const WorkshopOwnedItemSchema = z.object({
+    id: z.number().int(),
+    name: z.string(),
+    summary: z.string().nullable(),
+    image: z.string().nullable(),
+    webUrl: z.string(),
+    /** `none` = not offered in the Workshop. */
+    compat: z.enum(['none', 'any', 'listed']),
+    /** Game ids a `listed` pack is offered on. */
+    games: z.array(z.number().int()).default([]),
+    hidden: z.boolean().default(false),
+    subscribers: z.number().int().default(0),
+    version: z
+        .object({
+            version: z.string(),
+            runsCode: z.boolean(),
+            approved: z.boolean(),
+            kinds: z.array(z.string()),
+        })
+        .nullable(),
+    /** A version members can load right now (approved, or runs no code). */
+    listable: z.boolean(),
+    /** Some READY version provides a block, so it may be offered at all. */
+    canList: z.boolean(),
+})
+
+export const WorkshopOwnedResponse = z.object({
+    items: z.array(WorkshopOwnedItemSchema),
+    /** Every game that takes subscriptions: the choices for a `listed` pack. */
+    choices: z.array(z.object({ id: z.number().int(), contentId: z.string(), name: z.string() })),
+})
+
+/** `PATCH /workshop/item`: the owner's edit. Absent fields are left alone. */
+export const WorkshopItemPatchRequest = z
+    .object({
+        id: z.number().int().positive(),
+        name: z.string().trim().min(1).max(100).optional(),
+        summary: z.string().trim().max(500).optional(),
+        compat: z.enum(['none', 'any', 'listed']).optional(),
+        /** Game ids, with `compat: 'listed'`. */
+        games: z.array(z.number().int().positive()).max(200).optional(),
+    })
+    .refine((r) => r.games === undefined || r.compat === 'listed', {
+        message: 'games goes with compat: listed',
+        path: ['games'],
+    })
+
+/** `DELETE /workshop/item`. */
+export const WorkshopItemDeleteRequest = z.object({ id: z.number().int().positive() })
+
+export const WorkshopItemWriteResponse = z.object({ ok: z.literal(true), id: z.number().int() })
+
+export type WorkshopCatalogQueryT = z.infer<typeof WorkshopCatalogQuery>
+export type WorkshopCatalogItemAppT = z.infer<typeof WorkshopCatalogItemSchema>
+export type WorkshopOwnedItemT = z.infer<typeof WorkshopOwnedItemSchema>
+export type WorkshopItemPatchRequestT = z.infer<typeof WorkshopItemPatchRequest>
 export type WorkshopMineItemT = z.infer<typeof WorkshopMineItemSchema>
 export type PointsSummaryResponseT = z.infer<typeof PointsSummaryResponse>
 export type AvatarOutfitT = z.infer<typeof AvatarOutfitSchema>

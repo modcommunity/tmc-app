@@ -47,7 +47,11 @@ import {
     type PlayPageQueryT,
     type SubKindT,
     type UserSettingsT,
+    WorkshopCatalogResponse,
+    WorkshopItemWriteResponse,
     WorkshopMineResponse,
+    WorkshopOwnedResponse,
+    type WorkshopCatalogQueryT,
     WorkshopScopeResponse,
     PointsSummaryResponse,
     AvatarOutfitsResponse,
@@ -209,6 +213,26 @@ export const api = {
         subscriptionId: string,
         change: { all: boolean } | { game: string; on: boolean }
     ) => send('POST', '/workshop/scope', WorkshopScopeResponse, { subscriptionId, ...change }),
+
+    /** The whole Workshop: search, kind and game filters, sort, page; plus what is subscribed. */
+    workshopCatalog: (q: Partial<WorkshopCatalogQueryT> = {}) =>
+        get('/workshop/catalog', WorkshopCatalogResponse, q, true),
+
+    /** The member's own packs that are, or can be, offered in the Workshop. */
+    workshopOwned: () => get('/workshop/owned', WorkshopOwnedResponse, undefined, true),
+
+    /** Owner edit: name, summary, and where it is offered (`none`/`any`/`listed` + game ids). */
+    workshopItemPatch: (patch: {
+        id: number
+        name?: string
+        summary?: string
+        compat?: 'none' | 'any' | 'listed'
+        games?: number[]
+    }) => send('PATCH', '/workshop/item', WorkshopItemWriteResponse, patch),
+
+    /** Owner delete. */
+    workshopItemDelete: (id: number) =>
+        send('DELETE', '/workshop/item', WorkshopItemWriteResponse, { id }),
 
     /** Points in every pool. */
     myPoints: () => get('/me/points', PointsSummaryResponse, undefined, true),
