@@ -40,3 +40,6 @@ src-tauri/gen/apple
 # The updater signing keypair (`npx tauri signer generate`). The PRIVATE half
 # and its password go into GitHub secrets and nowhere else; see docs/RELEASING.md.
 .secrets/
+scripts/shots/node_modules
+scripts/shots/.vite
+scripts/shots/out

@@ -1,0 +1,16 @@
+{
+    "name": "gamespice-app-shots",
+    "private": true,
+    "type": "module",
+    "description": "Screenshots of the GameSpice App and the marketing frames, slides, PDF and deck built from them",
+    "license": "GPL-3.0-only",
+    "scripts": {
+        "capture": "node capture.mjs",
+        "marketing": "node compose.mjs"
+    },
+    "dependencies": {
+        "playwright": "1.61.1",
+        "pptxgenjs": "^4.0.1",
+        "sharp": "^0.35.5"
+    }
+}
