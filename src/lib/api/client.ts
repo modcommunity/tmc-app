@@ -67,6 +67,9 @@ import {
 
 const RawJson = z.unknown()
 
+/** A document whose shape the avatar studio checks itself. */
+const StudioDocSchema = z.record(z.string(), z.unknown())
+
 async function get<S extends z.ZodType>(
     path: string,
     schema: S,
@@ -184,6 +187,17 @@ export const api = {
 
     avatarWearableEquip: (wearableId: number, equipped: boolean, appId?: number) =>
         send('PUT', '/avatar/wearables', z.unknown(), { wearableId, equipped, appId }),
+
+    // ---- Avatar studio (`@modcommunity/shared/avatar`): the documents are handed
+    // on as the server sent them; the studio's own guards (ParseManifest and
+    // friends) read their shape, so this layer only insists on "an object".
+
+    /** One of the member's avatar documents (`avatar`, `avatar/schema`, `avatar/wearables`, `avatar/actions`, `me/points`). */
+    studioGet: (path: string, query?: Record<string, QueryValue>) =>
+        get(path, StudioDocSchema, query, true),
+
+    /** One studio write to `/api/app/v1` (`avatar`, `avatar/wearables`, `avatar/actions`, `avatar/outfits`). */
+    studioPut: (path: string, body: unknown) => send('PUT', path, z.unknown(), body),
 
     // ---- GameSpice hub reads (shapes in the contract, section GameSpice hub)
 

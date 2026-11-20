@@ -105,6 +105,26 @@ export type QueryRequestT = {
     wantPlayers?: boolean
 }
 
+/** A raw avatar document, or null for "none" and "off"; the studio's own guards read the shape. */
+const AvatarDocOrNull = z.record(z.string(), z.unknown()).nullable()
+
+/** `tauri::ipc::Response` arrives as an ArrayBuffer (a number array on a webview without raw IPC). */
+const BytesSchema = z.union([
+    z.instanceof(ArrayBuffer),
+    z.custom<ArrayBufferView>((v) => ArrayBuffer.isView(v)),
+    z.array(z.number().int().min(0).max(255)),
+])
+
+function toBuffer(raw: z.infer<typeof BytesSchema>): ArrayBuffer {
+    if (raw instanceof ArrayBuffer) return raw
+
+    const bytes = Array.isArray(raw)
+        ? Uint8Array.from(raw)
+        : new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength)
+
+    return bytes.slice().buffer
+}
+
 /** Every Rust command the app can call, in one place and each parsed. */
 export const ipc = {
     // --------------------------------------------------------------- Session
@@ -121,6 +141,21 @@ export const ipc = {
      * the app phishable by anything that can run a line of script in it.
      */
     apiEnv: () => call('api_env', ApiEnvSchema),
+
+    // ---------------------------------------------------------------- Avatar
+    /** TMC's built-in figure; null when TMC has none. */
+    avatarManifest: () => call('avatar_manifest', AvatarDocOrNull),
+    /** One game's avatar library; null when avatars are off for it. */
+    avatarLibrary: (appId: number) => call('avatar_library', AvatarDocOrNull, { appId }),
+    /** The member's avatar for one game; null when none is saved. */
+    avatarMe: (appId: number) => call('avatar_me', AvatarDocOrNull, { appId }),
+    avatarMePut: (body: unknown) => call('avatar_me_put', z.unknown(), { body }),
+    /**
+     * A model file's bytes. The webview names the URL, Rust checks it against
+     * what TMC itself listed (docs/avatar.md) and refuses anything else.
+     */
+    avatarAsset: async (url: string, appId: number | null, me: boolean) =>
+        toBuffer(await call('avatar_asset', BytesSchema, { url, appId, me })),
 
     // -------------------------------------------------------------- Settings
     settingsGet: () => call('settings_get', AppSettingsSchema),

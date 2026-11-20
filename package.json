@@ -58,6 +58,7 @@
         "react-dom": "^19.1.0",
         "react-icons": "^5.4.0",
         "react-router-dom": "^7.1.1",
+        "three": "^0.187.0",
         "zod": "^4.6.7"
     },
     "devDependencies": {
@@ -66,6 +67,7 @@
         "@tauri-apps/cli": "^2",
         "@types/react": "^19.1.8",
         "@types/react-dom": "^19.1.6",
+        "@types/three": "^0.187.0",
         "@vitejs/plugin-react": "^6.0.2",
         "eslint": "^10.13.0",
         "eslint-plugin-react-hooks": "^7.1.1",
