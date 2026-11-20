@@ -154,7 +154,12 @@ jobs:
                   echo "Updater endpoint: ${TMC_UPDATER_ENDPOINT}"
 
                   if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
-                      extra=(--config '{"bundle":{"createUpdaterArtifacts":true}}')
+                      # The CLI decodes plugins.updater.pubkey when it signs, and
+                      # tauri.conf.json leaves it empty on purpose (the app reads
+                      # its key from build.rs), so hand it the same key here.
+                      pub="${TMC_UPDATER_PUBKEY:-$(tr -d '\r\n' < src-tauri/updater.pub)}"
+                      cfg="$(PUB="$pub" node -e 'console.log(JSON.stringify({bundle:{createUpdaterArtifacts:true},plugins:{updater:{pubkey:process.env.PUB}}}))')"
+                      extra=(--config "$cfg")
                       echo "Signing updater artifacts."
                   else
                       echo "::warning::No TAURI_SIGNING_PRIVATE_KEY secret, so this release is unsigned and download-only: installed apps will show the banner and open the download page rather than installing. See docs/RELEASING.md."
