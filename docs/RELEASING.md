@@ -160,3 +160,14 @@ The source repo is now `gamespice-platform/app` and the product is the GameSpice
 **After the update the app is the GameSpice App.** On first start it moves its data directory from `…/com.moddingcommunity.app` to `…/gamespice-app` and leaves a link at the old path, and moves the stored sign-in to the `gamespice-app` keychain service (`tmc_core::rename`; [settings-and-logging.md](settings-and-logging.md#where-files-live)). The bundle identifier stays `com.moddingcommunity.app`, so the OS and the updater treat it as the same program.
 
 **Windows: the product name changed** (`TMC` → `GameSpice App`), and the NSIS installer's directory and Start-menu entry follow it. The updater runs the new setup in place; check on the first bridged release that it replaces the old entry rather than adding a second one, and uninstall the old entry by hand if it does not.
+
+## Windows code signing (the "Publisher" in SmartScreen)
+
+Without an Authenticode certificate the installer shows **Unknown publisher** and SmartScreen warns. The release workflow signs the Windows bundles when either is configured (otherwise it warns and ships unsigned):
+
+| Option | Secrets / variables |
+|---|---|
+| PFX certificate (OV/EV) | secrets `WINDOWS_CERTIFICATE` (`base64 -w0 cert.pfx`), `WINDOWS_CERTIFICATE_PASSWORD` |
+| Azure Trusted Signing | secrets `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`; variables `AZURE_SIGNING_ENDPOINT`, `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE` |
+
+The publisher name is the certificate's subject. EV certificates (and Azure Trusted Signing) clear SmartScreen immediately; OV builds reputation over time.

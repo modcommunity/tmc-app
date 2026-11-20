@@ -142,8 +142,39 @@ jobs:
                   REPO: ${{ github.repository }}
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+                  # Windows Authenticode (what SmartScreen's "Publisher" reads).
+                  # Either a PFX/OV/EV certificate, or Azure Trusted Signing.
+                  WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+                  WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+                  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+                  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+                  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+                  AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+                  AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+                  AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
               run: |
                   extra=()
+
+                  # THE PUBLISHER SHOWN BY WINDOWS COMES ONLY FROM A TRUSTED CODE
+                  # SIGNING CERTIFICATE. Unsigned installers read "Unknown
+                  # publisher" and trip SmartScreen. Not configured = warning.
+                  if [ "${{ matrix.name }}" = "windows" ]; then
+                      if [ -n "${WINDOWS_CERTIFICATE:-}" ]; then
+                          echo "$WINDOWS_CERTIFICATE" | base64 -d > "$RUNNER_TEMP/codesign.pfx"
+                          thumb="$(pwsh -NoProfile -Command "\$p=ConvertTo-SecureString \$env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force; (Import-PfxCertificate -FilePath '$RUNNER_TEMP/codesign.pfx' -CertStoreLocation Cert:\\CurrentUser\\My -Password \$p).Thumbprint")"
+                          cfg="$(T="$thumb" node -e 'console.log(JSON.stringify({bundle:{windows:{certificateThumbprint:process.env.T,digestAlgorithm:"sha256",timestampUrl:"http://timestamp.digicert.com"}}}))')"
+                          extra+=(--config "$cfg")
+                          echo "Authenticode signing with the imported certificate."
+                      elif [ -n "${AZURE_CLIENT_SECRET:-}" ] && [ -n "${AZURE_SIGNING_ACCOUNT:-}" ]; then
+                          cargo install trusted-signing-cli --locked
+                          cmd="trusted-signing-cli -e ${AZURE_SIGNING_ENDPOINT} -a ${AZURE_SIGNING_ACCOUNT} -c ${AZURE_SIGNING_PROFILE} -d GameSpice %1"
+                          cfg="$(C="$cmd" node -e 'console.log(JSON.stringify({bundle:{windows:{signCommand:process.env.C}}}))')"
+                          extra+=(--config "$cfg")
+                          echo "Authenticode signing with Azure Trusted Signing."
+                      else
+                          echo "::warning::No Windows code-signing certificate (WINDOWS_CERTIFICATE or AZURE_* secrets): the installer shows 'Unknown publisher' and SmartScreen warns. See docs/RELEASING.md."
+                      fi
+                  fi
 
                   if [ -z "${TMC_UPDATER_ENDPOINT:-}" ] && [ -n "${S3_PUBLIC_URL:-}" ]; then
                       export TMC_UPDATER_ENDPOINT="${S3_PUBLIC_URL%/}/downloads/gamespice-app/latest.json"
@@ -159,7 +190,7 @@ jobs:
                       # its key from build.rs), so hand it the same key here.
                       pub="${TMC_UPDATER_PUBKEY:-$(tr -d '\r\n' < src-tauri/updater.pub)}"
                       cfg="$(PUB="$pub" node -e 'console.log(JSON.stringify({bundle:{createUpdaterArtifacts:true},plugins:{updater:{pubkey:process.env.PUB}}}))')"
-                      extra=(--config "$cfg")
+                      extra+=(--config "$cfg")
                       echo "Signing updater artifacts."
                   else
                       echo "::warning::No TAURI_SIGNING_PRIVATE_KEY secret, so this release is unsigned and download-only: installed apps will show the banner and open the download page rather than installing. See docs/RELEASING.md."
