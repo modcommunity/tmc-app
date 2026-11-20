@@ -1,6 +1,6 @@
 [![GameSpice App](docs/banner.png)](https://gamespice.net/app)
 
-The **official** GameSpice App (Powered by TMC), the desktop home for GameSpice games and the Modding Community: Play, Library, Discover and Servers in one app, built with [Tauri 2](https://tauri.app/), [Rust](https://rust-lang.org/) and [React](https://react.dev/). Its deep links use `gs://` and `gs://`.
+The **official** GameSpice App (Powered by TMC), the desktop home for GameSpice games and the Modding Community: Play, Library, Discover and Servers in one app, built with [Tauri 2](https://tauri.app/), [Rust](https://rust-lang.org/) and [React](https://react.dev/). Its deep links use `gs://` (`tmc://` still works).
 
 ## Previews
 Shot from the running app in its dark theme, with a demo account on the dev site. Sandboxes, game folders and downloads are seeded, so what you see on your own machine will differ. The screenshots and the banner are rebuilt with `scripts/shots/make-banner.mjs`, see [`scripts/shots/README.md`](scripts/shots/README.md).
@@ -173,7 +173,7 @@ Your game is not here? It is four JSON files under `plugins/app/<slug>/` and no
 code. See [`docs/extending.md`](docs/extending.md) for more details.
 
 ## Security
-Found something? **Please do not open a public issue** —
+Found something? **Please do not open a public issue**,
 [`SECURITY.md`](SECURITY.md) has the private reporting route, the threat model
 the app is built around, and the list of things that look like holes and are
 deliberate (RCON reaching private addresses is the usual one).
