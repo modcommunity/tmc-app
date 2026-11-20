@@ -403,6 +403,32 @@ input[type='range']::-moz-range-thumb {
     color: var(--foreground);
 }
 
+/* Chart marks grow from their baseline on first paint (Stats screen); the
+ * reduced-motion block below collapses them to their end state. */
+@keyframes gs-grow {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+}
+@keyframes gs-grow-x {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+@keyframes gs-rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+.gs-grow {
+    transform-origin: bottom;
+    animation: gs-grow 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.gs-grow-x {
+    transform-origin: left;
+    animation: gs-grow-x 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.gs-rise {
+    animation: gs-rise 360ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

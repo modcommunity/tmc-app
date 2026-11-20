@@ -13,7 +13,7 @@ import { dayLabel, sparkPath } from '~/lib/gamespice/stats'
 export function ActivityBars({
     series,
     since,
-    accent = 'var(--color-accent)',
+    accent = 'var(--accent)',
     height = 112,
     unit = 'game',
 }: {
@@ -54,7 +54,7 @@ export function ActivityBars({
                                 className="gs-grow block w-full rounded-t-[4px] transition-[opacity,transform] duration-200 group-focus-visible:ring-2 group-focus-visible:ring-accent"
                                 style={{
                                     height: v > 0 ? `${Math.max(6, (v / max) * 100)}%` : 3,
-                                    background: v > 0 ? accent : 'var(--color-border)',
+                                    background: v > 0 ? accent : 'var(--border)',
                                     opacity: shown === null || shown === i ? 1 : 0.45,
                                     animationDelay: `${i * 12}ms`,
                                 }}
@@ -124,7 +124,7 @@ export function Sparkline({
 /** A ring showing a percentage, with the figure in the middle. */
 export function ProgressRing({
     value,
-    accent = 'var(--color-accent)',
+    accent = 'var(--accent)',
     size = 56,
     label,
 }: {
@@ -140,7 +140,7 @@ export function ProgressRing({
     return (
         <div className="relative shrink-0" style={{ width: size, height: size }} role="img" aria-label={`${label}: ${pct}%`}>
             <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} className="-rotate-90">
-                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-border)" strokeWidth={6} />
+                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border)" strokeWidth={6} />
                 <circle
                     cx={size / 2}
                     cy={size / 2}

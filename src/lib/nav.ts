@@ -1,4 +1,6 @@
 import {
+    FiBarChart2,
+    FiShoppingBag,
     FiBox,
     FiDownload,
     FiDownloadCloud,
@@ -97,6 +99,22 @@ export const GAMESPICE_ACCOUNT: NavNode = {
     label: 'My GameSpice',
     icon: FiAward,
     description: 'Points and saved outfits.',
+}
+
+export const STORE: NavNode = {
+    id: 'store',
+    to: '/store',
+    label: 'Store',
+    icon: FiShoppingBag,
+    description: 'Every game store, your inventory and loadouts.',
+}
+
+export const STATS: NavNode = {
+    id: 'stats',
+    to: '/stats',
+    label: 'Stats',
+    icon: FiBarChart2,
+    description: 'Days played, streaks, achievements and leaderboards.',
 }
 
 export const DISCOVER: NavNode = {
@@ -275,6 +293,8 @@ export const RAIL: NavNode[] = [
     LIBRARY,
     AVATAR,
     GAMESPICE_ACCOUNT,
+    STORE,
+    STATS,
     FRIENDS,
     CONSOLE,
     SETTINGS,

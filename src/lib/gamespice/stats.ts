@@ -99,7 +99,7 @@ export function playShare(
     if (total <= 0) return []
 
     const sorted = [...games].sort((a, b) => b.daysPlayed - a.daysPlayed || a.appId - b.appId)
-    const head = sorted.slice(0, top).map((g) => ({ appId: g.appId as number | null, days: g.daysPlayed }))
+    const head: { appId: number | null; days: number }[] = sorted.slice(0, top).map((g) => ({ appId: g.appId, days: g.daysPlayed }))
     const rest = sorted.slice(top).reduce((n, g) => n + g.daysPlayed, 0)
 
     if (rest > 0) head.push({ appId: null, days: rest })

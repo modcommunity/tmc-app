@@ -6,6 +6,7 @@ import { api } from '~/lib/api/client'
 import { useAuth } from '~/lib/auth/provider'
 import { messageOf } from '~/lib/ipc'
 import { BTN_GHOST } from '~/components/play-center'
+import { StatsStrip } from '~/routes/stats'
 
 /**
  * **My GameSpice** — points and saved outfits. Both are the member's own, so
@@ -44,6 +45,8 @@ export default function GameSpiceAccountRoute() {
                     <Link to="/settings/account" className="underline">Account settings</Link>
                 </p>
             </header>
+
+            <StatsStrip />
 
             <section className="flex flex-col gap-2">
                 <h2 className="text-sm font-semibold">Points</h2>

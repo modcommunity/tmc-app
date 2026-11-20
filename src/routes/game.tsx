@@ -238,7 +238,7 @@ function TopServers({ appId }: { appId: number }) {
     )
 }
 
-function Leaderboards({ appId }: { appId: number }) {
+export function Leaderboards({ appId }: { appId: number }) {
     const { status } = useAuth()
     const [params, setParams] = useSearchParams()
     const [typed, setTyped] = useState('')
