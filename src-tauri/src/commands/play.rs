@@ -7,7 +7,7 @@
 //!     of its own. [`play_open_web`].
 //!   * **A hand-off** — the site's `playAppUri` resolved to a URI the OS opens.
 //!     [`play_handoff`]. Rare, and it exists for completeness: that URI is
-//!     normally `tmc://`, which addresses this process.
+//!     normally `gs://`, which addresses this process.
 //!   * **The copy installed on this machine**, which is not here at all. That
 //!     is a sandbox launch, it goes through `commands::sandbox`, and the server
 //!     has no way of knowing whether it is possible — so it is not the server's
@@ -425,7 +425,7 @@ fn open_window(
 /// Resolve the site's `playAppUri` and hand it to the OS.
 ///
 /// Present for completeness rather than for daily use: that template normally
-/// produces a `tmc://` link, which addresses the process reading it. It earns
+/// produces a `gs://` link, which addresses the process reading it. It earns
 /// its place for an app whose URI names a DIFFERENT client — a game with its
 /// own launcher protocol — which is a thing the column can express and nothing
 /// else here could act on.

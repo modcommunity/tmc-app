@@ -12,7 +12,7 @@ import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
 import type { ContentSummaryT } from '~/lib/api/contract'
 
 /**
- * **Join** — where a `tmc://play/<host>:<port>` link lands.
+ * **Join** — where a `gs://play/<host>:<port>` link lands.
  *
  * THE LINK SHOWS THIS PAGE. IT DOES NOT JOIN.
  * ------------------------------------------

@@ -33,3 +33,15 @@ What this does *not* establish is that a human chose the path. That came from th
 - Every plugin step, every download URL, every jail refusal, every permission grant lands here.
 
 Write with the `audit!` macro. Never put a token or a credential in `data`.
+
+## Where files live
+
+On desktop the data directory (`settings.json`, `library.sqlite3`, plugins, staging, backups) is `gamespice-app` under the platform's app-data root: `~/.local/share/gamespice-app` on Linux, `%APPDATA%\gamespice-app` on Windows, `~/Library/Application Support/gamespice-app` on macOS. The audit log and cache follow the same name. Tauri would name them after the bundle identifier, which stays `com.moddingcommunity.app` so updates install over the old app, so `AppPaths::resolve` renames them (`gamespice_dirs` in `src-tauri/src/paths.rs`, rules in `tmc_core::rename`):
+
+- **An install from before the rename is moved once, and the old path becomes a link to the new one.** The library stores absolute paths into the data directory and symlink-strategy sandboxes link into staging, so the old path has to keep resolving.
+- **Where the link cannot be made** (Windows without the right to create symlinks), the move is undone and the app keeps using `com.moddingcommunity.app`, with a warning in the log. A working install under the old name beats a renamed one with dangling paths.
+- **Two directories are never merged.** If both exist, the new one is used and the old one is left alone.
+- **The audit log** (`activity.jsonl`) moves with the data, or on its own where the log directory is elsewhere (macOS, Windows). The cache is scratch and is not moved.
+- **The stored sign-in** moves from the `com.moddingcommunity.app` keychain service to `gamespice-app` the first time it is read; the old entry is deleted only after the new one was written (`secure::keyring_get`).
+
+The WebView's own storage stays where Tauri puts it, keyed by the identifier, so nothing in it is lost. Mobile is unaffected: there everything is inside the app's container.

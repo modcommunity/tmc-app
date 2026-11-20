@@ -51,7 +51,7 @@ Out of `npm run build:windows`:
 
 - `TMC.exe`
 - a Start Menu shortcut under *The Modding Community*
-- the `tmc://` scheme in `HKLM\Software\Classes` — the app cannot register this for itself in a per-machine install, and without it every deep link in the app is dead
+- the `gs://` scheme in `HKLM\Software\Classes` — the app cannot register this for itself in a per-machine install, and without it every deep link in the app is dead
 - an `Upgrade` row, so installing a newer version replaces the old one rather than sitting beside it
 
 Inspect one without Windows: `msiinfo tables x.msi`, `msiinfo export x.msi File`.
@@ -100,7 +100,7 @@ Moved to [`RELEASING.md`](RELEASING.md): the signing keypair (the public half is
 curl -fsSL https://raw.githubusercontent.com/gamespice-platform/app/main/scripts/install.sh | sh
 ```
 
-Downloads the AppImage for the running architecture, verifies it against the release's `checksums.txt`, and registers a launcher entry, an icon and the `tmc://` scheme. No root — everything lands under `~/.local` unless it is run as root, in which case `/usr/local`. It does not call `sudo` for you.
+Downloads the AppImage for the running architecture, verifies it against the release's `checksums.txt`, and registers a launcher entry, an icon and the `gs://` scheme. No root — everything lands under `~/.local` unless it is run as root, in which case `/usr/local`. It does not call `sudo` for you.
 
 ```bash
 … | sh -s -- --uninstall           # removes exactly what it wrote
@@ -110,4 +110,4 @@ TMC_APPIMAGE=./TMC_0.1.0_amd64.AppImage sh scripts/install.sh   # a build you ma
 
 Where libfuse2 is absent the AppImage is unpacked into `~/.local/lib/tmc` and `~/.local/bin/tmc` becomes a symlink to its `AppRun` — same files, no mount.
 
-**Windows** — the `-setup.exe`, or the `.msi` for deployment. Both register `tmc://`; the MSI is per-machine and needs elevation.
+**Windows** — the `-setup.exe`, or the `.msi` for deployment. Both register `gs://`; the MSI is per-machine and needs elevation.

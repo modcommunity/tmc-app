@@ -160,7 +160,7 @@ pub struct UpdateCheck {
 ///
 /// `TMC_UPDATER_PUBKEY` is filled by `build.rs` from `updater.pub` when the
 /// environment does not set it; `TMC_UPDATER_ENDPOINT` is the public
-/// `latest.json` the release workflow uploads (`downloads/tmc-app/latest.json`
+/// `latest.json` the release workflow uploads (`downloads/gamespice-app/latest.json`
 /// under the S3 bucket's public URL) and is unset in a developer build, which
 /// then asks the site.
 fn compiled() -> Compiled<'static> {

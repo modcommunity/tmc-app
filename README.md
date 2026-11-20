@@ -1,4 +1,4 @@
-The **official** GameSpice App (Powered by TMC), the desktop home for GameSpice games and the Modding Community: Play, Library, Discover and Servers in one app, built with [Tauri 2](https://tauri.app/), [Rust](https://rust-lang.org/) and [React](https://react.dev/). Its deep links use `gs://` and `tmc://`.
+The **official** GameSpice App (Powered by TMC), the desktop home for GameSpice games and the Modding Community: Play, Library, Discover and Servers in one app, built with [Tauri 2](https://tauri.app/), [Rust](https://rust-lang.org/) and [React](https://react.dev/). Its deep links use `gs://` and `gs://`.
 
 ## What It Does
 ### Mod Management
@@ -13,7 +13,7 @@ The **official** GameSpice App (Powered by TMC), the desktop home for GameSpice 
 - **Integrated Game Launcher**: Launch external games from the app, or launch integrated games right within the built-in Game Player — in a window of its own or full screen.
 - **Install TMC's own games**: Games we publish are downloaded and installed by the app for whatever machine you are on, kept up to date automatically, and started as real programs rather than in a browser. You can turn automatic updates off per game, and remove one at any time.
 - **UDP or TCP**: TMC games join over UDP by default; Settings → Games → *Connect over UDP* off switches to TCP (WebSocket) for networks that drop UDP. Both kinds of player share the same server.
-- **Join from a link**: A `tmc://play/<host>:<port>` link from the website opens the app on that server — showing which game is running there and the latency measured from *your* machine — with the ways you can actually join it. It never joins on its own.
+- **Join from a link**: A `gs://play/<host>:<port>` link from the website opens the app on that server — showing which game is running there and the latency measured from *your* machine — with the ways you can actually join it. It never joins on its own.
 - **Find fun games or servers**: Our gaming platform relies on third-party communities creating games and servers. Browse these games and servers right through our app and connect to them with one click!
 - **Assets**: Automatically download and install game assets onto servers where the game supports it (integrated games only).
 - **Game pages**: Every game has its own page — play it, see its busiest servers, and browse its **leaderboards** for any stat its servers record, with your own rank and figures beside them.
@@ -46,12 +46,12 @@ One line, no root, no package manager, just `curl` and `sh`:
 curl -fsSL https://raw.githubusercontent.com/gamespice-platform/app/main/scripts/install.sh | sh
 ```
 
-The script verifies the download against the release's checksums, installs into `~/.local`, and registers the launcher entry and the `tmc://` scheme. Undo it with `… | sh -s -- --uninstall`.
+The script verifies the download against the release's checksums, installs into `~/.local`, and registers the launcher entry and the `gs://` scheme. Undo it with `… | sh -s -- --uninstall`.
 
 ### Windows
 You can install the app onto your computer using the `setup` executables (`setup.exe` or `setup.msi`) in the releases.
 
-The `portable` executable is also available for those who want to run the app without installing it. The portable version **DOES NOT** register the launcher entry or the `tmc://` scheme.
+The `portable` executable is also available for those who want to run the app without installing it. The portable version **DOES NOT** register the launcher entry or the `gs://` scheme.
 
 ### macOS
 Install using the included `.dmg` file.

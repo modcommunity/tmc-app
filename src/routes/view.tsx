@@ -148,7 +148,7 @@ export default function ViewRoute() {
     const [playTarget, setPlayTarget] = useState<PlayTargetT | null>(null)
 
     /*
-     * Set by a `tmc://install/…` deep link — see `lib/hooks/use-deep-link`. All
+     * Set by a `gs://install/…` deep link — see `lib/hooks/use-deep-link`. All
      * it does is draw a ring around the install controls, because somebody who
      * pressed a button in their browser and landed here needs to be shown where
      * the next button is. It does not install anything: a link that could would

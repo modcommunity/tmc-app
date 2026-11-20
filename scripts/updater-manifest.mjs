@@ -4,7 +4,7 @@
  *
  *   node scripts/updater-manifest.mjs \
  *     --dir artifacts --version 0.3.0 \
- *     --base-url https://cdn.example.com/downloads/tmc-app/0.3.0 \
+ *     --base-url https://cdn.example.com/downloads/gamespice-app/0.3.0 \
  *     --out latest.json [--notes "…"]
  *
  * Reads every `<file>.sig` in `--dir` beside its `<file>`, maps the pair to the

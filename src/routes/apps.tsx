@@ -255,7 +255,7 @@ export default function AppsRoute() {
     }
 
     /*
-     * `tmc://play/app/<slug>` lands here with `?app=&start=1`.
+     * `gs://play/app/<slug>` lands here with `?app=&start=1`.
      *
      * The link opens the launch dialog and nothing else — the deep-link rule is
      * that a link may ask the app to SHOW something, and a dialog with a Play

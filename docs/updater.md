@@ -26,9 +26,13 @@ So:
 
 ## Cutting a release is pushing a tag
 
-`release.yml` signs each bundle, verifies the signatures, uploads everything to `downloads/tmc-app/<version>/` on the bucket, writes `latest-beta.json` (and, for a non-pre-release tag, `latest.json`) LAST because they are the switch, publishes the GitHub release, and — when `TMC_RELEASE_TOKEN` is set — posts the lot to `POST /api/app/v1/releases` in one call so the site's routes agree. Every step that is not configured warns and skips.
+`release.yml` signs each bundle, verifies the signatures, uploads everything to `downloads/gamespice-app/<version>/` on the bucket, writes `latest-beta.json` (and, for a non-pre-release tag, `latest.json`) LAST because they are the switch, publishes the GitHub release, and — when `TMC_RELEASE_TOKEN` is set — posts the lot to `POST /api/app/v1/releases` in one call so the site's routes agree. Every step that is not configured warns and skips.
 
 `scripts/release-targets.mjs` is the one filename → platform table, shared by the static manifest (`updater-manifest.mjs`) and the site publish (`publish-release.mjs`), and pinned by a vitest. macOS ships the `.app.tar.gz`, not the `.dmg`; Windows prefers the `-setup.exe` over the `.msi`, which does not bootstrap WebView2; the manifest carries `{os}-{arch}-{bundle}` keys too, so an MSI install updates from the MSI.
+
+## Installs from before the rename
+
+The updater public key is unchanged, so old installs verify new bundles; what they need is to *find* them. The workflow writes the manifests under the old `downloads/tmc-app/` prefix too, and `scripts/bridge-release.sh` publishes a `latest.json`-only release on `modcommunity/tmc-app` for installs that poll that repository. [RELEASING.md](RELEASING.md#the-repository-moved) has the table of who reaches the new release how.
 
 ## Three refusals worth keeping
 

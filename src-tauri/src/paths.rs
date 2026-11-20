@@ -37,6 +37,9 @@ impl AppPaths {
             .app_cache_dir()
             .map_err(|e| AppError::internal(format!("no cache dir: {e}")))?;
 
+        #[cfg(desktop)]
+        let (data, logs, cache) = gamespice_dirs(data, logs, cache);
+
         let plugins = data.join("plugins");
 
         for dir in [&data, &logs, &cache, &plugins] {
@@ -129,4 +132,44 @@ impl AppPaths {
     pub fn library_file(&self) -> PathBuf {
         self.data.join("library.sqlite3")
     }
+}
+
+/// The desktop directories under the GameSpice App's own name, moving an
+/// install from before the rename across first.
+///
+/// Tauri derives every path from the bundle identifier, which stays
+/// `com.moddingcommunity.app` so updates install over the old app; the
+/// directories are renamed here instead. `tmc_core::rename` has the rules: the
+/// data directory is moved once and the old path left as a link to it (the
+/// library records absolute paths into it), and when that cannot be done
+/// safely the old directory stays in use. The cache is not moved — it is
+/// scratch space — and the audit log follows the data when it lives elsewhere.
+#[cfg(desktop)]
+fn gamespice_dirs(data: PathBuf, logs: PathBuf, cache: PathBuf) -> (PathBuf, PathBuf, PathBuf) {
+    use tmc_core::rename::{migrate_dir, migrate_file, rebase, Migration};
+
+    let Some(new_data) = rebase(&data) else {
+        return (data, logs, cache);
+    };
+
+    let data = match migrate_dir(&data, &new_data) {
+        Migration::NotNeeded | Migration::Moved => new_data,
+        Migration::KeptLegacy(why) => {
+            tracing::warn!("keeping the pre-rename data directory: {why}");
+            return (data, logs, cache);
+        }
+    };
+
+    let logs = match rebase(&logs) {
+        Some(new_logs) => {
+            let file = "activity.jsonl";
+            migrate_file(&logs.join(file), &new_logs.join(file));
+            new_logs
+        }
+        None => logs,
+    };
+
+    let cache = rebase(&cache).unwrap_or(cache);
+
+    (data, logs, cache)
 }

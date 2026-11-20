@@ -64,7 +64,7 @@ Reported often enough to be worth listing:
 - **A signed plugin is confined exactly as an unsigned one is.** A signature
   says a holder of that key produced those permissions and those steps. It says
   nothing about whether they are safe.
-- **`tmc://` links do nothing but show a page.** If you find one that performs
+- **`gs://` links do nothing but show a page.** If you find one that performs
   an action, that _is_ a vulnerability — the closed list is in
   `core/src/deeplink.rs` and its test names the shapes that must never start
   working.
@@ -98,7 +98,7 @@ Reported often enough to be worth listing:
 | Encryption at rest                           | `src-tauri/core/src/crypto.rs`            |
 | Plugin signatures and the trust store        | `src-tauri/core/src/plugins/signature.rs` |
 | Extraction limits, zip-slip, tar links       | `src-tauri/core/src/plugins/steps.rs`     |
-| What a `tmc://` link may mean                | `src-tauri/core/src/deeplink.rs`          |
+| What a `gs://` link may mean                | `src-tauri/core/src/deeplink.rs`          |
 | The IPC surface, and its two rules           | `src-tauri/src/commands/mod.rs`           |
 | The audit trail                              | `src-tauri/core/src/logging.rs`           |
 

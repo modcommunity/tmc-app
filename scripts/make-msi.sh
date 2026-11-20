@@ -2,7 +2,7 @@
 #
 # Build the Windows MSI, on Linux, with `wixl` from msitools.
 #
-#   scripts/make-msi.sh <TMC.exe> [output.msi]
+#   scripts/make-msi.sh <GameSpice App.exe> [output.msi]
 #
 # Tauri bundles an MSI itself, by shelling out to WiX 3's candle.exe and
 # light.exe — which is why `tauri build --bundles msi` refuses on anything but
@@ -21,7 +21,7 @@ root="$(cd "$here/.." && pwd)"
 
 exe="${1:-}"
 if [ -z "$exe" ] || [ ! -f "$exe" ]; then
-    echo "usage: $0 <path/to/TMC.exe> [output.msi]" >&2
+    echo "usage: $0 <path/to/GameSpice App.exe> [output.msi]" >&2
     exit 2
 fi
 exe="$(cd "$(dirname "$exe")" && pwd)/$(basename "$exe")"
@@ -41,10 +41,10 @@ description="$(read_conf '.bundle.shortDescription')"
 homepage="https://moddingcommunity.com"
 icon="$root/src-tauri/icons/icon.ico"
 
-# The cargo binary is `tmc-app.exe`; what gets INSTALLED is named after the
+# The cargo binary is `gamespice-app.exe`; what gets INSTALLED is named after the
 # product, exactly as Tauri's own bundlers name it, so a machine that has had
 # both installers on it does not end up with two differently-named exes and two
-# `tmc://` registrations pointing at different files.
+# `gs://` registrations pointing at different files.
 exename="$(read_conf ".bundle.windows && require('$conf').bundle.windows.mainBinaryName || require('$conf').mainBinaryName || require('$conf').productName")".exe
 
 # MSI ProductVersion is major.minor.build and nothing else — the fourth field

@@ -142,7 +142,7 @@ jobs:
                   extra=()
 
                   if [ -z "${TMC_UPDATER_ENDPOINT:-}" ] && [ -n "${S3_PUBLIC_URL:-}" ]; then
-                      export TMC_UPDATER_ENDPOINT="${S3_PUBLIC_URL%/}/downloads/tmc-app/latest.json"
+                      export TMC_UPDATER_ENDPOINT="${S3_PUBLIC_URL%/}/downloads/gamespice-app/latest.json"
                   fi
                   # No apostrophe inside ${...:-...}: in double quotes bash reads it as an
                   # opening quote, and the whole step dies with "unexpected EOF".
@@ -179,7 +179,7 @@ jobs:
             #
             # `-portable.exe` also keeps it out of that table: the Windows rules
             # match `-setup.exe` and `.msi`, so the updater is never offered a
-            # file that installs nothing and registers no `tmc://` scheme.
+            # file that installs nothing and registers no `gs://` scheme.
             - name: Portable exe
               if: matrix.name == 'windows'
               shell: bash
@@ -198,7 +198,7 @@ jobs:
                   # The fallback is for the day Tauri starts renaming it
                   # itself, which would otherwise fail the whole release job
                   # over a file that is sitting right there under a new name.
-                  exe="$out/tmc-app.exe"
+                  exe="$out/gamespice-app.exe"
                   [ -f "$exe" ] || exe="$(ls "$out"/*.exe 2>/dev/null | head -1)"
 
                   if [ -z "$exe" ] || [ ! -f "$exe" ]; then
@@ -229,6 +229,16 @@ jobs:
                        -o -name '*.msi' -o -name '*.dmg' \
                        -o -name '*.app.tar.gz' -o -name '*.sig' \) \
                     -exec cp {} out/ \;
+
+                  # Tauri names bundles after productName, space and all
+                  # ("GameSpice App_0.3.0_x64-setup.exe"). A space in a release
+                  # asset becomes a dot on GitHub and %20 everywhere else, so
+                  # every artifact (and its .sig, which must keep the same
+                  # stem) is published as `GameSpice-App_*`.
+                  for f in out/*' '*; do
+                      [ -e "$f" ] || continue
+                      mv "$f" "out/$(basename "$f" | tr ' ' '-')"
+                  done
                   ls -la out
 
             - uses: actions/upload-artifact@v4
@@ -272,12 +282,18 @@ jobs:
             #
             # The bucket is website-city's uploads bucket (`S3_*` there), and
             # the secrets carry the same names so one set of values serves
-            # both. `downloads/tmc-app/<version>/` holds the installers, their
-            # `.sig` files, checksums.txt and that version's latest.json;
-            # `downloads/tmc-app/latest.json` (stable) and `latest-beta.json`
-            # are the switches the app's updater reads, so they are written
-            # only after everything they point at exists. A pre-release tag
-            # (`v1.2.0-beta.1`) moves only the beta switch.
+            # both. `downloads/gamespice-app/<version>/` holds the installers,
+            # their `.sig` files, checksums.txt and that version's latest.json;
+            # `downloads/gamespice-app/latest.json` (stable) and
+            # `latest-beta.json` are the switches the app's updater reads, so
+            # they are written only after everything they point at exists. A
+            # pre-release tag (`v1.2.0-beta.1`) moves only the beta switch.
+            #
+            # THE SAME SWITCHES ARE WRITTEN UNDER `downloads/tmc-app/` TOO.
+            # Builds from before the rename have that path compiled in as
+            # their endpoint; it is the bridge that carries them onto the
+            # GameSpice App, and stopping it strands them on their version.
+            # See docs/updater.md, "Installs from before the rename".
             #
             # Skipped, loudly, without the bucket secrets: the GitHub release
             # below still happens, and the app then learns about updates from
@@ -305,7 +321,8 @@ jobs:
                   fi
 
                   version="${TAG#v}"
-                  prefix="downloads/tmc-app"
+                  prefix="downloads/gamespice-app"
+                  legacy_prefix="downloads/tmc-app"
                   base="${S3_PUBLIC_URL%/}/${prefix}/${version}"
                   export AWS_DEFAULT_REGION="${S3_REGION:-us-east-1}"
 
@@ -337,9 +354,11 @@ jobs:
                           fi
                           name=latest.json
                           [ "$channel" = beta ] && name=latest-beta.json
-                          "${s3[@]}" cp "$manifest" "s3://${S3_BUCKET}/${prefix}/${name}" \
-                              --content-type application/json --cache-control "no-cache, max-age=0"
-                          echo "Updated ${S3_PUBLIC_URL%/}/${prefix}/${name}"
+                          for p in "$prefix" "$legacy_prefix"; do
+                              "${s3[@]}" cp "$manifest" "s3://${S3_BUCKET}/${p}/${name}" \
+                                  --content-type application/json --cache-control "no-cache, max-age=0"
+                              echo "Updated ${S3_PUBLIC_URL%/}/${p}/${name}"
+                          done
                       done
                   fi
 
@@ -352,7 +371,7 @@ jobs:
               run: |
                   prerelease=()
                   case "$TAG" in *-*) prerelease=(--prerelease) ;; esac
-                  gh release create "$TAG" --title "TMC $TAG" --generate-notes --draft=false "${prerelease[@]}" \
+                  gh release create "$TAG" --title "GameSpice App $TAG" --generate-notes --draft=false "${prerelease[@]}" \
                     || echo "release already exists, uploading into it"
                   gh release upload "$TAG" artifacts/* --clobber
 
@@ -373,7 +392,7 @@ jobs:
             # was cut and not announced is a state somebody can fix in a minute;
             # a failed release job is one that has to be re-run against a tag
             # that already has artifacts on it.
-            - name: Publish to TMC
+            - name: Publish to the site
               shell: bash
               env:
                   TMC_RELEASE_TOKEN: ${{ secrets.TMC_RELEASE_TOKEN }}

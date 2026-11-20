@@ -39,5 +39,5 @@ The index. `CLAUDE.md` in the repository root is the always-loaded summary; this
 | [downloads.md](downloads.md) | the download queue: resume, checksums, its own HTTP client, bandwidth |
 | [detection.md](detection.md) | finding installed games from launcher manifests, and the bounded folder walk |
 | [rcon.md](rcon.md) | the two RCON dialects, the one deliberate SSRF gap, how passwords are kept |
-| [deep-links.md](deep-links.md) | `tmc://`: a link may SHOW, never DO |
+| [deep-links.md](deep-links.md) | `gs://`: a link may SHOW, never DO |
 | [prior-art.md](prior-art.md) | which mod managers this learned from, and how they are credited |

@@ -32,7 +32,7 @@ tmc-core (src-tauri/core/src/)     ← NO Tauri dependency; tests anywhere
   ├── library/    subscriptions, sandboxes, staging, deployment
   ├── launch.rs   the only place a launch is RESOLVED
   ├── session.rs  the games that are running, and how long they ran for
-  ├── deeplink.rs what a `tmc://` link may mean, which is "show a page"
+  ├── deeplink.rs what a `gs://` link may mean, which is "show a page"
   └── logging.rs  the audit trail Settings → Logging reads
   │
   ├──► website-city  /api/app/v1   (catalogue, auth, sandboxes)

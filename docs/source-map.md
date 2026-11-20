@@ -14,7 +14,7 @@ What each file owns, per crate. The shape and the rule behind it are in [archite
 | `anchor.rs` | **What a jail anchor may be.** Guards `gameDirs` /`downloadDir` |
 | `canon.rs` | Resolving a path, in the spelling everything else uses. The one door to `canonicalize` |
 | `crypto.rs` | The device key, and what it does and does not buy |
-| `deeplink.rs` | The closed list of what a `tmc://` link may ask for |
+| `deeplink.rs` | The closed list of what a `gs://` link may ask for |
 | `logging.rs` | Append-only JSONL audit log + `audit!` macro |
 | `net/addr.rs` | **The public-address guard.** Resolve once, connect to that |
 | `net/transport.rs` | Bounded UDP/TCP exchanges — every read has a deadline and a cap |
@@ -110,7 +110,7 @@ What each file owns, per crate. The shape and the rule behind it are in [archite
 | `lib/hooks/use-breakpoint.ts` | Layout decisions, keyed on the window |
 | `lib/hooks/use-platform.ts` | The few decisions that genuinely are per-OS, not per-window |
 | `lib/hooks/use-live-query.tsx` | The live-server registry: one timer, one batch |
-| `lib/hooks/use-deep-link.tsx` | Turns a `tmc://` link into a route. Never into an action |
+| `lib/hooks/use-deep-link.tsx` | Turns a `gs://` link into a route. Never into an action |
 | `lib/downloads/provider.tsx` | The queue, pushed from Rust and coalesced |
 | `lib/library/provider.tsx` | The subscription sync loop |
 | `lib/external.ts` | Which content kinds are handed to the system browser |
@@ -147,7 +147,7 @@ What each file owns, per crate. The shape and the rule behind it are in [archite
 | `components/add-friend-button.tsx` | "Add friend" on a member's page |
 | `routes/library.tsx` | Three views: the games on this machine, the games TMC published here, and what the account subscribed to |
 | `components/library-tmc.tsx` | TMC's own games: install, update, auto-update, remove |
-| `routes/join.tsx` | Where a `tmc://play/<host>:<port>` link lands. Shows what is there; joins nothing on its own |
+| `routes/join.tsx` | Where a `gs://play/<host>:<port>` link lands. Shows what is there; joins nothing on its own |
 | `components/library-games.tsx` | Installed games, their sandboxes, play time, and what is running |
 | `components/library-content.tsx` | The subscription list, and why each row is or is not installed |
 | `components/play-dialog.tsx` | **The launcher.** The four ways to start a game, and which are possible here |

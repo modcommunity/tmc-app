@@ -1,4 +1,4 @@
-//! What a `tmc://` link is allowed to mean.
+//! What a `gs://` link is allowed to mean.
 //!
 //! THE RULE THIS MODULE EXISTS TO KEEP
 //! ----------------------------------
@@ -18,14 +18,14 @@
 //!
 //! WHY AUTH STILL READS NOTHING
 //! ---------------------------
-//! `tmc://auth` carries no payload at all and is only a WAKE-UP: it makes the
+//! `gs://auth` carries no payload at all and is only a WAKE-UP: it makes the
 //! app poll the API immediately instead of waiting out its interval. Nothing is
 //! read out of it, because anything a link carried would be something an
 //! attacker could also have written.
 //!
 //! THE GUEST CASE
 //! --------------
-//! `tmc://install/mod/1234` is what the website hands somebody who is not
+//! `gs://install/mod/1234` is what the website hands somebody who is not
 //! signed in. A signed-in user gets a subscription instead, which is better —
 //! it follows them to their other devices and keeps the mod updated — but a
 //! guest has no account to hang one on, so the link carries the item directly.
@@ -33,10 +33,10 @@
 
 use serde::Serialize;
 
-/// The schemes this app registers, and the only ones it accepts. `tmc` is the
-/// original and keeps working for every link already out there; `gs` is
-/// the GameSpice App's own. Both carry the identical grammar below.
-pub const SCHEMES: [&str; 2] = ["tmc", "gs"];
+/// The schemes this app registers, and the only ones it accepts. `gs` is the
+/// GameSpice App's own and what new links use; `tmc` is the original and keeps
+/// working for every link already out there. Both carry the identical grammar below.
+pub const SCHEMES: [&str; 2] = ["gs", "tmc"];
 
 /// Cap on a link. Nothing legitimate is close to this.
 const MAX_URL: usize = 2048;
@@ -48,26 +48,26 @@ const MAX_ID: i64 = 1_000_000_000;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum DeepLink {
-    /// `tmc://auth` — poll now. Carries nothing, deliberately.
+    /// `gs://auth` — poll now. Carries nothing, deliberately.
     Auth,
 
-    /// `tmc://install/<kind>/<id>` — open an item's page.
+    /// `gs://install/<kind>/<id>` — open an item's page.
     ///
     /// Named `Install` because that is what the link is FOR, and misnaming it
     /// would be the first step towards somebody making it live up to the name.
     /// It opens a page.
     Install { kind: String, id: i64 },
 
-    /// `tmc://view/<kind>/<id>` — the same thing, without the intent.
+    /// `gs://view/<kind>/<id>` — the same thing, without the intent.
     View { kind: String, id: i64 },
 
-    /// `tmc://sandbox/<id>` — open one sandbox.
+    /// `gs://sandbox/<id>` — open one sandbox.
     ///
     /// Local ids only, so this is only ever useful to something already on this
     /// machine. It still only opens a screen.
     Sandbox { id: i64 },
 
-    /// `tmc://play/<host>:<port>` — open a join screen for that address.
+    /// `gs://play/<host>:<port>` — open a join screen for that address.
     ///
     /// The link the website's Join button produces (`PLAY_URI_DEFAULT`), and
     /// the one place in this enum where the payload is not an id of ours. It is
@@ -82,12 +82,12 @@ pub enum DeepLink {
     /// shape of the thing this app spends four hundred lines avoiding
     /// elsewhere.
     ///
-    /// The port is optional: `tmc://play/example.com` is a perfectly good way
+    /// The port is optional: `gs://play/example.com` is a perfectly good way
     /// to say "this box", and the game's own default port is a thing the join
     /// screen can fill in.
     Play { host: String, port: Option<u16> },
 
-    /// `tmc://play/app/<slug-or-id>` — open one game's launch screen.
+    /// `gs://play/app/<slug-or-id>` — open one game's launch screen.
     ///
     /// The serverless half. A slug rather than only an id because that is what
     /// the website's `{app}` token substitutes, and because a link somebody
@@ -139,8 +139,8 @@ pub fn parse(raw: &str) -> Option<DeepLink> {
     }
 
     /*
-     * `tmc://auth` parses with `auth` as the HOST, not as a path segment, and
-     * `tmc:///auth` puts it in the path. Both shapes appear in the wild —
+     * `gs://auth` parses with `auth` as the HOST, not as a path segment, and
+     * `gs:///auth` puts it in the path. Both shapes appear in the wild —
      * different platforms' openers normalise differently — so the action is
      * taken from the host when there is one and from the first path segment
      * otherwise.
@@ -197,7 +197,7 @@ pub fn parse(raw: &str) -> Option<DeepLink> {
              * A trailing segment is ignored by `auth`, where that is right — a
              * wake-up has no arguments and reading one would be reading a value
              * an attacker chose. Here it is wrong for the opposite reason: this
-             * action HAS a grammar, and accepting `tmc://play/host:1/join`
+             * action HAS a grammar, and accepting `gs://play/host:1/join`
              * today is how `/join` quietly becomes meaningful the first time
              * somebody adds a segment to the match below.
              */
@@ -217,7 +217,7 @@ pub fn parse(raw: &str) -> Option<DeepLink> {
              * `play/app/<x>` is the serverless shape, and is checked before the
              * address one so that a game whose slug happens to be `app` cannot
              * be reached as an address. The alternative ordering would make
-             * `tmc://play/app` parse as a hostname called "app".
+             * `gs://play/app` parse as a hostname called "app".
              */
             if first.eq_ignore_ascii_case("app") {
                 let app = segments.get(2)?;

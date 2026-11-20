@@ -5,9 +5,9 @@
 members = ["core", "usvfs"]
 
 [package]
-name = "tmc-app"
+name = "gamespice-app"
 version = "0.2.4"
-description = "The official Modding Community app"
+description = "The GameSpice App: games, mods, sandboxes and servers"
 authors = ["The Modding Community"]
 edition = "2021"
 rust-version = "1.82"
@@ -16,7 +16,7 @@ license = "GPL-3.0-only"
 [lib]
 # The `_lib` suffix keeps the lib name distinct from the bin name, which
 # otherwise collides on Windows (rust-lang/cargo#8519).
-name = "tmc_app_lib"
+name = "gamespice_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

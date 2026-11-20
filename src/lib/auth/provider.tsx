@@ -26,7 +26,7 @@ import type { PendingLoginT, SessionUserT } from '~/lib/ipc/schemas'
  *   * Polling stops when the grant expires, when the user cancels, and when the
  *     window is hidden — a backgrounded app on a phone should not be waking a
  *     radio every five seconds.
- *   * The `tmc://` deep link fires an immediate poll, so approving in the
+ *   * The `gs://` deep link fires an immediate poll, so approving in the
  *     browser feels instant instead of taking up to one interval.
  */
 

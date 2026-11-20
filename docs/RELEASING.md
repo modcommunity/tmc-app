@@ -8,8 +8,8 @@ git tag v0.4.0-beta.1 && git push origin v0.4.0-beta.1   # a beta
 Bump `version` in `src-tauri/tauri.conf.json` (and `package.json`, `src-tauri/Cargo.toml`) to match first and tag that commit: the workflow refuses a tag that differs, because a manifest newer than the binary it points at is an update every installed app takes again on every check. Beyond that, this is the whole ceremony once the secrets below exist. `.github/workflows/release.yml` then:
 
 1. **Builds and signs** on Linux (AppImage, deb), Windows (NSIS setup, MSI, portable exe) and macOS (universal `.app` + `.dmg`). With `TAURI_SIGNING_PRIVATE_KEY` set it turns on `createUpdaterArtifacts`, so every updatable bundle gets a `.sig`, and then runs `scripts/verify-updater-signature.mjs`, which **fails the job** if those signatures do not verify against the public key the app is compiled with.
-2. **Uploads to the downloads bucket**: every file under `downloads/tmc-app/<version>/` (immutable cache headers), plus that version's `latest.json`; then — last, because they are the switch — `downloads/tmc-app/latest-beta.json` and, for a non-pre-release tag, `downloads/tmc-app/latest.json` (`no-cache`).
-3. **Publishes the GitHub release** with the same files (pre-release tags are marked as such), which `scripts/install.sh` and the README links use.
+2. **Uploads to the downloads bucket**: every file under `downloads/gamespice-app/<version>/` (immutable cache headers), plus that version's `latest.json`; then — last, because they are the switch — `downloads/gamespice-app/latest-beta.json` and, for a non-pre-release tag, `downloads/gamespice-app/latest.json` (`no-cache`). The same two switches are also written under `downloads/tmc-app/`, the endpoint compiled into builds from before the rename (see "The repository moved").
+3. **Publishes the GitHub release** with the same files, `latest.json` included, every artifact named `GameSpice-App_*` (Tauri's `GameSpice App_*` with the space replaced), (pre-release tags are marked as such), which `scripts/install.sh` and the README links use.
 4. **Tells the site** (`POST /api/app/v1/releases`) when `TMC_RELEASE_TOKEN` is set, with the bucket's URLs. Optional — see below.
 
 Each optional step that is not configured is a **warning, not a failure**: an unsigned release is still downloadable, and a release with no bucket still lands on GitHub.
@@ -20,7 +20,7 @@ Each optional step that is not configured is a **warning, not a failure**: an un
 
 | Input | `settings.json` override | Compiled into the build | Last resort |
 | --- | --- | --- | --- |
-| endpoint | `updaterEndpoint` in the app's `settings.json` (hand-edited) | `TMC_UPDATER_ENDPOINT` — the release workflow sets it to `<S3_PUBLIC_URL>/downloads/tmc-app/latest.json` | the site's `/api/app/v1/update/{{target}}/{{arch}}/{{current_version}}` |
+| endpoint | `updaterEndpoint` in the app's `settings.json` (hand-edited) | `TMC_UPDATER_ENDPOINT` — the release workflow sets it to `<S3_PUBLIC_URL>/downloads/gamespice-app/latest.json` | the site's `/api/app/v1/update/{{target}}/{{arch}}/{{current_version}}` |
 | public key | `updaterPubkey` in the same file | `src-tauri/updater.pub` (or `TMC_UPDATER_PUBKEY` in the build environment) | **none: the app cannot install, and says so** |
 
 The **beta** channel (Settings → App → Updates → Channel) reads `latest-beta.json` instead of `latest.json`; an endpoint containing `{{channel}}` gets `stable`/`beta` substituted instead.
@@ -76,7 +76,7 @@ GitHub → this repository → Settings → Secrets and variables → Actions.
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Secret | contents of `.secrets/tmc-updater.key.password` | the same |
 | `S3_BUCKET` | Secret | website-city's `S3_BUCKET` (the uploads bucket) | the downloads bucket |
 | `S3_REGION` | Secret | website-city's `S3_REGION` | the same |
-| `S3_ACCESS_KEY` | Secret | website-city's `S3_ACCESS_KEY` (or a key scoped to `downloads/tmc-app/*`) | the same |
+| `S3_ACCESS_KEY` | Secret | website-city's `S3_ACCESS_KEY` (or a key scoped to `downloads/gamespice-app/*` and `downloads/tmc-app/*`) | the same |
 | `S3_ACCESS_SECRET` | Secret | website-city's `S3_ACCESS_SECRET` | the same |
 | `S3_ENDPOINT` | Secret, optional | website-city's `S3_ENDPOINT`, for a non-AWS store (R2, B2, MinIO) | the same |
 | `S3_FORCE_PATH_STYLE` | Variable, optional | `true` when website-city sets it (MinIO) | the same |
@@ -88,27 +88,27 @@ GitHub → this repository → Settings → Secrets and variables → Actions.
 
 The secret names match website-city's `.env` (`S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_ACCESS_SECRET`, `S3_ENDPOINT`) so one set of values serves both. `S3_PUBLIC_URL` is a variable because it is not secret and it is compiled into the app; a secret of that name is accepted too.
 
-The bucket must serve `downloads/tmc-app/*` publicly at `S3_PUBLIC_URL` (website-city's uploads are already served that way through the CDN). The workflow does not set ACLs, since several S3-compatible stores reject them.
+The bucket must serve `downloads/gamespice-app/*` publicly at `S3_PUBLIC_URL` (website-city's uploads are already served that way through the CDN). The workflow does not set ACLs, since several S3-compatible stores reject them.
 
 ## Doing it by hand
 
 ```bash
 # the manifest for a directory of signed artifacts
 node scripts/updater-manifest.mjs --dir artifacts --version 0.3.0 \
-  --base-url https://cdn.example.com/downloads/tmc-app/0.3.0 --out latest.json
+  --base-url https://cdn.example.com/downloads/gamespice-app/0.3.0 --out latest.json
 
 # check signatures against the compiled-in key
 node scripts/verify-updater-signature.mjs artifacts
 
 # tell the site (prints what it would send)
 TMC_RELEASE_TOKEN=… node scripts/publish-release.mjs --dir artifacts \
-  --version 0.3.0 --base-url https://cdn.example.com/downloads/tmc-app/0.3.0 \
+  --version 0.3.0 --base-url https://cdn.example.com/downloads/gamespice-app/0.3.0 \
   --promote --dry-run
 ```
 
 `scripts/release-targets.mjs` is the one table mapping bundle filenames to platforms, shared by the manifest and the site publish: macOS ships the `.app.tar.gz` (a `.dmg` is mounted, not unpacked over a running app), and Windows prefers the NSIS `-setup.exe` over the `.msi`, which does not bootstrap WebView2. The manifest writes `{os}-{arch}` for the preferred file and `{os}-{arch}-{bundle}` for each, so an MSI install updates from the MSI.
 
-**A rollback** is re-uploading the previous version's `latest.json` over `downloads/tmc-app/latest.json` (it is kept in that version's directory), and, if the site is used, re-publishing it with `--promote`. That stops the bad version reaching anybody else; it does not take back those who already installed it, since the updater never offers an older version. Undoing it for them is a new, higher version.
+**A rollback** is re-uploading the previous version's `latest.json` over `downloads/gamespice-app/latest.json` (it is kept in that version's directory), and, if the site is used, re-publishing it with `--promote`. That stops the bad version reaching anybody else; it does not take back those who already installed it, since the updater never offers an older version. Undoing it for them is a new, higher version.
 
 ## The Rust toolchain is pinned
 
@@ -116,4 +116,16 @@ Both workflows install `RUST_TOOLCHAIN` (currently `1.98`) instead of floating `
 
 ## The repository moved
 
-The source repo is now `gamespice-platform/app`. The updater public key is unchanged, so old installs still verify new bundles. Builds from before the move poll the old `modcommunity/tmc-app` location, so a bridge release published there must point its `latest.json` at the new repo's artifacts, or those installs never see the new app.
+The source repo is now `gamespice-platform/app` and the product is the GameSpice App. **The updater public key (`src-tauri/updater.pub`) is unchanged**, so a bundle the new workflow signs verifies in every old install. What has to be bridged is how an old install *finds* it, which depends on the endpoint it was built with:
+
+| Old install's endpoint | How it reaches the new release | Who does it |
+| --- | --- | --- |
+| `<bucket>/downloads/tmc-app/latest.json` (the compiled default) | `release.yml` writes the manifests there as well as under `downloads/gamespice-app/` | automatic, every release |
+| the site's `/api/app/v1/update` route | the site serves whatever `publish-release.mjs` sent it | automatic when `TMC_RELEASE_TOKEN` is set |
+| `github.com/modcommunity/tmc-app/releases/latest/download/latest.json` | a bridge release on the old repo whose only asset is a `latest.json` naming the new repo's artifacts | **by hand**: `scripts/bridge-release.sh <tag>` |
+
+`scripts/bridge-release.sh <tag>` takes `latest.json` from the `gamespice-platform/app` release (or builds one from its `.sig` assets pointed at that release's download URLs), refuses unless every URL is the new release or the `downloads/gamespice-app/` bucket path, then creates the same tag on `modcommunity/tmc-app` and uploads the manifest. `--dry-run` prints the manifest and publishes nothing. Run it once per release for as long as old installs matter; it needs `gh` with write access to the old repository. New installs never read the old repository.
+
+**After the update the app is the GameSpice App.** On first start it moves its data directory from `…/com.moddingcommunity.app` to `…/gamespice-app` and leaves a link at the old path, and moves the stored sign-in to the `gamespice-app` keychain service (`tmc_core::rename`; [settings-and-logging.md](settings-and-logging.md#where-files-live)). The bundle identifier stays `com.moddingcommunity.app`, so the OS and the updater treat it as the same program.
+
+**Windows: the product name changed** (`TMC` → `GameSpice App`), and the NSIS installer's directory and Start-menu entry follow it. The updater runs the new setup in place; check on the first bridged release that it replaces the old entry rather than adding a second one, and uninstall the old entry by hand if it does not.

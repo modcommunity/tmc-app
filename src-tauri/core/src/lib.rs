@@ -11,7 +11,7 @@
 //! resolver, the `#[tauri::command]` surface, and the assembly of [`AppState`]
 //! from the pieces here.
 //!
-//! [`AppState`]: ../tmc_app_lib/state/struct.AppState.html
+//! [`AppState`]: ../gamespice_app_lib/state/struct.AppState.html
 
 pub mod anchor;
 pub mod api;
@@ -34,6 +34,7 @@ pub mod logging;
 pub mod net;
 pub mod plugins;
 pub mod rcon;
+pub mod rename;
 pub mod secure;
 pub mod session;
 pub mod settings;

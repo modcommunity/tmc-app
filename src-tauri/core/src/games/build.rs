@@ -320,7 +320,7 @@ pub fn browser_site_args(args: &[String], site: &str, env_set: bool) -> Vec<Stri
 
 /// The Solo pack a serverless launch should run: the game pack's
 /// `<owner>/<repo>` id and the version to mount, `None` for the newest.
-/// From the site's boot descriptor (`boot.solo`) or a `tmc://` launch link.
+/// From the site's boot descriptor (`boot.solo`) or a `gs://` launch link.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SoloPack {
     pub content_id: String,
@@ -332,7 +332,7 @@ impl SoloPack {
     /// argument. The id is `<owner>/<repo>` in a closed character set and the
     /// version a closed one too: neither may start with `-` (it would be read as
     /// a flag), and nothing outside the set (whitespace, control characters)
-    /// gets through. Both come from the site or from a `tmc://` link a web page
+    /// gets through. Both come from the site or from a `gs://` link a web page
     /// could have written, and they are about to be process arguments.
     pub fn new(content_id: &str, version: Option<&str>) -> Option<Self> {
         let word = |s: &str, max: usize, extra: &[char]| {

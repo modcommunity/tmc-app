@@ -1,13 +1,13 @@
 #!/bin/sh
 #
-# TMC — one-line install for Linux.
+# GameSpice App — one-line install for Linux.
 #
 #   curl -fsSL https://moddingcommunity.com/install.sh | sh
 #   curl -fsSL https://raw.githubusercontent.com/gamespice-platform/app/main/scripts/install.sh | sh
 #
 # Downloads the published AppImage, verifies it against the release's
 # checksums.txt, and puts it somewhere the desktop can find it — a launcher
-# entry, an icon, and the `tmc://` scheme so deep links work.
+# entry, an icon, and the `gs://` scheme so deep links work.
 #
 # Deliberate properties, because this is a script people pipe into a shell:
 #
@@ -23,25 +23,25 @@
 #     and `--uninstall` removes exactly what it wrote.
 #
 # Environment:
-#   TMC_REPO      owner/name to download from        (default gamespice-platform/app)
-#   TMC_VERSION   a release tag, e.g. v0.2.0         (default: latest)
-#   TMC_PREFIX    install prefix                     (default ~/.local, /usr/local as root)
-#   TMC_APPIMAGE  install this local file instead of downloading — which is how
+#   GS_REPO       owner/name to download from        (default gamespice-platform/app)
+#   GS_VERSION    a release tag, e.g. v0.2.0         (default: latest)
+#   GS_PREFIX     install prefix                     (default ~/.local, /usr/local as root)
+#   GS_APPIMAGE  install this local file instead of downloading — which is how
 #                 you install a build you made yourself
 set -eu
 
-REPO="${TMC_REPO:-gamespice-platform/app}"
-VERSION="${TMC_VERSION:-}"
-APPIMAGE="${TMC_APPIMAGE:-}"
+REPO="${GS_REPO:-${TMC_REPO:-gamespice-platform/app}}"
+VERSION="${GS_VERSION:-${TMC_VERSION:-}}"
+APPIMAGE="${GS_APPIMAGE:-${TMC_APPIMAGE:-}}"
 verify=1
 mode=install
 extract=auto
 
 if [ "$(id -u)" -eq 0 ]; then
-    PREFIX="${TMC_PREFIX:-/usr/local}"
+    PREFIX="${GS_PREFIX:-${TMC_PREFIX:-/usr/local}}"
     DATA="$PREFIX/share"
 else
-    PREFIX="${TMC_PREFIX:-$HOME/.local}"
+    PREFIX="${GS_PREFIX:-${TMC_PREFIX:-$HOME/.local}}"
     DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 fi
 
@@ -58,10 +58,18 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-BIN="$PREFIX/bin/tmc"
-LIBDIR="$PREFIX/lib/tmc"
-DESKTOP="$DATA/applications/tmc.desktop"
-ICON="$DATA/icons/hicolor/256x256/apps/tmc.png"
+BIN="$PREFIX/bin/gamespice-app"
+LIBDIR="$PREFIX/lib/gamespice-app"
+DESKTOP="$DATA/applications/gamespice-app.desktop"
+ICON="$DATA/icons/hicolor/256x256/apps/gamespice-app.png"
+
+# What this script installed before the app was renamed. Removed on install and
+# on uninstall, so an upgrade does not leave a second launcher (or a second
+# `tmc://` handler) pointing at the old binary.
+remove_legacy() {
+    rm -rf "$PREFIX/bin/tmc" "$PREFIX/lib/tmc" "$DATA/applications/tmc.desktop" \
+        "$DATA/icons/hicolor/256x256/apps/tmc.png"
+}
 
 say()  { printf '%s\n' "$*"; }
 warn() { printf '%s\n' "$*" >&2; }
@@ -71,10 +79,11 @@ die()  { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 if [ "$mode" = uninstall ]; then
     rm -rf "$BIN" "$LIBDIR" "$DESKTOP" "$ICON"
+    remove_legacy
     command -v update-desktop-database >/dev/null 2>&1 &&
         update-desktop-database "$DATA/applications" 2>/dev/null || true
-    say "Removed TMC from $PREFIX."
-    say "Your settings and library are untouched, in ${XDG_CONFIG_HOME:-$HOME/.config}/com.moddingcommunity.app."
+    say "Removed the GameSpice App from $PREFIX."
+    say "Your settings and library are untouched, in ${XDG_DATA_HOME:-$HOME/.local/share}/gamespice-app."
     exit 0
 fi
 
@@ -131,11 +140,16 @@ else
 
     base="https://github.com/$REPO/releases/download/$VERSION"
     number="${VERSION#v}"
-    asset="TMC_${number}_${arch}.AppImage"
+    # Releases from before the rename name their AppImage `TMC_…`; asking for
+    # one of those by --version still works.
+    asset="GameSpice-App_${number}_${arch}.AppImage"
 
-    say "Downloading TMC $VERSION ($arch)…"
-    fetch "$base/$asset" "$tmp/tmc.AppImage" ||
-        die "no $asset in release $VERSION — that architecture may not be published."
+    say "Downloading the GameSpice App $VERSION ($arch)…"
+    if ! fetch "$base/$asset" "$tmp/tmc.AppImage" 2>/dev/null; then
+        asset="TMC_${number}_${arch}.AppImage"
+        fetch "$base/$asset" "$tmp/tmc.AppImage" ||
+            die "no AppImage for $arch in release $VERSION — that architecture may not be published."
+    fi
 
     if [ "$verify" -eq 1 ]; then
         fetch "$base/checksums.txt" "$tmp/checksums.txt" ||
@@ -160,7 +174,7 @@ chmod +x "$tmp/tmc.AppImage"
 
 # An AppImage mounts itself with libfuse2, which several current distributions
 # no longer ship (Debian 13, Ubuntu 24.04). Where it is absent the image is
-# unpacked instead and `tmc` becomes a symlink to its AppRun — the same files,
+# unpacked instead and `gamespice-app` becomes a symlink to its AppRun — the same files,
 # without the mount.
 if [ "$extract" = auto ]; then
     # `ldconfig` lives in /sbin, which is not on a normal user's PATH.
@@ -169,6 +183,7 @@ if [ "$extract" = auto ]; then
 fi
 
 mkdir -p "$PREFIX/bin" "$DATA/applications" "$(dirname "$ICON")"
+remove_legacy
 
 # Unpack regardless: the icon and the desktop entry come out of the image, and
 # in FUSE mode the unpacked copy is thrown away with $tmp.
@@ -196,22 +211,22 @@ fi
 
 # ------------------------------------------------------- desktop registration
 
-# Written here rather than taken from the image: this is where `tmc://` is
+# Written here rather than taken from the image: this is where `gs://` is
 # claimed, and a link that opens the wrong copy of the app is worse than one
 # that opens nothing. `%u` is what passes the link through to the running
 # instance.
 cat > "$DESKTOP" <<DESK
 [Desktop Entry]
 Type=Application
-Name=TMC
-GenericName=Mod Manager
-Comment=Browse, install and manage mods, assets and servers.
+Name=GameSpice App
+GenericName=Game Launcher
+Comment=Play games, browse the store, and install mods, sandboxes and servers.
 Exec=$BIN %u
-Icon=tmc
+Icon=gamespice-app
 Terminal=false
-Categories=Utility;Game;
-MimeType=x-scheme-handler/tmc;
-StartupWMClass=TMC
+Categories=Game;Utility;
+MimeType=x-scheme-handler/gs;x-scheme-handler/tmc;
+StartupWMClass=GameSpice App
 DESK
 
 command -v update-desktop-database >/dev/null 2>&1 &&
@@ -219,12 +234,14 @@ command -v update-desktop-database >/dev/null 2>&1 &&
 command -v gtk-update-icon-cache >/dev/null 2>&1 &&
     gtk-update-icon-cache -qtf "$DATA/icons/hicolor" 2>/dev/null || true
 command -v xdg-mime >/dev/null 2>&1 &&
-    xdg-mime default tmc.desktop x-scheme-handler/tmc 2>/dev/null || true
+    for scheme in gs tmc; do
+        xdg-mime default gamespice-app.desktop "x-scheme-handler/$scheme" 2>/dev/null || true
+    done
 
 say ""
-say "TMC is installed at $BIN"
+say "The GameSpice App is installed at $BIN"
 case ":$PATH:" in
-    *":$PREFIX/bin:"*) say "Run it with: tmc" ;;
+    *":$PREFIX/bin:"*) say "Run it with: gamespice-app" ;;
     *) say "$PREFIX/bin is not on your PATH — run it with: $BIN"
        say "  (or add it: echo 'export PATH=\"$PREFIX/bin:\$PATH\"' >> ~/.profile)" ;;
 esac

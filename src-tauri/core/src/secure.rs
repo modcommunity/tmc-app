@@ -35,7 +35,10 @@ use crate::error::AppResult;
 // Referenced only by the `os-keyring` code paths, which are compiled out on
 // mobile and in `cargo test -p tmc-core`.
 #[cfg(feature = "os-keyring")]
-const SERVICE: &str = "com.moddingcommunity.app";
+const SERVICE: &str = crate::rename::KEYRING_SERVICE;
+/// Where builds from before the rename kept credentials; read once and moved.
+#[cfg(feature = "os-keyring")]
+const LEGACY_SERVICE: &str = crate::rename::LEGACY_KEYRING_SERVICE;
 #[cfg(feature = "os-keyring")]
 const ACCOUNT: &str = "refresh-token";
 
@@ -48,6 +51,40 @@ fn account() -> String {
         Some(scope) => format!("{ACCOUNT}@{scope}"),
         None => ACCOUNT.to_string(),
     }
+}
+
+/// Read `account` from the keychain, moving it from the pre-rename service the
+/// first time (see [`crate::rename::migrate_secret`] for the order).
+#[cfg(all(
+    feature = "os-keyring",
+    any(target_os = "windows", target_os = "macos", target_os = "linux")
+))]
+fn keyring_get(account: &str) -> Option<String> {
+    let read = |legacy: bool| {
+        let service = if legacy { LEGACY_SERVICE } else { SERVICE };
+        match keyring::Entry::new(service, account).and_then(|e| e.get_password()) {
+            Ok(value) => Some(value),
+            Err(keyring::Error::NoEntry) => None,
+            Err(e) => {
+                tracing::warn!("credential store read ({service}): {e}");
+                None
+            }
+        }
+    };
+
+    crate::rename::migrate_secret(
+        read,
+        |value| {
+            keyring::Entry::new(SERVICE, account)
+                .and_then(|e| e.set_password(value))
+                .is_ok()
+        },
+        || {
+            if let Ok(entry) = keyring::Entry::new(LEGACY_SERVICE, account) {
+                let _ = entry.delete_credential();
+            }
+        },
+    )
 }
 
 /// A secret name that is safe as both a keychain account and a filename.
@@ -156,12 +193,8 @@ impl SecureStore {
             any(target_os = "windows", target_os = "macos", target_os = "linux")
         ))]
         {
-            if let Ok(entry) = keyring::Entry::new(SERVICE, &scoped(&name)) {
-                match entry.get_password() {
-                    Ok(value) => return Some(value),
-                    Err(keyring::Error::NoEntry) => {}
-                    Err(e) => tracing::warn!("credential store read '{name}': {e}"),
-                }
+            if let Some(value) = keyring_get(&scoped(&name)) {
+                return Some(value);
             }
         }
 
@@ -179,8 +212,10 @@ impl SecureStore {
             any(target_os = "windows", target_os = "macos", target_os = "linux")
         ))]
         {
-            if let Ok(entry) = keyring::Entry::new(SERVICE, &scoped(&name)) {
-                let _ = entry.delete_credential();
+            for service in [SERVICE, LEGACY_SERVICE] {
+                if let Ok(entry) = keyring::Entry::new(service, &scoped(&name)) {
+                    let _ = entry.delete_credential();
+                }
             }
         }
 
@@ -222,13 +257,9 @@ impl SecureStore {
             any(target_os = "windows", target_os = "macos", target_os = "linux")
         ))]
         {
-            if let Ok(entry) = keyring::Entry::new(SERVICE, &account()) {
-                match entry.get_password() {
-                    Ok(token) => return Some(token),
-                    // `NoEntry` is the ordinary "never signed in" case.
-                    Err(keyring::Error::NoEntry) => {}
-                    Err(e) => tracing::warn!("credential store read: {e}"),
-                }
+            // `None` is the ordinary "never signed in" case.
+            if let Some(token) = keyring_get(&account()) {
+                return Some(token);
             }
         }
 
@@ -241,8 +272,10 @@ impl SecureStore {
             any(target_os = "windows", target_os = "macos", target_os = "linux")
         ))]
         {
-            if let Ok(entry) = keyring::Entry::new(SERVICE, &account()) {
-                let _ = entry.delete_credential();
+            for service in [SERVICE, LEGACY_SERVICE] {
+                if let Ok(entry) = keyring::Entry::new(service, &account()) {
+                    let _ = entry.delete_credential();
+                }
             }
         }
 

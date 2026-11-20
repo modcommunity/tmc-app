@@ -25,7 +25,7 @@ pub fn run() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "tmc_app_lib=info,tmc_core=info,warn".into()),
+                .unwrap_or_else(|_| "gamespice_app_lib=info,tmc_core=info,warn".into()),
         )
         .init();
 
@@ -43,7 +43,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init());
 
     /*
-     * Deep links accelerate the login: the browser bounces to `tmc://auth`
+     * Deep links accelerate the login: the browser bounces to `gs://auth`
      * after approval so the app polls immediately instead of waiting out its
      * interval. Registration is desktop-only here — on Android and iOS the
      * scheme is declared in the platform manifests that `tauri android init` /

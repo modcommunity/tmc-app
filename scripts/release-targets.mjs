@@ -152,7 +152,7 @@ export function buildUpdaterManifest({
 
     return {
         version,
-        notes: notes || `TMC ${version}`,
+        notes: notes || `GameSpice App ${version}`,
         pub_date: pubDate ?? new Date().toISOString(),
         platforms: Object.fromEntries(
             Object.entries(platforms).sort(([a], [b]) => a.localeCompare(b))

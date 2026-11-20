@@ -86,7 +86,7 @@ Four of the five targets can be built without owning the machine they run on. [B
 
 That file is written against **the subset wixl implements**, which is smaller than WiX's — no `MajorUpgrade`, no launch conditions, no `Platform` attribute, no WixUI. A change that reaches for one of those does not fail at review, it fails at `wixl` with a Vala assertion, and the fix is a Windows runner rather than a workaround. Its header says which elements are there and why.
 
-The MSI registers `tmc://` in `HKLM` itself, because a per-machine install is the one elevated moment there is and the app cannot claim the scheme for itself afterwards. It does **not** bootstrap the WebView2 runtime — wixl has no launch conditions, so it cannot even warn — which is why the `.exe` setup is the recommended download and the MSI is for policy deployment.
+The MSI registers `gs://` in `HKLM` itself, because a per-machine install is the one elevated moment there is and the app cannot claim the scheme for itself afterwards. It does **not** bootstrap the WebView2 runtime — wixl has no launch conditions, so it cannot even warn — which is why the `.exe` setup is the recommended download and the MSI is for policy deployment.
 
 **macOS is the exception and stays one.** The SDK is not redistributable and an un-notarised `.app` is one Gatekeeper refuses outright rather than warns about, so a cross-build would produce something that cannot be run. It comes from the `macos-latest` runner in `.github/workflows/release.yml`.
 

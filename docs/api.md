@@ -24,7 +24,7 @@ Non-obvious properties, all load-bearing:
 - **The grant is claimed atomically** (`updateMany` with `status: 'APPROVED'` in the WHERE). The app polls on a timer *and* on the deep link, so two claims racing is the normal case, not an edge case.
 - **Refresh tokens rotate, and reuse kills the family.** A retired token coming back means two parties hold one lineage; every device is revoked and `reuseDetected` is set. `ApiClient::refresh` holds a mutex so the app never does this to itself.
 - **The access token is memory-only.** One hour, treated as stale 60s early.
-- **`tmc://` is a wake-up, not a credential.** Any app can claim a custom scheme, so nothing is read out of the URL — it only triggers an immediate poll.
+- **`gs://` is a wake-up, not a credential.** Any app can claim a custom scheme, so nothing is read out of the URL — it only triggers an immediate poll.
 - **System browser, never a webview.** An embedded login hides the address bar and the password manager, which is what makes it indistinguishable from phishing.
 
 Website-side files: `src/server/auth/app-token.ts`, `prisma/models/app-device.prisma`, `src/app/api/app/v1/auth/*`, `src/server/api/routers/app-device.ts`, `src/app/[locale]/login/device/page.tsx`.

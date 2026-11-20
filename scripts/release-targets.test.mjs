@@ -7,7 +7,7 @@ import {
     isPrerelease,
 } from './release-targets.mjs'
 
-const BASE = 'https://cdn.example.com/downloads/tmc-app/0.3.0'
+const BASE = 'https://cdn.example.com/downloads/gamespice-app/0.3.0'
 
 /** What `release.yml`'s Collect step gathers from a signed build. */
 const ARTIFACTS = [

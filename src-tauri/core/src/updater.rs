@@ -9,7 +9,7 @@
 //! | public key | `updaterPubkey` | `TMC_UPDATER_PUBKEY` | **none — no updater** |
 //!
 //! The compiled endpoint is the static `latest.json` the release workflow
-//! uploads to the S3 bucket (`downloads/tmc-app/latest.json`), which works
+//! uploads to the S3 bucket (`downloads/gamespice-app/latest.json`), which works
 //! with nothing on the site's side. The site's endpoint remains the fallback
 //! for a build made without one, and the override lets an operator point a
 //! machine at either — or at a staging bucket — without a rebuild.
@@ -283,7 +283,7 @@ mod tests {
 
     const KEY: &str = TEST_PUBKEY;
 
-    const S3: &str = "https://cdn.example.com/downloads/tmc-app/latest.json";
+    const S3: &str = "https://cdn.example.com/downloads/gamespice-app/latest.json";
 
     #[test]
     fn a_real_key_is_accepted_and_whitespace_is_ignored() {
@@ -336,11 +336,11 @@ mod tests {
         assert_eq!(apply_channel(S3, "stable"), S3);
         assert_eq!(
             apply_channel(S3, "beta"),
-            "https://cdn.example.com/downloads/tmc-app/latest-beta.json"
+            "https://cdn.example.com/downloads/gamespice-app/latest-beta.json"
         );
         assert_eq!(
             apply_channel(&format!("{S3}?v=1"), "beta"),
-            "https://cdn.example.com/downloads/tmc-app/latest-beta.json?v=1"
+            "https://cdn.example.com/downloads/gamespice-app/latest-beta.json?v=1"
         );
         assert_eq!(
             apply_channel("https://x.example/{{channel}}/latest.json", "beta"),

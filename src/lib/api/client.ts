@@ -257,7 +257,7 @@ export const api = {
     /**
      * Which listed server is at an address.
      *
-     * What a `tmc://play/<host>:<port>` link resolves through. The caller
+     * What a `gs://play/<host>:<port>` link resolves through. The caller
      * already holds the address — that is what a link IS — so this discloses
      * nothing the browser does not; what it adds is which game is running
      * there, which is the fact a join screen needs before it can draw a button.

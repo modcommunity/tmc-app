@@ -48,8 +48,11 @@
     "plugins": {
         "deep-link": {
             "desktop": {
-                "schemes": ["tmc", "gs"]
-            }
+                "schemes": ["gs", "tmc"]
+            },
+            "mobile": [
+                { "scheme": ["gs", "tmc"], "appLink": false }
+            ]
         },
         "updater": {
             "_comment": [

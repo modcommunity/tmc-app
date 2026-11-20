@@ -191,7 +191,7 @@ pub struct GameLaunchRequest {
     #[serde(default)]
     pub locale: Option<String>,
     /// A game pack to run with no server (`<owner>/<repo>`), from a
-    /// `tmc://play/app/..?solo=` link. Only a fallback: the site's own
+    /// `gs://play/app/..?solo=` link. Only a fallback: the site's own
     /// `boot.solo` wins. Ignored when a server is named.
     #[serde(default)]
     pub solo: Option<String>,

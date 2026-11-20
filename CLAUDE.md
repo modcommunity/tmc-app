@@ -26,7 +26,7 @@ The official **The Modding Community** app: Rust + Tauri 2 + React 19, shipping 
 | [docs/downloads.md](docs/downloads.md) | the download queue |
 | [docs/detection.md](docs/detection.md) | finding installed games |
 | [docs/rcon.md](docs/rcon.md) | RCON |
-| [docs/deep-links.md](docs/deep-links.md) | `tmc://` |
+| [docs/deep-links.md](docs/deep-links.md) | `gs://` |
 | [docs/development.md](docs/development.md) | commands, the dev site, Linux without root, CI, `audit:rust` |
 | [docs/BUILDING.md](docs/BUILDING.md) | producing a platform artifact |
 | [docs/RELEASING.md](docs/RELEASING.md) | cutting a release |
@@ -85,7 +85,7 @@ Short forms; the reasoning is in the linked file.
 - `gameDirs`/`downloadDir` anchor the plugin jail: `settings_patch` refuses them; only their own commands set them, through `anchor::validate_root` ([settings-and-logging.md](docs/settings-and-logging.md#two-of-them-are-not-settings-at-all)).
 - `updaterEndpoint`/`updaterPubkey` have no setter, and must not get one ([updater.md](docs/updater.md#the-signature-is-the-entire-security-model)).
 - Security-level audit entries are written even with logging off; never put a token or credential in `audit!` data ([settings-and-logging.md](docs/settings-and-logging.md#logging)).
-- A `tmc://` link may SHOW something, never DO something; an unrecognised link does nothing ([deep-links.md](docs/deep-links.md)).
+- A `gs://` link may SHOW something, never DO something; an unrecognised link does nothing ([deep-links.md](docs/deep-links.md)).
 - The web player runs on the site's origin with no IPC; its window stays decorated ([playing.md](docs/playing.md#the-web-player-runs-on-the-sites-origin-and-that-is-the-isolation)).
 - RCON is the one deliberate SSRF gap; everything else resolves through `net::addr::resolve_public` ([rcon.md](docs/rcon.md)).
 
