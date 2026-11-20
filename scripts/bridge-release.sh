@@ -10,11 +10,13 @@
 # publishes a release with the same tag on the old repository whose ONLY asset
 # is a `latest.json` naming the NEW repository's artifacts:
 #
-#   1. take `latest.json` from the new repository's release, or, when that
-#      release has none (the bucket was not configured), build one from its
+#   1. take `latest.json` from the new repository's release (the release
+#      workflow attaches one to every signed release), or, for a release from
+#      before it did, build one from its
 #      `.sig` assets with `updater-manifest.mjs`, pointed at that release's
 #      download URLs;
-#   2. refuse unless every platform URL is on the new repository or the
+#   2. refuse unless the manifest's version is the tag's (without its `v`)
+#      and every platform URL is on the new repository or the
 #      downloads bucket — a bridge that points somewhere else is the one thing
 #      worse than no bridge;
 #   3. create the release on the old repository (or reuse it) and upload the
@@ -40,7 +42,7 @@ while [ $# -gt 0 ]; do
         --from) FROM="${2:?--from needs owner/name}"; shift ;;
         --to) TO="${2:?--to needs owner/name}"; shift ;;
         --dry-run) DRY=1 ;;
-        -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
+        -h|--help) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 0 ;;
         -*) echo "unknown option $1" >&2; exit 2 ;;
         *) TAG="$1" ;;
     esac
@@ -65,20 +67,22 @@ else
     # empty stand-in spares downloading every installer.
     for sig in "$tmp"/sigs/*.sig; do : > "${sig%.sig}"; done
     node "$root/scripts/updater-manifest.mjs" --dir "$tmp/sigs" \
-        --version "$TAG" --base-url "$base" --out "$tmp/latest.json"
+        --version "${TAG#v}" --base-url "$base" --out "$tmp/latest.json"
 fi
 
 # Every URL must be the new repository's release or the downloads bucket.
 node -e '
 const m = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))
 const from = process.argv[2]
+const want = process.argv[3]
+if (m.version !== want) { console.error(`refusing, the manifest names version ${m.version}, not ${want}`); process.exit(1) }
 const bad = Object.entries(m.platforms ?? {}).filter(([, p]) =>
     !(p.url.startsWith(`https://github.com/${from}/releases/download/`) ||
       /^https:\/\/[^/]+\/downloads\/gamespice-app\//.test(p.url)) || !p.signature)
 if (!Object.keys(m.platforms ?? {}).length) { console.error("no platforms in the manifest"); process.exit(1) }
 if (bad.length) { console.error("refusing, these do not point at the GameSpice App release:", bad.map(([k]) => k).join(", ")); process.exit(1) }
 console.log(`version ${m.version}: ${Object.keys(m.platforms).join(", ")}`)
-' "$tmp/latest.json" "$FROM"
+' "$tmp/latest.json" "$FROM" "${TAG#v}"
 
 if [ "$DRY" -eq 1 ]; then
     cat "$tmp/latest.json"

@@ -9,7 +9,7 @@
 | Needs | nothing | a public key from somewhere, and desktop |
 | Does | reports | replaces the running program |
 
-**Both inputs are resolved per call by `tmc_core::updater::resolve`**: the `settings.json` override (hand-edited; no command sets it), else what was compiled in, else the fallback. The endpoint's compiled default is `TMC_UPDATER_ENDPOINT` — the static `latest.json` the release workflow uploads to the S3 downloads bucket, which needs nothing on the site — and its fallback is the site's `/update/:target/:arch/:current` route. The key's compiled default is `src-tauri/updater.pub`, which `build.rs` turns into `TMC_UPDATER_PUBKEY` unless the environment sets one; there is no fallback key. The beta channel reads `latest-beta.json`.
+**Both inputs are resolved per call by `tmc_core::updater::resolve`**: the `settings.json` override (hand-edited; no command sets it), else what was compiled in, else the fallback. The endpoint's compiled default is `TMC_UPDATER_ENDPOINT` — a static `latest.json` that needs nothing on the site: the one the release workflow uploads to the S3 downloads bucket when the bucket is configured, else the one it attaches to the GitHub release (`github.com/<repo>/releases/latest/download/latest.json`) — and its fallback is the site's `/update/:target/:arch/:current` route. The key's compiled default is `src-tauri/updater.pub`, which `build.rs` turns into `TMC_UPDATER_PUBKEY` unless the environment sets one; there is no fallback key. The beta channel reads `latest-beta.json`.
 
 **The plugin is registered unconditionally on desktop** and handed the key with `updater_builder().pubkey(..)` on each call. `updater_builder()` panics without the plugin's managed state, so registering it only when a key was compiled in would make a runtime key impossible.
 
@@ -26,7 +26,7 @@ So:
 
 ## Cutting a release is pushing a tag
 
-`release.yml` signs each bundle, verifies the signatures, uploads everything to `downloads/gamespice-app/<version>/` on the bucket, writes `latest-beta.json` (and, for a non-pre-release tag, `latest.json`) LAST because they are the switch, publishes the GitHub release, and — when `TMC_RELEASE_TOKEN` is set — posts the lot to `POST /api/app/v1/releases` in one call so the site's routes agree. Every step that is not configured warns and skips.
+`release.yml` signs each bundle, verifies the signatures, uploads everything to `downloads/gamespice-app/<version>/` on the bucket, writes `latest-beta.json` (and, for a non-pre-release tag, `latest.json`) LAST because they are the switch, publishes the GitHub release with `latest.json` and `latest-beta.json` attached (written for the release's own URLs when there is no bucket), and — when `TMC_RELEASE_TOKEN` is set — posts the lot to `POST /api/app/v1/releases` in one call so the site's routes agree. Every step that is not configured warns and skips.
 
 `scripts/release-targets.mjs` is the one filename → platform table, shared by the static manifest (`updater-manifest.mjs`) and the site publish (`publish-release.mjs`), and pinned by a vitest. macOS ships the `.app.tar.gz`, not the `.dmg`; Windows prefers the `-setup.exe` over the `.msi`, which does not bootstrap WebView2; the manifest carries `{os}-{arch}-{bundle}` keys too, so an MSI install updates from the MSI.
 

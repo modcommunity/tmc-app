@@ -126,16 +126,20 @@ jobs:
             # mismatch is a release every installed app refuses after the
             # download, so it is checked below before anything is built.
             #
-            # TMC_UPDATER_ENDPOINT is the public `latest.json` this workflow
-            # uploads to the downloads bucket; compiled in as the updater's
-            # default so a release updates from S3 with nothing on the site.
-            # Without S3_PUBLIC_URL the app falls back to the site's route.
+            # TMC_UPDATER_ENDPOINT is the public `latest.json` compiled in as
+            # the updater's default, so a release updates with nothing on the
+            # site. In order: the variable when set; the downloads bucket's
+            # switch when S3_PUBLIC_URL is set; otherwise the `latest.json`
+            # the Publish step attaches to this repository's newest release
+            # (`releases/latest/download/latest.json`), which GitHub serves
+            # without any configuration.
             - name: Build
               shell: bash
               env:
                   TMC_UPDATER_PUBKEY: ${{ vars.TMC_UPDATER_PUBKEY }}
                   TMC_UPDATER_ENDPOINT: ${{ vars.TMC_UPDATER_ENDPOINT }}
                   S3_PUBLIC_URL: ${{ vars.S3_PUBLIC_URL || secrets.S3_PUBLIC_URL }}
+                  REPO: ${{ github.repository }}
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
               run: |
@@ -144,9 +148,10 @@ jobs:
                   if [ -z "${TMC_UPDATER_ENDPOINT:-}" ] && [ -n "${S3_PUBLIC_URL:-}" ]; then
                       export TMC_UPDATER_ENDPOINT="${S3_PUBLIC_URL%/}/downloads/gamespice-app/latest.json"
                   fi
-                  # No apostrophe inside ${...:-...}: in double quotes bash reads it as an
-                  # opening quote, and the whole step dies with "unexpected EOF".
-                  echo "Updater endpoint: ${TMC_UPDATER_ENDPOINT:-(the /api/app/v1/update route of the site)}"
+                  if [ -z "${TMC_UPDATER_ENDPOINT:-}" ]; then
+                      export TMC_UPDATER_ENDPOINT="https://github.com/${REPO}/releases/latest/download/latest.json"
+                  fi
+                  echo "Updater endpoint: ${TMC_UPDATER_ENDPOINT}"
 
                   if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
                       extra=(--config '{"bundle":{"createUpdaterArtifacts":true}}')
@@ -363,6 +368,33 @@ jobs:
                   fi
 
                   echo "base-url=$base" >> "$GITHUB_OUTPUT"
+
+            # THE RELEASE ALWAYS CARRIES ITS OWN MANIFESTS. `latest.json` and
+            # `latest-beta.json` go on the GitHub release beside the
+            # installers: they are what a build polls when no bucket is
+            # configured (`releases/latest/download/latest.json`), and what
+            # scripts/bridge-release.sh copies to modcommunity/tmc-app for
+            # installs from before the move. With the bucket, its manifest
+            # (URLs in the bucket) is reused; without it, one is written here
+            # whose URLs are this release's own downloads. GitHub's
+            # `releases/latest` never names a pre-release, so on this route a
+            # beta-channel install sees the newest stable release.
+            - name: Updater manifests on the release
+              shell: bash
+              env:
+                  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+                  REPO: ${{ github.repository }}
+              run: |
+                  if ! ls artifacts/*.sig >/dev/null 2>&1; then
+                      echo "::warning::This release is unsigned (no TAURI_SIGNING_PRIVATE_KEY), so it carries no updater manifest and no installed app will update to it."
+                      exit 0
+                  fi
+                  if [ ! -f artifacts/latest.json ]; then
+                      node scripts/updater-manifest.mjs --dir artifacts --version "${TAG#v}" \
+                          --base-url "https://github.com/${REPO}/releases/download/${TAG}" --out artifacts/latest.json
+                  fi
+                  cp artifacts/latest.json artifacts/latest-beta.json
+                  cat artifacts/latest.json
 
             - name: Publish
               env:
