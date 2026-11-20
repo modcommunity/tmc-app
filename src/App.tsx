@@ -28,7 +28,6 @@ import RconRoute from '~/routes/rcon'
 import ViewRoute from '~/routes/view'
 import GameCatalogueRoute from '~/routes/games'
 import GameHubRoute from '~/routes/game-hub'
-import AvatarSlotRoute from '~/routes/avatar-slot'
 import WorkshopRoute from '~/routes/workshop'
 import GameSpiceAccountRoute from '~/routes/gamespice-account'
 import AccountRoute from '~/routes/account'
@@ -56,8 +55,8 @@ const router = createHashRouter([
             { path: 'play', element: <PlayRoute /> },
             { path: 'games', element: <GameCatalogueRoute /> },
             { path: 'games/:slug', element: <GameHubRoute /> },
-            { path: 'games/:slug/avatar', element: <AvatarSlotRoute /> },
-            { path: 'avatar', element: <AvatarSlotRoute /> },
+            { path: 'games/:slug/avatar', lazy: () => import('~/routes/avatar-games').then((m) => ({ Component: m.default })) },
+            { path: 'avatar', lazy: () => import('~/routes/avatar-member').then((m) => ({ Component: m.default })) },
             { path: 'workshop', element: <WorkshopRoute /> },
             { path: 'me', element: <GameSpiceAccountRoute /> },
             { path: 'discover', element: <DiscoverRoute /> },

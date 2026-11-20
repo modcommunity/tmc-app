@@ -8,6 +8,7 @@ The index. `CLAUDE.md` in the repository root is the always-loaded summary; this
 | --- | --- |
 | [development.md](development.md) | running, checking or building anything; pointing a build at the dev site; building on Linux without root; what CI runs; `audit:rust` |
 | [BUILDING.md](BUILDING.md) | producing an artifact for a platform, including the whole Windows build from Linux |
+| [avatar.md](avatar.md) | the avatar studio: the shared editor, its IPC, the model-bytes command, the `blob:` CSP allowance |
 | [RELEASING.md](RELEASING.md) | cutting a release: the tag, the secrets, the bucket, the updater keypair |
 | [extending.md](extending.md) | adding a content kind, a query protocol, a game, a mod manager, a deployment strategy or a step type |
 | [gotchas.md](gotchas.md) | before declaring anything done: the traps that do not error usefully, by area |

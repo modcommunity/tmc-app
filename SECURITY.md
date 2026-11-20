@@ -51,6 +51,13 @@ Reported often enough to be worth listing:
   a per-host connection cooldown, a session cap, and a Security-level audit
   entry on every connect. This is documented as a widening in
   `core/src/rcon/mod.rs`.
+- **`connect-src` allows `blob:`.** The avatar studio's 3D stage hands a model
+  to three.js as bytes Rust fetched (`avatar_asset`); three then decodes the
+  textures inside a glTF through `blob:` URLs, which a webview `fetch` governs
+  as `connect-src`. `blob:` names only objects this page created itself; it
+  grants no host. The model bytes never touch the network from the webview, and
+  `avatar_asset` refuses any URL TMC's own manifest, library and wearables
+  answers did not name (`core/src/avatar.rs`). See `docs/avatar.md`.
 - **The app process has the user's filesystem permissions.** It writes into
   game folders — that is the product. The jail bounds what a _plugin_ and the
   _webview_ can name, not what the process could do if it were rewritten.

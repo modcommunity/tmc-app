@@ -11,6 +11,7 @@
  */
 @import '@modcommunity/shared/theme.css';
 @source "../../node_modules/@modcommunity/shared/dist";
+@import './avatar-studio.css';
 
 /*
  * GameSpice fonts, bundled with the app (OFL 1.1, licences beside the files).

@@ -1,0 +1,80 @@
+/*
+ * The avatar studio (`@modcommunity/shared/avatar`) is written against the
+ * GameSpice website's classes (`glass`, `btn`, `chip`, `field`, `input`,
+ * `display`) and variables (`--ink`, `--accent-soft`, `--glass-*`). The app has
+ * neither, so this maps them onto the shared theme's tokens. Everything is
+ * scoped under `.avatar-studio`: the studio's host component wraps its page in
+ * it, and nothing here reaches the rest of the app.
+ */
+.avatar-studio {
+    --ink: var(--foreground);
+    --accent-soft: color-mix(in oklab, var(--accent) 18%, transparent);
+    --glass-line: var(--border);
+    --glass-strong: var(--surface-tertiary);
+}
+
+.avatar-studio .glass {
+    background: var(--surface);
+    border: 1px solid var(--glass-line);
+    border-radius: 0.75rem;
+}
+
+.avatar-studio .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--glass-line);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.avatar-studio .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.avatar-studio .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-foreground);
+}
+
+.avatar-studio .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+}
+
+.avatar-studio .btn-ghost:hover:not(:disabled) {
+    background: var(--surface-hover);
+}
+
+.avatar-studio .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--glass-line);
+    background: var(--accent-soft);
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.avatar-studio .field,
+.avatar-studio .input {
+    border: 1px solid var(--glass-line);
+    border-radius: 0.5rem;
+    background: var(--surface-secondary);
+    color: var(--ink);
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+}
+
+.avatar-studio .display {
+    font-family: var(--font-pjs);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}

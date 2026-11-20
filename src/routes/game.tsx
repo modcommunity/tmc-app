@@ -18,7 +18,6 @@ import { useAuth } from '~/lib/auth/provider'
 import { openExternally } from '~/lib/external'
 import { messageOf } from '~/lib/ipc'
 import { GameIcon } from '~/components/game-icon'
-import AvatarPanel from '~/components/avatar-panel'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
 
 /**
@@ -135,7 +134,6 @@ export default function GameRoute() {
 
             <Leaderboards appId={app.id} />
 
-            <AvatarPanel siteUrl={app.webUrl ?? null} appId={app.id} />
 
             {target && (
                 <PlayDialog target={target} onClose={() => setTarget(null)} />
