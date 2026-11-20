@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import { RAIL } from '../nav'
-import { AvatarOutfitsResponse, PointsSummaryResponse, WorkshopMineResponse } from '~/lib/api/contract'
+import {
+    AvatarOutfitsResponse,
+    PointsSummaryResponse,
+    WorkshopMineResponse,
+    WorkshopScopeRequest,
+    WorkshopScopeResponse,
+} from '~/lib/api/contract'
 
 describe('gamespice schemas', () => {
     it('parses a workshop subscription list', () => {
@@ -12,6 +18,37 @@ describe('gamespice schemas', () => {
         })
 
         expect(r.items[0]?.scope).toBe('all')
+    })
+
+    it('parses the list tmcdev.net returned on 2026-11-20', () => {
+        // Verbatim from GET /api/app/v1/workshop/mine on the dev site (envelope removed).
+        const r = WorkshopMineResponse.parse({
+            items: [
+                {
+                    subscriptionId: 'cmwovjct50001eroyep7pbsgl',
+                    assetId: 300,
+                    name: 'Zombie Zone maps',
+                    image: null,
+                    webUrl: 'https://tmcdev.net/a/zombie-zone-maps',
+                    scope: 'all',
+                    games: [],
+                    paused: false,
+                    autoUpdate: true,
+                    via: null,
+                    available: false,
+                },
+            ],
+        })
+
+        expect(r.items[0]?.available).toBe(false)
+    })
+
+    it('accepts exactly the two scope request shapes the site accepts', () => {
+        expect(WorkshopScopeRequest.safeParse({ subscriptionId: 's', all: false }).success).toBe(true)
+        expect(WorkshopScopeRequest.safeParse({ subscriptionId: 's', game: 'fatal-contact', on: true }).success).toBe(true)
+        expect(WorkshopScopeRequest.safeParse({ subscriptionId: 's', game: 'fatal-contact' }).success).toBe(false)
+        expect(WorkshopScopeRequest.safeParse({ subscriptionId: 's', all: true, game: 'fatal-contact', on: true }).success).toBe(false)
+        expect(WorkshopScopeResponse.parse({ subscriptionId: 's', scope: 'listed', games: [] }).scope).toBe('listed')
     })
 
     it('rejects an unknown scope', () => {
