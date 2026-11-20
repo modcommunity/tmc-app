@@ -260,12 +260,20 @@ h4 {
  * different door. `appearance: none` takes the drawing back and everything
  * below re-supplies what it removed.
  */
-input,
-select,
-textarea,
-button {
-    font: inherit;
-    color: inherit;
+@layer base {
+    /*
+     * In the base layer, not unlayered: an unlayered `font: inherit` beats
+     * `@layer utilities`, so every `text-xs`/`text-muted` on a button was
+     * silently ignored and the button took its parent's size and colour (the
+     * "Powered by TMC" footer rendered at 16px body text).
+     */
+    input,
+    select,
+    textarea,
+    button {
+        font: inherit;
+        color: inherit;
+    }
 }
 
 /*
