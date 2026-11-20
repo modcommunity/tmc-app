@@ -32,6 +32,9 @@ const reviewHooks: Plugin = {
 export default mergeConfig((base as (env: unknown) => UserConfig)({ command: 'serve', mode: 'development' }), {
     plugins: [reviewHooks],
     root: new URL('../..', import.meta.url).pathname,
+    // A worktree that borrows another checkout's node_modules may not own its
+    // .vite cache; TMC_REVIEW_CACHE_DIR moves it somewhere writable.
+    ...(process.env.TMC_REVIEW_CACHE_DIR ? { cacheDir: process.env.TMC_REVIEW_CACHE_DIR } : {}),
     server: {
         port: Number(process.env.TMC_REVIEW_PORT ?? 1431),
         strictPort: true,

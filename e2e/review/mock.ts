@@ -41,7 +41,8 @@ export function fake(schema: unknown, depth = 0): unknown {
         case 'number': case 'int': return 0
         case 'bigint': return 0
         case 'boolean': return false
-        case 'null': case 'void': case 'undefined': return null
+        case 'null': return null
+        case 'void': case 'undefined': return undefined // z.void() refuses null
         case 'nullable': return null
         case 'optional': return undefined
         case 'default': return typeof def.defaultValue === 'function' ? (def.defaultValue as () => unknown)() : def.defaultValue
@@ -131,8 +132,11 @@ mockIPC(async (cmd, args) => {
             return { signedIn: !!me, pending: false, user }
         }
         case 'api_env': return { base: 'https://tmcdev.net', isProd: false, version: '0.0.0-review' }
-        case 'settings_get': return (settings ??= { ...(fake(schema) as Record<string, unknown>), uiScale: 1 }) // a zero scale makes 1rem = 0px
+        case 'settings_get': return (settings ??= { ...(fake(schema) as Record<string, unknown>), uiScale: 1, theme: 'system' }) // a zero scale makes 1rem = 0px; the page's colorScheme picks light or dark
         case 'settings_patch': return (settings = { ...(settings ?? {}), ...(a.patch as object ?? a) })
+        // Fixture mode supports the dev site's one modded game, so the new
+        // sandbox form has something to offer.
+        case 'library_supported_apps': return g.__reviewFixtures ? ['css'] : []
         case 'sandbox_list':
             return [...sandboxes.values()].filter((s) => a.appId == null || s.appId === a.appId)
         case 'sandbox_get': return sandboxes.get(Number(a.id)) ?? null

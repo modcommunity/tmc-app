@@ -45,6 +45,18 @@ const KIND_LABELS: Record<ContentKindT, string> = {
     user: 'Members',
 }
 
+/** The count line's noun when there is exactly one: "1 mod", not "1 mods". */
+const KIND_ONE: Record<ContentKindT, string> = {
+    mod: 'mod',
+    asset: 'asset',
+    server: 'server',
+    serverMap: 'map',
+    article: 'article',
+    community: 'community',
+    collection: 'collection',
+    user: 'member',
+}
+
 /** Which kinds each tab offers as sub-filters. */
 const KIND_GROUPS: Record<string, ContentKindT[]> = {
     mod: ['mod'],
@@ -579,7 +591,9 @@ export default function BrowseRoute() {
                     {total !== null && (
                         <p className="mb-3 text-xs text-muted">
                             {total.toLocaleString()}{' '}
-                            {KIND_LABELS[kind].toLowerCase()}
+                            {total === 1
+                                ? KIND_ONE[kind]
+                                : KIND_LABELS[kind].toLowerCase()}
                         </p>
                     )}
 
