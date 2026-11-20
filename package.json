@@ -30,6 +30,8 @@
         "test:core": "cargo test --manifest-path src-tauri/core/Cargo.toml",
         "sysroot": "bash scripts/linux-sysroot.sh",
         "contract:sync": "bash scripts/sync-contract.sh",
+        "shots:capture": "npm --prefix scripts/shots run capture --",
+        "shots:marketing": "npm --prefix scripts/shots run marketing --",
         "tauri": "tauri",
         "desktop": "tauri dev",
         "desktop:build": "tauri build",

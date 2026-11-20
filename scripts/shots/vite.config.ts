@@ -21,5 +21,5 @@ const seed: Plugin = {
 export default mergeConfig(review, {
     plugins: [seed],
     cacheDir: new URL('./.vite', import.meta.url).pathname,
-    server: { port: Number(process.env.TMC_REVIEW_PORT ?? 1440), hmr: false },
+    server: { host: '127.0.0.1', port: Number(process.env.TMC_REVIEW_PORT ?? 1440), hmr: false },
 })

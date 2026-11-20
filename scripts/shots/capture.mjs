@@ -10,7 +10,7 @@
  * the screens marked gpu, `--no-gpu` skips them.
  */
 import { createRequire } from 'node:module'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 import { screens, themes, SIZE } from './screens.mjs'
 
@@ -67,7 +67,8 @@ for (const theme of wantThemes) {
         await page.locator(s.wait).first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => errors.push(`wait ${s.wait} timed out`))
         if (s.act) await s.act(page)
         // No caret, no scrollbars, no running transitions in a still.
-        await page.addStyleTag({ content: '*{caret-color:transparent!important}::-webkit-scrollbar{display:none}*{scrollbar-width:none!important}' })
+        // The dev-API badge in the title bar is for bug reports, not product shots.
+        await page.addStyleTag({ content: '[title^="API: "]{display:none!important}*{caret-color:transparent!important}::-webkit-scrollbar{display:none}*{scrollbar-width:none!important}' })
         await page.waitForTimeout(Number(s.settle ?? process.env.SETTLE ?? 2500))
         const file = `${out}${s.slot}-${theme}.png`
         await page.screenshot({ path: file, animations: 'disabled' })
@@ -76,12 +77,23 @@ for (const theme of wantThemes) {
             const d = c?.getExtension('WEBGL_debug_renderer_info')
             return d ? c.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'no webgl'
         }) : undefined
-        report.push({ slot: s.slot, theme, route, gl, errors: [...new Set(errors)] })
+        // Where each callout points, so compose never guesses pixel positions.
+        const callouts = []
+        for (const c of s.callouts ?? []) {
+            const box = await page.locator(c.at).first().boundingBox().catch(() => null)
+            if (box) callouts.push({ label: c.label, ...box })
+            else errors.push(`callout ${c.at} not found`)
+        }
+        report.push({ slot: s.slot, theme, route, gl, callouts, errors: [...new Set(errors)] })
         console.log(`${s.slot}-${theme}${gl ? ` [${gl}]` : ''}${errors.length ? `  ${errors.length} error(s): ${errors[0]}` : ''}`)
-        if (errors.some((e) => e.startsWith('wait '))) failed++
+        if (errors.some((e) => e.startsWith('wait ') || e.startsWith('callout '))) failed++
         await page.close()
     }
 }
-writeFileSync(`${out}capture.json`, JSON.stringify(report, null, 2))
+// Merged by slot and theme, so a partial run (--only, --gpu-only) keeps the rest.
+const prior = existsSync(`${out}capture.json`) ? JSON.parse(readFileSync(`${out}capture.json`, 'utf8')) : []
+const merged = [...prior.filter((p) => !report.some((r) => r.slot === p.slot && r.theme === p.theme)), ...report]
+merged.sort((a, b) => `${a.slot}-${a.theme}`.localeCompare(`${b.slot}-${b.theme}`))
+writeFileSync(`${out}capture.json`, JSON.stringify(merged, null, 2))
 await (cdp ? context.close() : browser.close())
 process.exit(failed ? 1 : 0)

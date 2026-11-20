@@ -14,6 +14,7 @@ The index. `CLAUDE.md` in the repository root is the always-loaded summary; this
 | [gotchas.md](gotchas.md) | before declaring anything done: the traps that do not error usefully, by area |
 | [history.md](history.md) | a bug that "cannot be happening" — what this repository has already met, and how it looked |
 | [gaps.md](gaps.md) | planning: what is deliberately not built yet, and why |
+| [../scripts/shots/README.md](../scripts/shots/README.md) | the website screenshots, marketing frames, tour slides, PDF and deck (`npm run shots:capture`, `npm run shots:marketing`); what in them is seeded |
 
 ## Architecture
 

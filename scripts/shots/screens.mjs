@@ -10,7 +10,7 @@
  * wait     a selector that is visible once the screen has its data
  * gpu      needs real WebGL (the 3D avatar): capture on a GPU box
  * act      optional: async (page) => {} run after load, before the shot
- * callouts optional: [{ x, y, text }] in screenshot pixels, drawn by compose
+ * callouts optional: [{ at: locator, label }]; capture records where `at` is, compose draws the label there
  */
 export const screens = [
     {
@@ -28,6 +28,7 @@ export const screens = [
     {
         slot: 'modpage', route: '/view/mod/2', wait: 'main',
         title: 'Install in one click', caption: 'Every mod page shows what it changes and installs into the right sandbox.',
+        callouts: [{ at: 'text=Install into a sandbox >> xpath=ancestor::*[.//button][1]', label: 'Pick a sandbox, press Install' }],
     },
     {
         slot: 'workshop', route: '/workshop', wait: 'main',
@@ -42,6 +43,7 @@ export const screens = [
         slot: 'servers', route: '/browse/server', wait: 'main',
         title: 'Servers with live latency', caption: 'Real game queries and a running ping trace for every server.',
         act: async (page) => { await page.getByText('Ember Ridge | Casual 24/7').first().click() },
+        callouts: [{ at: '[role="img"][aria-label^="Latency over"]', label: 'Ping measured from your machine' }],
     },
     {
         slot: 'downloads', route: '/downloads', wait: 'main',
