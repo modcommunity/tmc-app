@@ -1,5 +1,5 @@
-# Cut a release: build on every desktop platform, then publish one GitHub
-# release with checksums.
+# Cut a release: build on every desktop platform plus Android and iOS, then
+# publish one GitHub release with checksums.
 #
 # This is the ONLY path that produces a macOS build. Windows and Linux both
 # cross-build from a Linux box (`scripts/build-windows.sh`), and that is the
@@ -252,8 +252,282 @@ jobs:
                   path: out/*
                   if-no-files-found: error
 
+    # ANDROID AND iOS: the same tag, built from a freshly generated project.
+    #
+    # `src-tauri/gen/` is not committed. `tauri android init` / `tauri ios init`
+    # write it, `scripts/mobile-patch.mjs` adds the `gs://` and `tmc://` schemes
+    # (read from tauri.conf.json) and the committed icons, and a check after
+    # the build refuses an artifact that does not declare them. The outputs are
+    # NOT updater artifacts (no `.sig`), so they never reach `latest.json`, the
+    # site publish or the desktop jobs: they are plain release files with a
+    # line in checksums.txt. A failed mobile job does not stop the desktop
+    # release from publishing (see `publish`'s `if`).
+    android:
+        runs-on: ubuntu-22.04
+        env:
+            ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+            ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+            ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+            ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+            NDK_VERSION: '27.2.12479018'
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event.inputs.tag || github.ref }}
+
+            - name: Tag matches tauri.conf.json
+              shell: bash
+              env:
+                  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+              run: |
+                  conf="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+                  if [ "${TAG#v}" != "$conf" ]; then
+                      echo "::error::Tag $TAG is not the version in src-tauri/tauri.conf.json ($conf)."
+                      exit 1
+                  fi
+                  echo "VERSION=$conf" >> "$GITHUB_ENV"
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  registry-url: https://npm.pkg.github.com
+                  scope: '@modcommunity'
+
+            - uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: '17'
+
+            - uses: dtolnay/rust-toolchain@master
+              with:
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: src-tauri
+                  key: android
+
+            - name: Android SDK and NDK
+              shell: bash
+              run: |
+                  sdkm="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+                  yes | "$sdkm" --licenses >/dev/null || true
+                  "$sdkm" "ndk;${NDK_VERSION}" "platforms;android-36" "build-tools;35.0.0"
+                  echo "NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+                  echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+            - name: Install
+              run: npm ci
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+
+            # The version code Gradle gets is derived by Tauri from `version`
+            # (major*1000000 + minor*1000 + patch) when `bundle.android.versionCode`
+            # is unset, so a higher tag is always a higher code.
+            - name: Generate the Android project
+              shell: bash
+              run: |
+                  npx tauri android init --ci
+                  gen=src-tauri/gen/android
+                  cp -R src-tauri/icons/android/. "$gen/app/src/main/res/"
+                  node scripts/mobile-patch.mjs android "$gen/app/src/main/AndroidManifest.xml"
+
+            - name: Build
+              shell: bash
+              env:
+                  TMC_API_BASE: ${{ vars.TMC_API_BASE }}
+              run: npx tauri android build --ci --apk --aab --target aarch64 armv7 x86_64
+
+            - name: Both schemes are in the built manifest
+              shell: bash
+              run: node scripts/mobile-patch.mjs check-android src-tauri/gen/android/app/src/main/AndroidManifest.xml
+
+            # Signed here with apksigner / jarsigner rather than through a
+            # Gradle signingConfig patch: it needs nothing in the generated
+            # build files, so a template change in Tauri cannot break it.
+            - name: Sign and collect
+              shell: bash
+              run: |
+                  out=src-tauri/gen/android/app/build/outputs
+                  apk="$(find "$out/apk" -name '*.apk' | head -1)"
+                  aab="$(find "$out/bundle" -name '*.aab' | head -1)"
+                  [ -n "$apk" ] || { echo "::error::No apk was built."; exit 1; }
+                  bt="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+                  mkdir -p out
+                  summary=""
+
+                  if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] && [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ]; then
+                      ks="$RUNNER_TEMP/release.jks"
+                      echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$ks"
+                      export KSPASS="$ANDROID_KEYSTORE_PASSWORD" KEYPASS="${ANDROID_KEY_PASSWORD:-$ANDROID_KEYSTORE_PASSWORD}"
+                      alias="$ANDROID_KEY_ALIAS"
+                      summary="Signed with the release keystore (alias \`$alias\`)."
+                  else
+                      ks="$RUNNER_TEMP/debug.jks"
+                      keytool -genkeypair -keystore "$ks" -storepass android -keypass android \
+                        -alias debug -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=GameSpice debug"
+                      export KSPASS=android KEYPASS=android
+                      alias=debug
+                      summary="**DEBUG-SIGNED, not release-signed**: the ANDROID_KEYSTORE_* secrets are not set. The APK installs for testing but is signed with a throwaway key (an update signed with the real key later will not install over it), and **no .aab was produced for upload** because Google Play rejects it. See docs/RELEASING.md."
+                      echo "::warning::No ANDROID_KEYSTORE_* secrets: the APK is debug-signed and the AAB is not published."
+                  fi
+
+                  "$bt/zipalign" -p -f 4 "$apk" "$RUNNER_TEMP/aligned.apk"
+                  "$bt/apksigner" sign --ks "$ks" --ks-pass env:KSPASS --ks-key-alias "$alias" --key-pass env:KEYPASS \
+                      --out "out/GameSpice_${VERSION}.apk" "$RUNNER_TEMP/aligned.apk"
+                  "$bt/apksigner" verify "out/GameSpice_${VERSION}.apk"
+
+                  if [ -n "$aab" ] && [ "$ks" = "$RUNNER_TEMP/release.jks" ]; then
+                      cp "$aab" "out/GameSpice_${VERSION}.aab"
+                      jarsigner -keystore "$ks" -storepass:env KSPASS -keypass:env KEYPASS \
+                          -sigalg SHA256withRSA -digestalg SHA-256 "out/GameSpice_${VERSION}.aab" "$alias"
+                  fi
+
+                  {
+                      echo "### Android ${VERSION}"
+                      echo "$summary"
+                      echo
+                      ls -la out | sed 's/^/    /'
+                  } >> "$GITHUB_STEP_SUMMARY"
+                  ls -la out
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: android
+                  path: out/*
+                  if-no-files-found: error
+
+    ios:
+        runs-on: macos-latest
+        env:
+            APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+            APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+            APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+            APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+            # `release-testing` is ad-hoc (installable on registered devices);
+            # `app-store-connect` is for TestFlight / the App Store. A repository
+            # variable switches it.
+            IOS_EXPORT_METHOD: ${{ vars.IOS_EXPORT_METHOD || 'release-testing' }}
+        steps:
+            # An .ipa cannot be signed without the owner's Apple Developer
+            # account, so without these secrets the job ends here, green, with
+            # a notice rather than failing the release.
+            - name: Apple credentials present?
+              id: gate
+              shell: bash
+              run: |
+                  if [ -z "${APPLE_CERTIFICATE:-}" ] || [ -z "${APPLE_CERTIFICATE_PASSWORD:-}" ] || [ -z "${APPLE_PROVISIONING_PROFILE_BASE64:-}" ] || [ -z "${APPLE_TEAM_ID:-}" ]; then
+                      echo "::notice::iOS build skipped: APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_PROVISIONING_PROFILE_BASE64 and APPLE_TEAM_ID are not all set. An Apple Developer account is required; see docs/RELEASING.md."
+                      {
+                          echo "### iOS"
+                          echo "**Skipped**: the Apple Developer secrets are not configured, so no .ipa was built. See docs/RELEASING.md."
+                      } >> "$GITHUB_STEP_SUMMARY"
+                      echo "run=false" >> "$GITHUB_OUTPUT"
+                  else
+                      echo "run=true" >> "$GITHUB_OUTPUT"
+                  fi
+
+            - uses: actions/checkout@v4
+              if: steps.gate.outputs.run == 'true'
+              with:
+                  ref: ${{ github.event.inputs.tag || github.ref }}
+
+            - name: Tag matches tauri.conf.json
+              if: steps.gate.outputs.run == 'true'
+              shell: bash
+              env:
+                  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+              run: |
+                  conf="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+                  if [ "${TAG#v}" != "$conf" ]; then
+                      echo "::error::Tag $TAG is not the version in src-tauri/tauri.conf.json ($conf)."
+                      exit 1
+                  fi
+                  echo "VERSION=$conf" >> "$GITHUB_ENV"
+
+            - uses: actions/setup-node@v4
+              if: steps.gate.outputs.run == 'true'
+              with:
+                  node-version: 22
+                  registry-url: https://npm.pkg.github.com
+                  scope: '@modcommunity'
+
+            - uses: dtolnay/rust-toolchain@master
+              if: steps.gate.outputs.run == 'true'
+              with:
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+            - uses: Swatinem/rust-cache@v2
+              if: steps.gate.outputs.run == 'true'
+              with:
+                  workspaces: src-tauri
+                  key: ios
+
+            - name: Install
+              if: steps.gate.outputs.run == 'true'
+              run: |
+                  npm ci
+                  brew install xcodegen
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+
+            - name: Generate the iOS project
+              if: steps.gate.outputs.run == 'true'
+              shell: bash
+              env:
+                  APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+              run: |
+                  npx tauri ios init --ci
+                  gen=src-tauri/gen/apple
+                  # The icons (square and unrounded: Apple rounds them).
+                  set="$(find "$gen" -type d -name 'AppIcon.appiconset' | head -1)"
+                  [ -n "$set" ] && cp src-tauri/icons/ios/*.png "$set/"
+                  plist="$(find "$gen" -maxdepth 2 -name Info.plist | head -1)"
+                  node scripts/mobile-patch.mjs ios "$plist"
+
+            # Tauri imports the certificate into a temporary keychain and
+            # installs the profile itself when these three are set.
+            - name: Build
+              if: steps.gate.outputs.run == 'true'
+              shell: bash
+              env:
+                  IOS_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+                  IOS_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+                  IOS_MOBILE_PROVISION: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+                  APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+                  TMC_API_BASE: ${{ vars.TMC_API_BASE }}
+              run: npx tauri ios build --ci --export-method "$IOS_EXPORT_METHOD"
+
+            - name: Both schemes are in the built ipa
+              if: steps.gate.outputs.run == 'true'
+              shell: bash
+              run: |
+                  ipa="$(find src-tauri/gen/apple/build -name '*.ipa' | head -1)"
+                  [ -n "$ipa" ] || { echo "::error::No ipa was built."; exit 1; }
+                  unzip -p "$ipa" 'Payload/*.app/Info.plist' > "$RUNNER_TEMP/Info.plist"
+                  plutil -convert xml1 "$RUNNER_TEMP/Info.plist"
+                  node scripts/mobile-patch.mjs check-ios "$RUNNER_TEMP/Info.plist"
+                  mkdir -p out
+                  cp "$ipa" "out/GameSpice_${VERSION}.ipa"
+                  {
+                      echo "### iOS ${VERSION}"
+                      echo "Exported with method \`$IOS_EXPORT_METHOD\`."
+                  } >> "$GITHUB_STEP_SUMMARY"
+
+            - uses: actions/upload-artifact@v4
+              if: steps.gate.outputs.run == 'true'
+              with:
+                  name: ios
+                  path: out/*
+                  if-no-files-found: error
+
+    # Publishes whenever the desktop build succeeded. A mobile job that failed
+    # or was skipped (no Apple credentials) simply leaves its artifact out.
     publish:
-        needs: build
+        needs: [build, android, ios]
+        if: ${{ !cancelled() && needs.build.result == 'success' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4

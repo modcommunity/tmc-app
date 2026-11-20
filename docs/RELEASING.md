@@ -10,6 +10,7 @@ Bump `version` in `src-tauri/tauri.conf.json` (and `package.json`, `src-tauri/Ca
 1. **Builds and signs** on Linux (AppImage, deb), Windows (NSIS setup, MSI, portable exe) and macOS (universal `.app` + `.dmg`). With `TAURI_SIGNING_PRIVATE_KEY` set it turns on `createUpdaterArtifacts`, so every updatable bundle gets a `.sig`, and then runs `scripts/verify-updater-signature.mjs`, which **fails the job** if those signatures do not verify against the public key the app is compiled with.
 2. **Uploads to the downloads bucket**: every file under `downloads/gamespice-app/<version>/` (immutable cache headers), plus that version's `latest.json`; then — last, because they are the switch — `downloads/gamespice-app/latest-beta.json` and, for a non-pre-release tag, `downloads/gamespice-app/latest.json` (`no-cache`). The same two switches are also written under `downloads/tmc-app/`, the endpoint compiled into builds from before the rename (see "The repository moved").
 3. **Publishes the GitHub release** with the same files plus `latest.json` and `latest-beta.json` (the bucket's manifest when there is a bucket; otherwise one written by `scripts/updater-manifest.mjs` whose URLs are the release's own downloads, so a release with no bucket is still an update), every artifact named `GameSpice-App_*` (Tauri's `GameSpice App_*` with the space replaced), (pre-release tags are marked as such), which `scripts/install.sh` and the README links use.
+   The **`android` and `ios` jobs** run beside the desktop build and add `GameSpice_<version>.apk`, `.aab` and `.ipa` to the same release and to `checksums.txt`. They are not updater artifacts, and a failed or skipped mobile job does not stop the desktop release from publishing. See "Android and iOS secrets".
 4. **Tells the site** (`POST /api/app/v1/releases`) when `TMC_RELEASE_TOKEN` is set, with the bucket's URLs. Optional — see below.
 
 Each optional step that is not configured is a **warning, not a failure**: an unsigned release is still downloadable, and a release with no bucket still lands on GitHub.
@@ -86,6 +87,33 @@ GitHub → this repository → Settings → Secrets and variables → Actions.
 | `TMC_SITE_URL` | Variable, optional | a staging site | the same |
 | `TMC_UPDATER_PUBKEY` | Variable, optional | a different public key | a fork signing its own releases |
 | `TMC_UPDATER_ENDPOINT` | Variable, optional | a different default manifest URL | overriding the bucket or GitHub default |
+
+### Android and iOS secrets
+
+All optional; without them the release still ships, and the job summary says what was skipped.
+
+| Name | Kind | Value | Without it |
+| --- | --- | --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | Secret | the release keystore, `base64 -w0 gamespice-release.jks` | the APK is signed with a throwaway debug key and **no `.aab` is published** |
+| `ANDROID_KEYSTORE_PASSWORD` | Secret | the keystore password | the same |
+| `ANDROID_KEY_ALIAS` | Secret | the key alias (`gamespice` below) | the same |
+| `ANDROID_KEY_PASSWORD` | Secret, optional | the key password; defaults to the keystore password | |
+| `APPLE_CERTIFICATE` | Secret | a distribution certificate exported as `.p12`, `base64 -i cert.p12` | the iOS job is skipped with a notice |
+| `APPLE_CERTIFICATE_PASSWORD` | Secret | the `.p12` password | the same |
+| `APPLE_PROVISIONING_PROFILE_BASE64` | Secret | the provisioning profile for `com.moddingcommunity.app` (ad-hoc, or App Store), `base64 -i profile.mobileprovision` | the same |
+| `APPLE_TEAM_ID` | Secret | the 10-character team id | the same |
+| `IOS_EXPORT_METHOD` | Variable, optional | `release-testing` (ad-hoc, the default) or `app-store-connect` | |
+| `TMC_API_BASE` | Variable, optional | an API base baked into the mobile builds (default: production) | |
+
+**Making the Android keystore** (once, then back it up beside the updater key: every later release must be signed with the same key or installs cannot update, and Play will refuse an upload signed with another):
+
+```bash
+keytool -genkeypair -v -keystore gamespice-release.jks -alias gamespice \
+  -keyalg RSA -keysize 4096 -validity 10000
+base64 -w0 gamespice-release.jks      # the ANDROID_KEYSTORE_BASE64 value
+```
+
+The iOS credentials need a paid Apple Developer Program membership: create the App ID `com.moddingcommunity.app`, a distribution certificate and a matching provisioning profile in the developer portal (ad-hoc profiles list the registered devices). Nothing here can create them. The iOS job has not been run: expect to adjust it on the first real build.
 
 The minimum for a release that installed apps update to is the two `TAURI_SIGNING_*` secrets (plus `PACKAGES_TOKEN` if `npm ci` cannot read `@modcommunity/shared`); everything else is optional. Settings → Actions → General must also give workflows **read and write** permission, since the publish job creates the release with the job's own token.
 

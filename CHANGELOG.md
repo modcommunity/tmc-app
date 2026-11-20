@@ -1,5 +1,9 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
+## Unreleased
+
+- **Android and iOS builds in the release pipeline**: tagged releases now also attach `GameSpice_<version>.apk`, `.aab` and `.ipa` (checksummed with the rest). Android is signed with the owner's keystore when `ANDROID_KEYSTORE_*` secrets exist, otherwise debug-signed and without an AAB; iOS needs the Apple Developer secrets and is skipped without them. Both `gs://` and `tmc://` are checked in the built app. See `docs/RELEASING.md`.
+
 ## 0.3.0
 
 The first release as the GameSpice App, published from `gamespice-platform/app`.

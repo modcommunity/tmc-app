@@ -56,6 +56,12 @@ The `portable` executable is also available for those who want to run the app wi
 ### macOS
 Install using the included `.dmg` file.
 
+### Android
+Download `GameSpice_<version>.apk` from the releases and open it (allow installs from your browser or file manager when asked). `gs://` and `tmc://` links open the app. The `.aab` is for Google Play. If a release says its APK is debug-signed, it was built without the maintainer's signing key: use it for testing only.
+
+### iOS
+`GameSpice_<version>.ipa` is attached to a release only when the maintainer's Apple Developer credentials were available when it was built. It is an ad-hoc build for registered devices, or a TestFlight / App Store upload.
+
 ## Development
 ### Getting Started
 ```bash

@@ -7,8 +7,8 @@ Five targets, one codebase — but not one machine. This is what can be produced
 | `GameSpice App.exe` (portable), `*-setup.exe`, `*.msi` | **Linux or Windows** | `npm run build:windows` |
 | `*.AppImage`, `*.deb` | Linux | `npm run build:linux` |
 | `*.dmg`, `GameSpice App.app` | **macOS only** | `npx tauri build --target universal-apple-darwin` |
-| `*.apk` /`*.aab` | Linux, macOS or Windows | `npm run android:build` |
-| `*.ipa` | macOS only | `npm run ios:build` |
+| `GameSpice_x.y.z.apk` / `.aab` | Linux, macOS or Windows | `npm run android:build` (CI: the `android` job) |
+| `GameSpice_x.y.z.ipa` | macOS only | `npm run ios:build` (CI: the `ios` job) |
 
 The interesting row is the first one: **the whole Windows build comes out of the Linux box**, installers included, so a developer without a Windows machine — or without access to `@modcommunity/shared` on the one they have — can still hand somebody an exe.
 
@@ -76,6 +76,23 @@ Two things that bite on a current distribution, both handled by the script and b
 
 So macOS builds come from the `macos-latest` runner in `.github/workflows/release.yml`, as a universal binary. Signing and notarisation are still to be wired up there: it needs an Apple Developer ID certificate in the repository secrets, at which point `tauri-action`'s existing environment variables (`APPLE_CERTIFICATE`, `APPLE_ID`, `APPLE_TEAM_ID`, …) do the rest.
 
+## Android and iOS
+
+`src-tauri/gen/` (the Gradle and Xcode projects) is **not committed**. `release.yml` generates it on every build, so a Tauri upgrade never leaves a stale template behind and nothing generated can drift from `tauri.conf.json`:
+
+1. `tauri android init --ci` / `tauri ios init --ci`.
+2. The icons: `src-tauri/icons/android/` into `app/src/main/res/`, `src-tauri/icons/ios/` into the `AppIcon.appiconset`.
+3. `scripts/mobile-patch.mjs android|ios`, which adds the `gs://` and `tmc://` intent filters / `CFBundleURLTypes` if the generated project lacks them. The schemes are read from `plugins.deep-link.mobile` in `tauri.conf.json`, the same list the desktop build registers. After the build the same script **checks** the built manifest (Android) or the `Info.plist` inside the `.ipa` (iOS) and fails the job when a scheme is missing: a build without them would have dead `gs://` links.
+4. `tauri android build --apk --aab --target aarch64 armv7 x86_64` (one universal APK and one AAB with all three ABIs), or `tauri ios build --export-method <method>`.
+
+The Android version code is derived by Tauri from `version` (`major*1000000 + minor*1000 + patch`), so a higher tag is always a higher code.
+
+Locally: `npm run android:init`, then `node scripts/mobile-patch.mjs android src-tauri/gen/android/app/src/main/AndroidManifest.xml`, then `npm run android:build`. Needs JDK 17, the Android SDK with an NDK (`NDK_HOME`), and the rust targets `aarch64-linux-android armv7-linux-androideabi x86_64-linux-android`. iOS needs a Mac with Xcode and `xcodegen`.
+
+**Signing happens after the build**, outside Gradle (`apksigner` for the APK, `jarsigner` for the AAB), so the generated build files are never patched. Without the `ANDROID_KEYSTORE_*` secrets the APK is signed with a throwaway debug key and no AAB is published; the job summary says so. An iOS build needs the owner's Apple Developer account and is skipped, with a notice, without it. Secrets and how to create them: [RELEASING.md](RELEASING.md#android-and-ios-secrets).
+
+Mobile files have no `.sig` and are not updater artifacts: they never enter `latest.json` or the site publish. People update from the store or by installing the newer file.
+
 ## The app icon
 
 The icon is the GameSpice website's: the GS potion mark on the ember tile, from website-gs `public/brand/icon-1024.png`. `src-tauri/icons/app-icon.png` is the 1024 master: that tile with rounded corners. Every size and format in `src-tauri/icons/` comes from it:
@@ -93,7 +110,7 @@ The one exception is `ios/`. App Store icons must be opaque, and iOS rounds them
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-`.github/workflows/release.yml` builds on all three desktop platforms, signs the bundles, writes `checksums.txt`, uploads everything plus the updater's `latest.json` to the S3 downloads bucket, publishes the GitHub release and — with the release token set — tells the website too. Installed copies of the app update themselves from the bucket's `latest.json`. There is no manual step; the secrets it needs are listed in [`RELEASING.md`](RELEASING.md).
+`.github/workflows/release.yml` builds on all three desktop platforms plus Android and iOS, signs the bundles, writes `checksums.txt`, uploads everything plus the updater's `latest.json` to the S3 downloads bucket, publishes the GitHub release and — with the release token set — tells the website too. Installed copies of the app update themselves from the bucket's `latest.json`. There is no manual step; the secrets it needs are listed in [`RELEASING.md`](RELEASING.md).
 
 `checksums.txt` is not decoration: `scripts/install.sh` **refuses to install** a release that does not have one, so a release published by hand without it is one the one-line installer will not touch.
 
