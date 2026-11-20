@@ -10,7 +10,7 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-src="$here/../../website-city/src/types/app-api/contract.ts"
+src="${CONTRACT_SRC_ROOT:-$here/../../website-city}/src/types/app-api/contract.ts"
 dst="$here/../src/lib/api/contract.ts"
 
 [ -f "$src" ] || {

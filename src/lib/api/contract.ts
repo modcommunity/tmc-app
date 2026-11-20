@@ -3012,3 +3012,206 @@ export type WorkshopItemPatchRequestT = z.infer<typeof WorkshopItemPatchRequest>
 export type WorkshopMineItemT = z.infer<typeof WorkshopMineItemSchema>
 export type PointsSummaryResponseT = z.infer<typeof PointsSummaryResponse>
 export type AvatarOutfitT = z.infer<typeof AvatarOutfitSchema>
+
+// ------------------------------------------------------------- Store and stats
+//
+// The app's Store and Stats screens. `store/front`, `store/purchase` and
+// `store/loadout` are the in-game store API (docs/api/store-in-game.md);
+// `store/directory`, `store/purchases`, `me/stats` and `stats/achievements`
+// are written from `@lib/app-api/store-stats`.
+
+export const StoreCurrencyVals = ['POINTS', 'CREDITS', 'APP_POINTS'] as const
+
+/** One item as `GET store/front` lists it. `price` is what a buy costs now (the sale price while one runs). */
+export const StoreFrontItemSchema = z.object({
+    id: z.number().int(),
+    key: z.string(),
+    name: z.string(),
+    description: z.string().default(''),
+    imageUrl: z.string().nullable().default(null),
+    images: z.array(z.string()).default([]),
+    kind: z.string(),
+    refId: z.number().int().nullable().default(null),
+    currency: z.enum(StoreCurrencyVals),
+    price: z.number().int(),
+    listPrice: z.number().int(),
+    onSale: z.boolean().default(false),
+    saleEndsAt: z.string().nullable().default(null),
+    billing: z.enum(['ONE_TIME', 'SUBSCRIPTION']),
+    periodDays: z.number().int().nullable().default(null),
+    category: z.string().nullable().default(null),
+    stock: z.number().int().default(0),
+    stockLeft: z.number().int().nullable().default(null),
+    maxPerPlayer: z.number().int().default(1),
+    availableFrom: z.string().nullable().default(null),
+    availableUntil: z.string().nullable().default(null),
+    /** `soon` (before its window), `live`; ended items are not sent. */
+    window: z.string(),
+    bundle: z.array(z.object({ id: z.number().int(), name: z.string() })).default([]),
+})
+
+export const StoreWalletSchema = z.object({
+    points: z.number(),
+    pointsApp: z.number().default(0),
+    pointsSite: z.number().default(0),
+    credits: z.number().nullable(),
+    appPoints: z.number().nullable(),
+})
+
+/** `GET store/front?appId=` (or `?serverId=`). Signed out: `wallet: null`, nothing owned. */
+export const StoreFrontResponse = z.object({
+    owner: z.object({ kind: z.enum(['app', 'server']), id: z.number().int(), appId: z.number().int(), name: z.string() }),
+    /** TMC's store page for this store, a site path: where a paid (credits) checkout happens. */
+    storeUrl: z.string(),
+    availability: z.object({
+        open: z.boolean(),
+        reason: z.string().nullable().default(null),
+        points: z.boolean(),
+        credits: z.boolean(),
+        appPoints: z.boolean(),
+    }),
+    labels: z.object({ points: z.string(), credits: z.string(), appPoints: z.string() }),
+    items: z.array(StoreFrontItemSchema),
+    wallet: StoreWalletSchema.nullable(),
+    owned: z.array(z.number().int()),
+    held: z.record(z.string(), z.number().int()).default({}),
+    subscribed: z.array(z.object({ itemId: z.number().int(), cancelAtPeriodEnd: z.boolean(), currentPeriodEnd: z.string() })).default([]),
+    servers: z.array(z.object({ id: z.number().int(), name: z.string() })).optional(),
+})
+
+/** `POST store/purchase`: `price`/`currency` are what was shown; `idemKey` is made once per confirmed buy. */
+export const StorePurchaseRequest = z.object({
+    itemId: z.number().int().positive(),
+    idemKey: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/),
+    price: z.number().int().min(0),
+    currency: z.enum(StoreCurrencyVals),
+})
+
+export const StorePurchaseResponse = z.object({
+    purchase: z.object({
+        id: z.number().int(),
+        itemId: z.number().int(),
+        status: z.string(),
+        price: z.number().int(),
+        currency: z.enum(StoreCurrencyVals),
+        createdAt: z.string(),
+        expiresAt: z.string().nullable(),
+    }),
+    replay: z.boolean(),
+    wallet: StoreWalletSchema.nullable(),
+    held: z.number().int(),
+})
+
+/** `GET`/`PUT store/loadout`: what the member has equipped in one game (`maxSlots` 0 = unlimited). */
+export const StoreLoadoutResponse = z.object({
+    appId: z.number().int(),
+    loadout: z.array(z.object({ slot: z.string(), store: z.string(), key: z.string() })),
+    maxSlots: z.number().int(),
+})
+
+export const StoreLoadoutPutRequest = z.object({
+    appId: z.number().int().positive(),
+    slot: z.string().min(1).max(64),
+    key: z.string().min(1).max(64).nullable(),
+    store: z.string().optional(),
+})
+
+/** `GET store/directory`: every game whose own store is open. */
+export const StoreDirectoryResponse = z.object({
+    stores: z.array(z.object({ appId: z.number().int(), name: z.string(), items: z.number().int() })),
+})
+
+/** `GET store/purchases?limit=&cursor=`: the member's purchases, newest first. */
+export const StorePurchasesResponse = z.object({
+    purchases: z.array(
+        z.object({
+            id: z.number().int(),
+            createdAt: z.string(),
+            appId: z.number().int(),
+            serverId: z.number().int().nullable(),
+            currency: z.enum(StoreCurrencyVals),
+            price: z.number().int(),
+            status: z.string(),
+            expiresAt: z.string().nullable(),
+            live: z.boolean(),
+            item: z.object({
+                id: z.number().int(),
+                key: z.string(),
+                name: z.string(),
+                imageUrl: z.string().nullable(),
+                kind: z.string(),
+                billing: z.string(),
+            }),
+        })
+    ),
+    next: z.number().int().nullable(),
+})
+
+export const AchievementSummarySchema = z.object({
+    unlocked: z.number().int(),
+    points: z.number().int(),
+    total: z.number().int(),
+})
+
+/** `GET me/stats`: days played per game, a 30-day series (index 0 = `since`), achievements. */
+export const MeStatsResponse = z.object({
+    since: z.string(),
+    totals: z.object({
+        games: z.number().int(),
+        daysPlayed: z.number().int(),
+        activeDays: z.number().int(),
+        achievements: z.number().int(),
+        achievementPoints: z.number().int(),
+    }),
+    recent: z.array(z.number().int()),
+    games: z.array(
+        z.object({
+            appId: z.number().int(),
+            daysPlayed: z.number().int(),
+            firstPlayed: z.string().nullable(),
+            lastPlayed: z.string().nullable(),
+            recent: z.array(z.number().int()),
+            achievements: AchievementSummarySchema.nullable(),
+        })
+    ),
+})
+
+/** `GET stats/achievements?app=`: held (with `unlockedAt`, epoch seconds) and still locked. */
+export const AchievementsResponse = z.object({
+    points: z.number().int(),
+    unlocked: z.array(
+        z.object({
+            key: z.string(),
+            name: z.string(),
+            description: z.string(),
+            points: z.number().int(),
+            category: z.string(),
+            icon: z.string(),
+            unlockedAt: z.number().int(),
+            unlockCnt: z.number().int(),
+        })
+    ),
+    locked: z.array(
+        z.object({
+            key: z.string(),
+            name: z.string().nullable(),
+            description: z.string().nullable(),
+            points: z.number().int(),
+            category: z.string(),
+            icon: z.string(),
+            secret: z.boolean(),
+            unlockCnt: z.number().int(),
+        })
+    ),
+})
+
+export type StoreFrontItemT = z.infer<typeof StoreFrontItemSchema>
+export type StoreFrontResponseT = z.infer<typeof StoreFrontResponse>
+export type StoreWalletT = z.infer<typeof StoreWalletSchema>
+export type StorePurchaseResponseT = z.infer<typeof StorePurchaseResponse>
+export type StoreLoadoutResponseT = z.infer<typeof StoreLoadoutResponse>
+export type StoreDirectoryResponseT = z.infer<typeof StoreDirectoryResponse>
+export type StorePurchasesResponseT = z.infer<typeof StorePurchasesResponse>
+export type MeStatsResponseT = z.infer<typeof MeStatsResponse>
+export type AchievementsResponseT = z.infer<typeof AchievementsResponse>
+export type StoreCurrencyT = (typeof StoreCurrencyVals)[number]

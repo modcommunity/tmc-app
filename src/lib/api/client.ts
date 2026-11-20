@@ -54,6 +54,14 @@ import {
     type WorkshopCatalogQueryT,
     WorkshopScopeResponse,
     PointsSummaryResponse,
+    AchievementsResponse,
+    MeStatsResponse,
+    StoreDirectoryResponse,
+    StoreFrontResponse,
+    StoreLoadoutResponse,
+    StorePurchaseResponse,
+    StorePurchasesResponse,
+    type StoreCurrencyT,
     AvatarOutfitsResponse,
 } from './contract'
 
@@ -547,4 +555,37 @@ export const api = {
 
     /** Every visible stat one game declared — what the leaderboard picker lists. */
     statsDefs: (app: number) => get('/stats/defs', StatDefsResponse, { app }, true),
+
+    /** Every game whose own store is open, most items first. Signed-out works. */
+    storeDirectory: () => get('/store/directory', StoreDirectoryResponse, undefined, false),
+
+    /** One game's store: items, the member's wallet, what they own. */
+    storeFront: (appId: number) => get('/store/front', StoreFrontResponse, { appId }, false),
+
+    /**
+     * Buy one item with points (or the game's own points). `idemKey` is made
+     * once per confirmed buy so a retried request cannot charge twice;
+     * `price`/`currency` are what the member saw, and the server answers 409
+     * `changed` if that is no longer true.
+     */
+    storePurchase: (req: { itemId: number; idemKey: string; price: number; currency: StoreCurrencyT }) =>
+        send('POST', '/store/purchase', StorePurchaseResponse, req),
+
+    /** What the member has equipped in one game. */
+    storeLoadout: (appId: number) => get('/store/loadout', StoreLoadoutResponse, { appId }, true),
+
+    /** Equip `key` in `slot` (or clear it with `null`). */
+    storeLoadoutPut: (req: { appId: number; slot: string; key: string | null; store?: string }) =>
+        send('PUT', '/store/loadout', StoreLoadoutResponse, req),
+
+    /** The member's purchases across every store, newest first. */
+    storePurchases: (cursor?: number, limit = 50) =>
+        get('/store/purchases', StorePurchasesResponse, { limit, cursor }, true),
+
+    /** Days played per game, the 30-day series and achievement totals. */
+    meStats: () => get('/me/stats', MeStatsResponse, undefined, true),
+
+    /** One game's achievements: unlocked (with time) and locked. */
+    statsAchievements: (app: number) =>
+        get('/stats/achievements', AchievementsResponse, { app }, true),
 }
