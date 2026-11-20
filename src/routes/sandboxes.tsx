@@ -1102,7 +1102,7 @@ function SandboxSettings({
                 <Labelled label="Game version">
                     <TextField
                         value={sandbox.gameVersion ?? ''}
-                        placeholder="1.21"
+                        placeholder="Any"
                         onCommit={(value) =>
                             void patch({ gameVersion: value || null })
                         }
@@ -1112,7 +1112,7 @@ function SandboxSettings({
                 <Labelled label="Loader">
                     <TextField
                         value={sandbox.loader ?? ''}
-                        placeholder="fabric"
+                        placeholder="None"
                         onCommit={(value) => void patch({ loader: value || null })}
                     />
                 </Labelled>

@@ -195,6 +195,14 @@ async function apiSeed(a: Obj, real: () => Promise<unknown>): Promise<unknown> {
             releases: ((r.releases as Obj[]) ?? []).slice(0, 1).map((x) => ({ ...x, version: '2.3.0', createdAt: iso(60 * 30) })),
         }
     }
+    if (path === '/play/page') {
+        // A dev game with no art yet is a blank card in a marketing shot
+        // (Hungario, The Room): show the games that have their banner.
+        const r = (await real()) as { apps?: Obj[]; totals?: Obj } | null
+        if (!r?.apps) return r
+        const apps = r.apps.filter((x) => x.bannerUrl)
+        return { ...r, apps, totals: r.totals && 'games' in r.totals ? { ...r.totals, games: apps.length } : r.totals }
+    }
     if (path === '/workshop/catalog') {
         const games = [{ id: 100, url: 'playlot', contentId: 'app:100', name: 'Playlot' }, { id: 101, url: 'fatal-contact', contentId: 'app:101', name: 'Fatal Contact' }]
         return {

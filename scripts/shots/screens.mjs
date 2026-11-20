@@ -2,7 +2,7 @@
  * The screen list: what capture.mjs shoots and the order compose.mjs tells the
  * story in. Add a screen here (route, copy, what to wait for) and both steps
  * pick it up. `enabled: false` keeps a slot in the tour without shooting it,
- * for screens that are not on this branch yet (Store, Stats).
+ * for a screen that is not on this branch yet.
  *
  * slot     file stem: <slot>-<light|dark>.png in out/raw, and the website's
  *          public/app/shots/<slot>-<scheme>-<800|1600>.webp
@@ -65,9 +65,8 @@ export const screens = [
         slot: 'settings', route: '/settings', wait: 'main',
         title: 'Settings', caption: 'Themes, folders, plugins and logging, all in one place.',
     },
-    // On branch gs-app-store-stats; enable once it is on main.
-    { slot: 'store', route: '/store', wait: 'main', enabled: false, title: 'Store', caption: 'Buy and gift games and packs.' },
-    { slot: 'stats', route: '/stats', wait: 'main', enabled: false, title: 'Stats', caption: 'Your playtime and progress across games.' },
+    { slot: 'store', route: '/store', wait: 'main', title: 'Store', caption: 'Every game\'s store: outfits, packs and points in one place.' },
+    { slot: 'stats', route: '/stats', wait: 'main', title: 'Stats', caption: 'Your playtime and progress across games.' },
 ]
 
 /** The narrative order of the presentation (slots; missing or disabled are skipped). */
