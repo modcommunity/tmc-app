@@ -205,6 +205,10 @@ export default function LibraryTmcGames() {
 
         try {
             await run()
+            // The last check described the install this just replaced or
+            // removed; keeping it leaves "Update to X" (and the Update button)
+            // on a game that is already on X.
+            setStatuses(({ [appId]: _gone, ...rest }) => rest)
             await refresh()
         } catch (err) {
             setError(messageOf(err))

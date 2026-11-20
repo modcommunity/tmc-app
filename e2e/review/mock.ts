@@ -84,6 +84,10 @@ g.__reviewLog = log
 const sandboxes = new Map<number, Record<string, unknown>>()
 let nextSandbox = 1
 let settings: Record<string, unknown> | null = null
+/** Installed TMC games by app id; the published build every install gets. */
+const games = new Map<number, Record<string, unknown>>()
+const REVIEW_BUILD = '1.20261113.1637'
+g.__reviewGames = games
 
 mockWindows('main')
 g.__TAURI_OS_PLUGIN_INTERNALS__ = { platform: 'linux', os_type: 'linux', family: 'unix', version: '6', arch: 'x86_64', exe_extension: '', eol: '\n', hostname: 'review' }
@@ -100,7 +104,12 @@ mockIPC(async (cmd, args) => {
             const fx = g.__reviewFixtures ? fixture('GET', String(a.path), q, undefined) : undefined
             if (fx !== undefined) return fx
             const qs = q.toString()
-            return json(await fetch(`/__api${a.path}${qs ? `?${qs}` : ''}`))
+            const body = await json(await fetch(`/__api${a.path}${qs ? `?${qs}` : ''}`))
+            // No dev server publishes a connect link; a flow script that drives
+            // Join -> play_connect lends one to every server it opens.
+            const srv = (body as { summary?: { server?: Record<string, unknown> } } | null)?.summary?.server
+            if (g.__reviewConnectUrl && srv && String(a.path).startsWith('/content/server/')) srv.connectUrl = `steam://connect/${srv.host}:${srv.port}`
+            return body
         }
         case 'api_send': {
             const fx = g.__reviewFixtures ? fixture(String(a.method), String(a.path), new URLSearchParams(), a.body as Record<string, unknown>) : undefined
@@ -132,7 +141,7 @@ mockIPC(async (cmd, args) => {
             return { signedIn: !!me, pending: false, user }
         }
         case 'api_env': return { base: 'https://tmcdev.net', isProd: false, version: '0.0.0-review' }
-        case 'settings_get': return (settings ??= { ...(fake(schema) as Record<string, unknown>), uiScale: 1, theme: 'system' }) // a zero scale makes 1rem = 0px; the page's colorScheme picks light or dark
+        case 'settings_get': return (settings ??= { ...(fake(schema) as Record<string, unknown>), uiScale: 1, theme: 'system', liveLatency: true, latencyIntervalMs: 1000, latencyConcurrency: 8, downloadConcurrency: 3, autoUpdateCheck: true }) // Rust's defaults (core/src/settings.rs) where fake()'s zeros read as nonsense ("every 0 seconds") // a zero scale makes 1rem = 0px; the page's colorScheme picks light or dark
         case 'settings_patch': return (settings = { ...(settings ?? {}), ...(a.patch as object ?? a) })
         // Fixture mode supports the dev site's one modded game, so the new
         // sandbox form has something to offer.
@@ -144,7 +153,7 @@ mockIPC(async (cmd, args) => {
             const row = fake((schema as { _zod: { def: Def } })) as Record<string, unknown>
             const input = (a.new ?? a) as Record<string, unknown>
             const id = nextSandbox++
-            Object.assign(row, { id, appId: input.appId, name: input.name, appSlug: input.appSlug ?? null, appName: input.appName ?? null, isDefault: sandboxes.size === 0 })
+            Object.assign(row, { id, appId: input.appId, name: input.name, targetDir: g.__reviewFixtures ? '/review/game' : null, appSlug: input.appSlug ?? null, appName: input.appName ?? null, isDefault: sandboxes.size === 0 })
             sandboxes.set(id, row)
             return row
         }
@@ -157,6 +166,74 @@ mockIPC(async (cmd, args) => {
             const s = sandboxes.get(Number(a.id))
             if (s) Object.assign(s, a.patch ?? {})
             return s ?? fake(schema)
+        }
+        // ---------------------------------------------------- TMC games (fixture mode)
+        // One target build per app at REVIEW_BUILD; a flow script ages an
+        // install through `__reviewGames` to make an update appear.
+        case 'games_platform': return g.__reviewFixtures ? { platform: 'LINUX_X64', installable: true } : fake(schema)
+        case 'games_list': return [...games.values()]
+        case 'game_install': {
+            const r = (a.request ?? a) as { appId: number; name: string; slug?: string }
+            const now = Date.now()
+            const prev = games.get(r.appId)
+            const row = { appId: r.appId, slug: r.slug ?? null, name: r.name, platform: 'LINUX_X64', version: REVIEW_BUILD, dir: `/review/games/${r.slug ?? r.appId}`, entry: null, args: [], sizeBytes: 52_428_800, installedMs: prev?.installedMs ?? now, updatedMs: now, autoUpdate: prev?.autoUpdate ?? false }
+            games.set(r.appId, row)
+            return row
+        }
+        case 'game_uninstall': games.delete(Number(a.appId)); return undefined
+        case 'games_check_updates':
+            return [...games.values()].map((r) => ({ ...r, available: REVIEW_BUILD, updateAvailable: r.version !== REVIEW_BUILD, notes: null }))
+        case 'game_set_auto_update': {
+            const r = games.get(Number(a.appId))
+            if (r) r.autoUpdate = !!a.enabled
+            return fake(schema)
+        }
+        // ---------------------------------------------------- Mods in a sandbox (fixture mode)
+        case 'sandbox_install_item': {
+            const s = sandboxes.get(Number(a.id))
+            if (!s) throw { code: 'not_found', message: 'No such sandbox' }
+            const mods = s.mods as Record<string, unknown>[]
+            const modKey = `${a.kind}:${a.itemId}`
+            const already = mods.some((m) => m.modKey === modKey)
+            if (!already) mods.push({ modKey, kind: a.kind, itemId: Number(a.itemId), name: `Item ${a.itemId}`, enabled: true, priority: mods.length, releaseId: 1, version: '1.0', stagedAt: new Date().toISOString(), lastError: null })
+            s.deployedFiles = Number(s.deployedFiles ?? 0) + 3
+            s.needsDeploy = false
+            const deployed = { ...(fake((schema as { shape: { deployed: { unwrap(): unknown } } }).shape.deployed.unwrap()) as object), placed: 3, backedUp: 1 }
+            return { subscribed: true, alreadyPresent: already, staged: { modKey, ok: true, rule: 'files', files: 3, error: null }, deployed: a.deploy === false ? null : deployed, warnings: [] }
+        }
+        case 'sandbox_updates': {
+            const out: Record<string, unknown>[] = []
+            for (const s of sandboxes.values())
+                for (const m of s.mods as Record<string, unknown>[])
+                    if (m.version !== '2.0') out.push({ sandboxId: s.id, sandboxName: s.name, modKey: m.modKey, name: m.name, fromVersion: m.version, toVersion: '2.0', releaseId: 2 })
+            return g.__reviewFixtures ? out : []
+        }
+        case 'sandbox_stage': {
+            const s = sandboxes.get(Number(a.id))
+            const mods = (s?.mods ?? []) as Record<string, unknown>[]
+            if (a.force) for (const m of mods) Object.assign(m, { version: '2.0', releaseId: 2 })
+            return mods.map((m) => ({ modKey: m.modKey, ok: true, rule: 'files', files: 3, error: null }))
+        }
+        case 'sandbox_purge': {
+            const s = sandboxes.get(Number(a.id))
+            const removed = Number(s?.deployedFiles ?? 0)
+            if (s) Object.assign(s, { deployedFiles: 0, needsDeploy: (s.mods as unknown[]).length > 0 })
+            return { removed, restored: removed ? 1 : 0, kept: [], missing: 0, errors: [] }
+        }
+        // ---------------------------------------------------- Live server queries (fixture mode)
+        case 'query_servers': case 'query_server': {
+            const reqs = (cmd === 'query_server' ? [a.request] : a.requests) as { id: string; host: string; port: number }[]
+            const out = reqs.map((r) => ({
+                id: r.id,
+                key: `${r.host}:${r.port}`,
+                result: g.__reviewFixtures ? { online: true, rttMs: 42, protocol: 'A2S', name: null, map: 'de_dust2', game: null, version: null, players: 7, maxPlayers: 24, bots: 0, password: false, secure: true, playerList: [], rules: {}, queriedPort: r.port } : undefined,
+                error: g.__reviewFixtures ? undefined : 'review: no network',
+            }))
+            return cmd === 'query_server' ? out[0] : out
+        }
+        case 'play_connect': {
+            const session = fake(schema) as Record<string, unknown>
+            return Object.assign(session, { id: 1, kind: fake((schema as { shape: { kind: unknown } }).shape.kind), label: `server ${a.serverId}`, startedMs: Date.now() })
         }
         case 'plugin:event|listen': return 1
         case 'plugin:event|unlisten': case 'plugin:event|emit': return null
