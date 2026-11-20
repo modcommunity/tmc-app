@@ -6,11 +6,11 @@
     "license": "GPL-3.0-only",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/modcommunity/tmc-app.git"
+        "url": "git+https://github.com/gamespice-platform/app.git"
     },
     "homepage": "https://moddingcommunity.com",
     "bugs": {
-        "url": "https://github.com/modcommunity/tmc-app/issues"
+        "url": "https://github.com/gamespice-platform/app/issues"
     },
     "type": "module",
     "scripts": {

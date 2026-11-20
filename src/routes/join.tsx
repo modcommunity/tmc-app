@@ -85,14 +85,14 @@ export default function JoinRoute() {
 
             {lookup.isError && (
                 <Notice danger>
-                    Could not reach TMC to look that address up. Check your
+                    Could not reach GameSpice to look that address up. Check your
                     connection and try the link again.
                 </Notice>
             )}
 
             {lookup.isSuccess && servers.length === 0 && (
                 <Notice>
-                    No server TMC lists is at that address. It may be unlisted, or
+                    No server GameSpice lists is at that address. It may be unlisted, or
                     the link may be out of date — you can still
                     <Link to="/browse/server" className="mx-1 underline">
                         browse servers

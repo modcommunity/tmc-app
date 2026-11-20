@@ -1,7 +1,7 @@
 [package]
 name = "tmc-core"
 version = "0.1.0"
-description = "Platform-independent core for the TMC app: API client, auth, plugin sandbox and game-server query protocols"
+description = "Platform-independent core for the GameSpice App: API client, auth, plugin sandbox and game-server query protocols"
 authors = ["The Modding Community"]
 edition = "2021"
 # 1.82 for `Option::is_none_or`, used in the log filter and the query parsers'

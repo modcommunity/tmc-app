@@ -1,6 +1,6 @@
 # Deep links
 
-`tmc://` is registered on desktop and declared in the mobile manifests. One rule governs all of it:
+`gs://` and `tmc://` are both registered on desktop (same grammar, `SCHEMES` in `tmc_core::deeplink`); only `tmc://` is declared in the mobile manifests so far. The table below shows `tmc://`; every row works with `gs://` too. One rule governs all of it:
 
 > **A link can ask the app to SHOW something. It can never ask the app to DO something.**
 

@@ -15,7 +15,7 @@ export default function DiscoverRoute() {
             <header>
                 <h1 className="text-lg font-bold">Discover</h1>
                 <p className="text-xs text-muted">
-                    Browse what The Modding Community hosts.
+                    Browse what GameSpice hosts.
                 </p>
             </header>
 

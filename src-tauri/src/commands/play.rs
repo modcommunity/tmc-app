@@ -213,7 +213,7 @@ async fn open_web(
         .title
         .clone()
         .filter(|t| !t.trim().is_empty())
-        .unwrap_or_else(|| "TMC Player".to_string());
+        .unwrap_or_else(|| "GameSpice Player".to_string());
 
     #[cfg(mobile)]
     {

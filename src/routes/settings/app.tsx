@@ -61,7 +61,7 @@ function GameCacheSection() {
     return (
         <Section
             title="Games"
-            hint="Games played through TMC download their content as you join. Kept downloads make the next join instant."
+            hint="Games played through GameSpice download their content as you join. Kept downloads make the next join instant."
         >
             <Row
                 label="Keep downloaded games"

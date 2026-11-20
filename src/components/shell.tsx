@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Logo } from '@modcommunity/shared'
 import { FiChevronRight, FiUser } from 'react-icons/fi'
 
 import { useAuth } from '~/lib/auth/provider'
@@ -8,6 +7,8 @@ import { useDownloads } from '~/lib/downloads/provider'
 import { useDeepLink } from '~/lib/hooks/use-deep-link'
 import { useIsCompact } from '~/lib/hooks/use-breakpoint'
 import { useIsDesktop } from '~/lib/hooks/use-platform'
+import { openUrl } from '@tauri-apps/plugin-opener'
+import { GsLogo } from './gs-logo'
 import Titlebar, { WindowResizeEdges } from './titlebar'
 import UpdateBanner from './update-banner'
 import { COMPACT, RAIL, isActive, isWithin, isOwn, type NavNode } from '~/lib/nav'
@@ -18,7 +19,7 @@ import { COMPACT, RAIL, isActive, isWithin, isOwn, type NavNode } from '~/lib/na
  * This is where the app deliberately stops looking like the website. The site
  * has a marketing header, a mega-menu and a footer full of links; an app has a
  * persistent primary navigation and nothing else, because the user is not
- * arriving from a search engine and does not need to be told what TMC is on
+ * arriving from a search engine and does not need to be told what GameSpice is on
  * every screen.
  *
  * One component covers all five platforms rather than two. The tree it draws
@@ -70,7 +71,7 @@ function collapsibleIds(nodes: NavNode[]): string[] {
 
 const rowBase =
     'no-drag flex min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors'
-const rowOn = 'bg-accent text-accent-foreground'
+const rowOn = 'gs-rail-on'
 // A parent of the active child: visible without competing with the child.
 const rowSoft = 'bg-accent/15 text-foreground'
 const rowOff = 'text-muted hover:bg-surface-hover hover:text-foreground'
@@ -266,10 +267,10 @@ export default function Shell() {
      * way a real titlebar does rather than starting after the sidebar.
      */
     return (
-        <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
+        <div className="flex h-screen w-screen flex-col overflow-hidden text-foreground">
             {desktop && (
                 <>
-                    <Titlebar title="The Modding Community" />
+                    <Titlebar title="GameSpice App" />
                     <WindowResizeEdges />
                 </>
             )}
@@ -291,7 +292,10 @@ export default function Shell() {
                                     : 'calc(1rem + var(--safe-top))',
                             }}
                         >
-                            <Logo />
+                            <GsLogo size={34} id="rail" />
+                            <span className="gs-wordmark text-lg leading-none">
+                                Game<span className="gs-flame-text">Spice</span>
+                            </span>
                         </div>
 
                         <Rail pathname={pathname} />
@@ -338,6 +342,21 @@ export default function Shell() {
                         }}
                     >
                         <Outlet />
+                    </div>
+
+                    {/*
+                     * A row of its own below the scroll area, so it never
+                     * covers content, and above the bottom bar on a phone so
+                     * the bar never covers it.
+                     */}
+                    <div className="flex shrink-0 justify-end px-3 py-0.5">
+                        <button
+                            type="button"
+                            onClick={() => void openUrl('https://modcommunity.net')}
+                            className="no-drag text-[11px] leading-4 text-muted/70 transition-colors hover:text-foreground"
+                        >
+                            Powered by TMC
+                        </button>
                     </div>
 
                     {compact && (

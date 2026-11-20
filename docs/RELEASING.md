@@ -113,3 +113,7 @@ TMC_RELEASE_TOKEN=… node scripts/publish-release.mjs --dir artifacts \
 ## The Rust toolchain is pinned
 
 Both workflows install `RUST_TOOLCHAIN` (currently `1.98`) instead of floating `stable`. A new stable brings new clippy lints and `-D warnings` makes each an error, which once failed a release tag on code that had passed review. Bump it in `ci.yml` and `release.yml` together, on a branch, so a new lint fails a pull request rather than a tag.
+
+## The repository moved
+
+The source repo is now `gamespice-platform/app`. The updater public key is unchanged, so old installs still verify new bundles. Builds from before the move poll the old `modcommunity/tmc-app` location, so a bridge release published there must point its `latest.json` at the new repo's artifacts, or those installs never see the new app.

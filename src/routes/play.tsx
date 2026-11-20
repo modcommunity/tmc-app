@@ -129,7 +129,13 @@ export default function PlayRoute() {
     const pages = listing.data?.pages
     const first = pages?.[0]
     const off = pages !== undefined && first === null
-    const apps = useMemo(() => pages?.flatMap((p) => p?.apps ?? []) ?? [], [pages])
+    // GameSpice's own games lead; the sort is stable, so the server's order
+    // (and the user's chosen sort) still decides within each half.
+    const apps = useMemo(() => {
+        const all = pages?.flatMap((p) => p?.apps ?? []) ?? []
+
+        return [...all].sort((a, b) => Number(b.isOfficial) - Number(a.isOfficial))
+    }, [pages])
     const servers = useMemo(() => pages?.flatMap((p) => p?.servers ?? []) ?? [], [pages])
     const lobbies = useMemo(() => pages?.flatMap((p) => p?.lobbies ?? []) ?? [], [pages])
 

@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 **Do not open a public issue.** Report privately through GitHub's
-[Report a vulnerability](https://github.com/modcommunity/tmc-app/security/advisories/new)
+[Report a vulnerability](https://github.com/gamespice-platform/app/security/advisories/new)
 form, or by email to `security@moddingcommunity.com`.
 
 Please include what you did, what happened, and which build you were on

@@ -33,8 +33,10 @@
 
 use serde::Serialize;
 
-/// The scheme, and the only one this app registers.
-pub const SCHEME: &str = "tmc";
+/// The schemes this app registers, and the only ones it accepts. `tmc` is the
+/// original and keeps working for every link already out there; `gs` is
+/// the GameSpice App's own. Both carry the identical grammar below.
+pub const SCHEMES: [&str; 2] = ["tmc", "gs"];
 
 /// Cap on a link. Nothing legitimate is close to this.
 const MAX_URL: usize = 2048;
@@ -132,7 +134,7 @@ pub fn parse(raw: &str) -> Option<DeepLink> {
 
     let url = url::Url::parse(raw).ok()?;
 
-    if url.scheme() != SCHEME {
+    if !SCHEMES.contains(&url.scheme()) {
         return None;
     }
 
@@ -348,6 +350,26 @@ fn parse_id(raw: &str) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_gs_scheme_parses_like_tmc() {
+        for path in [
+            "auth",
+            "install/mod/1234",
+            "sandbox/3",
+            "play/example.com:6064",
+            "play/app/arena",
+        ] {
+            assert_eq!(
+                parse(&format!("gs://{path}")),
+                parse(&format!("tmc://{path}")),
+                "{path}"
+            );
+            assert!(parse(&format!("gs://{path}")).is_some(), "{path}");
+        }
+        assert_eq!(parse("gs://deploy/1"), None);
+        assert_eq!(parse("othergame://auth"), None);
+    }
 
     #[test]
     fn an_auth_link_carries_nothing() {

@@ -77,7 +77,7 @@ export const DISCOVER: NavNode = {
     to: '/discover',
     label: 'Discover',
     icon: FiCompass,
-    description: 'Everything TMC hosts, from games to people.',
+    description: 'Everything GameSpice hosts, from games to people.',
     collapsible: true,
     items: [
         {

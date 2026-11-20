@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "TMC",
+    "productName": "GameSpice App",
     "version": "0.2.4",
     "identifier": "com.moddingcommunity.app",
     "build": {
@@ -13,7 +13,7 @@
         "windows": [
             {
                 "label": "main",
-                "title": "The Modding Community",
+                "title": "GameSpice App",
                 "width": 1280,
                 "height": 820,
                 "minWidth": 380,
@@ -48,7 +48,7 @@
     "plugins": {
         "deep-link": {
             "desktop": {
-                "schemes": ["tmc"]
+                "schemes": ["tmc", "gs"]
             }
         },
         "updater": {
@@ -71,7 +71,7 @@
         "active": true,
         "targets": "all",
         "category": "Utility",
-        "shortDescription": "Browse, install and manage mods, assets and servers.",
+        "shortDescription": "Play, mod and manage games, servers and your avatar: the GameSpice hub.",
         "publisher": "The Modding Community",
         "icon": [
             "icons/32x32.png",

@@ -147,7 +147,7 @@ function Header({
                     active={view === 'tmc'}
                     onClick={() => onChange('tmc')}
                     icon={FiZap}
-                    label="TMC Games"
+                    label="GameSpice Games"
                 />
                 <Tab
                     active={view === 'content'}

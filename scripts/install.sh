@@ -3,7 +3,7 @@
 # TMC — one-line install for Linux.
 #
 #   curl -fsSL https://moddingcommunity.com/install.sh | sh
-#   curl -fsSL https://raw.githubusercontent.com/modcommunity/tmc-app/main/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/gamespice-platform/app/main/scripts/install.sh | sh
 #
 # Downloads the published AppImage, verifies it against the release's
 # checksums.txt, and puts it somewhere the desktop can find it — a launcher
@@ -23,14 +23,14 @@
 #     and `--uninstall` removes exactly what it wrote.
 #
 # Environment:
-#   TMC_REPO      owner/name to download from        (default modcommunity/tmc-app)
+#   TMC_REPO      owner/name to download from        (default gamespice-platform/app)
 #   TMC_VERSION   a release tag, e.g. v0.2.0         (default: latest)
 #   TMC_PREFIX    install prefix                     (default ~/.local, /usr/local as root)
 #   TMC_APPIMAGE  install this local file instead of downloading — which is how
 #                 you install a build you made yourself
 set -eu
 
-REPO="${TMC_REPO:-modcommunity/tmc-app}"
+REPO="${TMC_REPO:-gamespice-platform/app}"
 VERSION="${TMC_VERSION:-}"
 APPIMAGE="${TMC_APPIMAGE:-}"
 verify=1

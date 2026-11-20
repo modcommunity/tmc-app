@@ -55,7 +55,7 @@ export default function AccountSettingsRoute() {
         <>
             <Section
                 title="Signed in"
-                hint="These settings are stored on your TMC account and apply everywhere you sign in."
+                hint="These settings are stored on your GameSpice account and apply everywhere you sign in."
             >
                 <Row
                     label={user?.name ?? user?.username ?? 'Your account'}

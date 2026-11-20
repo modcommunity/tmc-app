@@ -98,7 +98,7 @@ pub fn run() {
                 Info,
                 App,
                 "app.start",
-                format!("TMC {} started", state.version)
+                format!("GameSpice App {} started", state.version)
             );
 
             /*
@@ -124,7 +124,9 @@ pub fn run() {
 
                 // Best effort: a failed registration means the accelerator does
                 // not work, not that the app cannot sign in.
-                let _ = app.deep_link().register("tmc");
+                for scheme in tmc_core::deeplink::SCHEMES {
+                    let _ = app.deep_link().register(scheme);
+                }
 
                 let emitter = app.handle().clone();
 

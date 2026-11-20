@@ -13,6 +13,91 @@
 @source "../../node_modules/@modcommunity/shared/dist";
 
 /*
+ * GameSpice fonts, bundled with the app (OFL 1.1, licences beside the files).
+ * The CSP is `font-src 'self' data:`, so nothing here can come from a CDN; the
+ * files are the same two variable fonts website-gs self-hosts. DM Sans is the
+ * body face and Plus Jakarta Sans the heading face (--font-dm-sans / --font-pjs
+ * in the shared theme name them).
+ */
+@font-face {
+    font-family: 'DM Sans';
+    font-style: normal;
+    font-weight: 100 1000;
+    font-display: swap;
+    src: url('../assets/fonts/dm-sans-latin-wght-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url('../assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2')
+        format('woff2');
+}
+
+/*
+ * The GameSpice theme (website-gs docs/brand.md): ember surfaces, warm ink, the
+ * flame accent #e4572e. It overrides the shared TMC palette HERE rather than in
+ * @modcommunity/shared, because that file also themes the TMC websites, which
+ * must not turn orange. Same token names, so every shared component and every
+ * `bg-surface` / `text-accent` in the app follows without being touched.
+ *
+ * Light is the :root default and dark is `.dark` / `[data-theme='dark']`, the
+ * same split as the shared theme, so the settings provider needs no change.
+ *
+ * Text on the accent is the ember ink, not white: white on #e4572e is 3.6:1,
+ * the dark ink is above 5:1.
+ */
+:root {
+    --background: #fbf3e8;
+    --surface: #fffaf2;
+    --surface-secondary: #f6e9d8;
+    --surface-tertiary: #efdcc4;
+    --foreground: #2b1410;
+    --muted: #7a5a4b;
+    --border: #e6d2b8;
+
+    --accent: #d9461c;
+    --accent-foreground: #fffaf2;
+
+    --danger: #c0233f;
+    --warning: #c98a0b;
+    --success: #2f8f4e;
+
+    --header: var(--surface);
+    --footer: var(--surface);
+
+    --gs-flame: linear-gradient(135deg, #ffc83d 0%, #f2542d 55%, #b8193c 100%);
+    --gs-glow: 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent),
+        0 8px 28px -12px color-mix(in oklab, var(--accent) 55%, transparent);
+
+    /* The mark carries its own colours; no inversion on either scheme. */
+    --logo-ink: none;
+}
+
+.dark,
+[data-theme='dark'] {
+    --background: #120a09;
+    --surface: #1a0f0c;
+    --surface-secondary: #241510;
+    --surface-tertiary: #2e1c16;
+    --foreground: #fff6e6;
+    --muted: #d9b99f;
+    --border: #3a251d;
+
+    --accent: #e4572e;
+    --accent-foreground: #1a0a06;
+
+    --danger: #ff6b6b;
+    --warning: #ffc83d;
+    --success: #5fd38d;
+
+    --header: var(--surface);
+    --footer: var(--surface);
+}
+
+/*
  * App-only tokens. Everything here describes chrome the WEBSITE does not have —
  * a bottom tab bar, safe-area insets, a titlebar drag region — so it belongs
  * to this app rather than in the shared theme.
@@ -41,7 +126,7 @@
 }
 
 :root {
-    --app-chrome: var(--surface);
+    --app-chrome: color-mix(in oklab, var(--background) 70%, var(--surface));
     --app-chrome-border: var(--border);
 
     /*
@@ -59,8 +144,8 @@
      */
     --lat-good: var(--success);
     --lat-fair: var(--warning);
-    --lat-poor: oklch(0.74 0.17 62);
-    --lat-bad: oklch(0.68 0.2 38);
+    --lat-poor: oklch(0.66 0.17 55);
+    --lat-bad: oklch(0.58 0.2 32);
     --lat-dead: var(--danger);
 
     /* Filled in by the OS on iOS/Android; 0 elsewhere. */
@@ -324,4 +409,48 @@ input[type='range']::-moz-range-thumb {
         animation-duration: 0.01ms !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+/* ------------------------------------------------------------ GameSpice skin
+ * Small, deliberate touches on top of the tokens: the flame-gradient strip that
+ * marks the active rail row, the ember glow behind the window, and the lift on
+ * cards. Utilities in components stay as they are.
+ */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(
+            60rem 28rem at 12% -8%,
+            color-mix(in oklab, var(--accent) 14%, transparent),
+            transparent 70%
+        ),
+        radial-gradient(
+            40rem 24rem at 100% 100%,
+            color-mix(in oklab, #b8193c 10%, transparent),
+            transparent 70%
+        );
+}
+
+.gs-wordmark {
+    font-family: var(--font-pjs), system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.gs-flame-text {
+    background: var(--gs-flame);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.gs-rail-on {
+    background: var(--gs-flame);
+    color: #1a0a06;
+    font-weight: 600;
+    box-shadow: var(--gs-glow);
 }

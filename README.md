@@ -1,4 +1,4 @@
-The **official** [TMC App](https://moddingcommunity.com/tmc-app), built with [Tauri 2](https://tauri.app/), [Rust](https://rust-lang.org/) and [React](https://react.dev/).
+The **official** GameSpice App (Powered by TMC), the desktop home for GameSpice games and the Modding Community: Play, Library, Discover and Servers in one app, built with [Tauri 2](https://tauri.app/), [Rust](https://rust-lang.org/) and [React](https://react.dev/). Its deep links use `gs://` and `tmc://`.
 
 ## What It Does
 ### Mod Management
@@ -34,7 +34,7 @@ The **official** [TMC App](https://moddingcommunity.com/tmc-app), built with [Ta
 ## From Maintainer & WARNING
 This application was built initially with **Claude Code** and will continue to be maintained and extended using it. This is because I (`gamemann`) cannot build the entire TMC platform alone (I wish I could lol).
 
-**Please treat this as partially tested.** I've tested many things in the app, but there are still many things that need to be tested and verified. If you find any bugs or issues, please report them in [issues](https://github.com/modcommunity/tmc-app/issues).
+**Please treat this as partially tested.** I've tested many things in the app, but there are still many things that need to be tested and verified. If you find any bugs or issues, please report them in [issues](https://github.com/gamespice-platform/app/issues).
 
 I intend on reviewing code, testing, and editing documentation regularly. If you're interested in helping out, please let me know!
 
@@ -43,7 +43,7 @@ I intend on reviewing code, testing, and editing documentation regularly. If you
 One line, no root, no package manager, just `curl` and `sh`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/modcommunity/tmc-app/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gamespice-platform/app/main/scripts/install.sh | sh
 ```
 
 The script verifies the download against the release's checksums, installs into `~/.local`, and registers the launcher entry and the `tmc://` scheme. Undo it with `… | sh -s -- --uninstall`.

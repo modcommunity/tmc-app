@@ -99,7 +99,7 @@ export default function AccountRoute() {
     return (
         <Centered>
             <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
-                <h1 className="text-lg font-bold">Sign in to TMC</h1>
+                <h1 className="text-lg font-bold">Sign in to GameSpice</h1>
 
                 {/*
                  * The host is named from the base this build actually talks to

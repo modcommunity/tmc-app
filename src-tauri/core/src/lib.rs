@@ -1,4 +1,4 @@
-//! Everything the TMC app does that is not "being a window".
+//! Everything the GameSpice App does that is not "being a window".
 //!
 //! This crate deliberately has **no Tauri dependency**. The split is not
 //! cosmetic: the code that matters most here is the plugin jail, the query

@@ -11,11 +11,11 @@
 
   What it installs, and why each piece is here rather than left to the app:
 
-    - TMC.exe into Program Files. One file: the binary is statically linked
+    - @PRODUCT@ exe into Program Files. One file: the binary is statically linked
       apart from the system webview.
     - A Start Menu shortcut, because a per-machine install puts the exe
       somewhere nobody browses to.
-    - The `tmc://` scheme. The app cannot register this for itself on a
+    - The `tmc://` and `gs://` schemes. The app cannot register this for itself on a
       per-machine install — HKLM needs elevation, and the installer is the one
       elevated moment there is. Without it every deep link in docs/deep-links.md
       is dead on a Windows box.
@@ -82,6 +82,17 @@
                            Value="&quot;[INSTALLDIR]@EXENAME@&quot; &quot;%1&quot;" Type="string" />
           </Component>
 
+          <Component Id="DeepLinkSchemeGs" Guid="5B7E2D10-6C41-4F0A-9E53-1D8A4B2C7F96" Win64="yes">
+            <RegistryValue Root="HKLM" Key="Software\Classes\gs"
+                           Value="URL:@PRODUCT@ Protocol" Type="string" KeyPath="yes" />
+            <RegistryValue Root="HKLM" Key="Software\Classes\gs"
+                           Name="URL Protocol" Value="" Type="string" />
+            <RegistryValue Root="HKLM" Key="Software\Classes\gs\DefaultIcon"
+                           Value="&quot;[INSTALLDIR]@EXENAME@&quot;,0" Type="string" />
+            <RegistryValue Root="HKLM" Key="Software\Classes\gs\shell\open\command"
+                           Value="&quot;[INSTALLDIR]@EXENAME@&quot; &quot;%1&quot;" Type="string" />
+          </Component>
+
         </Directory>
       </Directory>
 
@@ -108,6 +119,7 @@
     <Feature Id="Complete" Title="@PRODUCT@" Level="1">
       <ComponentRef Id="MainExecutable" />
       <ComponentRef Id="DeepLinkScheme" />
+      <ComponentRef Id="DeepLinkSchemeGs" />
       <ComponentRef Id="StartMenuShortcut" />
     </Feature>
 

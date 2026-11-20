@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { FiMaximize2, FiMinimize2, FiMinus, FiX } from 'react-icons/fi'
 
+import { GsLogo } from './gs-logo'
 import { useApiEnv } from '~/lib/api/env'
 import { usePlatform } from '~/lib/hooks/use-platform'
 
@@ -266,7 +267,11 @@ export default function Titlebar({ title }: { title: string }) {
                 className="flex min-w-0 flex-1 items-center px-3 text-xs text-muted"
                 style={macos ? { justifyContent: 'center' } : undefined}
             >
-                <span data-tauri-drag-region className="truncate">
+                <GsLogo size={16} id="bar" className="mr-2 shrink-0" />
+                <span
+                    data-tauri-drag-region
+                    className="gs-wordmark truncate text-[0.7rem]"
+                >
                     {title}
                 </span>
 

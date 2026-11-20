@@ -1,4 +1,4 @@
-# CLAUDE.md — tmc-app
+# CLAUDE.md — tmc-app (product name: GameSpice App)
 
 The official **The Modding Community** app: Rust + Tauri 2 + React 19, shipping to Windows, macOS, Linux, Android and iOS from one codebase. It browses what the website holds (assets, mods, servers, maps, articles, communities, collections, members) and adds what a browser tab cannot do: one-click installs through declarative plugins, sandboxes (mod profiles deployed by link, copy or a virtual filesystem), live server queries and real latency from the user's own device, a download queue, RCON, finding installed games, a catalogue with a Play button, and play sessions. It is not a wrapper around the website: no landing page, no marketing chrome; it opens on a browser and stays there.
 

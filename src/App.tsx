@@ -47,7 +47,7 @@ const router = createHashRouter([
         path: '/',
         element: <Shell />,
         children: [
-            { index: true, element: <Navigate to="/apps" replace /> },
+            { index: true, element: <Navigate to="/play" replace /> },
             { path: 'play', element: <PlayRoute /> },
             { path: 'discover', element: <DiscoverRoute /> },
             { path: 'apps', element: <AppsRoute /> },
@@ -77,7 +77,7 @@ const router = createHashRouter([
                     { path: 'logging', element: <LoggingRoute /> },
                 ],
             },
-            { path: '*', element: <Navigate to="/apps" replace /> },
+            { path: '*', element: <Navigate to="/play" replace /> },
         ],
     },
 ])
