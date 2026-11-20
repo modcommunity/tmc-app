@@ -47,13 +47,11 @@ import {
     type PlayPageQueryT,
     type SubKindT,
     type UserSettingsT,
+    WorkshopMineResponse,
     WorkshopScopeResponse,
+    PointsSummaryResponse,
+    AvatarOutfitsResponse,
 } from './contract'
-import {
-    OutfitsResponseSchema,
-    PointsSummarySchema,
-    WorkshopMineResponseSchema,
-} from '../gamespice/schemas'
 
 /**
  * The website API, as the app sees it.
@@ -187,10 +185,10 @@ export const api = {
     avatarWearableEquip: (wearableId: number, equipped: boolean, appId?: number) =>
         send('PUT', '/avatar/wearables', z.unknown(), { wearableId, equipped, appId }),
 
-    // ---- GameSpice hub reads (shapes in lib/gamespice/schemas.ts)
+    // ---- GameSpice hub reads (shapes in the contract, section GameSpice hub)
 
     /** Every Workshop subscription of the member, across games. */
-    workshopMine: () => get('/workshop/mine', WorkshopMineResponseSchema, undefined, true),
+    workshopMine: () => get('/workshop/mine', WorkshopMineResponse, undefined, true),
 
     /** Which games a subscription loads into: every game, or one game on or off. */
     workshopScope: (
@@ -199,10 +197,10 @@ export const api = {
     ) => send('POST', '/workshop/scope', WorkshopScopeResponse, { subscriptionId, ...change }),
 
     /** Points in every pool. */
-    myPoints: () => get('/me/points', PointsSummarySchema, undefined, true),
+    myPoints: () => get('/me/points', PointsSummaryResponse, undefined, true),
 
     /** The member's saved outfits; 404 (avatars off) surfaces as an error. */
-    avatarOutfits: () => get('/avatar/outfits', OutfitsResponseSchema, undefined, true),
+    avatarOutfits: () => get('/avatar/outfits', AvatarOutfitsResponse, undefined, true),
 
     facets: (kind: ContentKindT, online = true) =>
         get('/facets', FacetsResponseSchema, {

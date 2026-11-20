@@ -471,7 +471,7 @@ pub fn shell_predates_solo(version: &str) -> bool {
         .split('.')
         .nth(1)
         .and_then(|d| d.parse::<u32>().ok())
-        .is_some_and(|d| d >= 20000101 && d < SOLO_SHELL_SINCE)
+        .is_some_and(|d| (20000101..SOLO_SHELL_SINCE).contains(&d))
 }
 
 /// The bare `--` (or Godot's `++`) that ends the engine's own arguments.

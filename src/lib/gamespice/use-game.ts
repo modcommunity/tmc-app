@@ -31,3 +31,27 @@ export function useGameBySlug(slug: string | undefined) {
         staleTime: 60_000,
     })
 }
+
+/** Every platform game the site lists (all catalogue pages, filtered to the allowlist). */
+export function usePlatformGames() {
+    return useQuery({
+        queryKey: ['gamespice', 'platform-games'],
+        queryFn: async (): Promise<PlayAppRowT[]> => {
+            const out: PlayAppRowT[] = []
+            let cursor = 0
+
+            for (;;) {
+                const page = await api.playPage(pageQuery({ ...DEFAULT_FILTERS, tab: 'games' }, cursor))
+
+                if (!page) return out
+
+                out.push(...page.apps.filter((a) => isPlatformSlug(a.url)))
+
+                if (page.nextCursor === null) return out
+
+                cursor = page.nextCursor
+            }
+        },
+        staleTime: 60_000,
+    })
+}

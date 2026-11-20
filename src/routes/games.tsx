@@ -7,6 +7,7 @@ import { api } from '~/lib/api/client'
 import { messageOf } from '~/lib/ipc'
 import { compact, pageQuery, DEFAULT_FILTERS } from '~/lib/api/play'
 import { gameHeadingStyle, gameLook, isPlatformSlug } from '~/lib/gamespice/games'
+import GameServers from '~/components/game-servers'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
 import { BTN_GHOST, BTN_PRIMARY, type PlayAppRowT } from '~/components/play-center'
 
@@ -115,6 +116,10 @@ export default function GamesRoute() {
                     </li>
                 ))}
             </ul>
+
+            {!loading && shown.length > 0 && (
+                <GameServers appIds={shown.slice(0, 50).map((g) => g.id)} limit={15} />
+            )}
 
             {target && <PlayDialog target={target} onClose={() => setTarget(null)} />}
         </div>

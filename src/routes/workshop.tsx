@@ -5,6 +5,8 @@ import { Button } from '@modcommunity/shared'
 import { api } from '~/lib/api/client'
 import { useAuth } from '~/lib/auth/provider'
 import { messageOf } from '~/lib/ipc'
+import { usePlatformGames } from '~/lib/gamespice/use-game'
+import ContentCard from '~/components/content-card'
 
 /**
  * **Workshop** — the packs a member has subscribed to, across every GameSpice
@@ -13,6 +15,15 @@ import { messageOf } from '~/lib/ipc'
  * screen is where they are managed. Signed in only: the list is the member's.
  */
 export default function WorkshopRoute() {
+    const games = usePlatformGames()
+    const gameIds = (games.data ?? []).slice(0, 50).map((g) => g.id)
+    const discover = useQuery({
+        queryKey: ['gamespice', 'workshop-discover', gameIds.join(',')],
+        queryFn: () => api.browse({ kind: 'asset', apps: gameIds, sort: 'downloads', limit: 12 }),
+        enabled: gameIds.length > 0,
+        staleTime: 60_000,
+    })
+
     const { status, signIn } = useAuth()
     const qc = useQueryClient()
     const mine = useQuery({
@@ -89,6 +100,26 @@ export default function WorkshopRoute() {
                     </li>
                 ))}
             </ul>
+
+            <section className="flex flex-col gap-2" aria-label="Discover packs">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold">Popular packs for GameSpice games</h2>
+                    <Link to={`/browse/asset?app=${gameIds.join(',')}`} className="text-xs text-muted underline">
+                        Browse all
+                    </Link>
+                </div>
+                {discover.isError && (
+                    <p role="alert" className="text-sm text-danger">{messageOf(discover.error)}</p>
+                )}
+                {discover.data?.items.length === 0 && (
+                    <p className="text-sm text-muted">No packs are listed for these games yet.</p>
+                )}
+                <div className="grid grid-cols-1 gap-3 xs:grid-cols-2 lg:grid-cols-3">
+                    {discover.data?.items.map((item) => (
+                        <ContentCard key={`${item.kind}-${item.id}`} item={item} />
+                    ))}
+                </div>
+            </section>
         </div>
     )
 }

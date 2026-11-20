@@ -6,6 +6,7 @@ import { messageOf } from '~/lib/ipc'
 import { compact } from '~/lib/api/play'
 import { canonicalSlug, gameHeadingStyle, gameLook, isPlatformSlug } from '~/lib/gamespice/games'
 import { useGameBySlug } from '~/lib/gamespice/use-game'
+import GameServers from '~/components/game-servers'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
 import { BTN_GHOST, BTN_PRIMARY } from '~/components/play-center'
 
@@ -102,6 +103,8 @@ export default function GameHubRoute() {
                             </div>
                         </div>
                     </div>
+
+                    <GameServers appIds={[row.id]} />
                 </>
             )}
 

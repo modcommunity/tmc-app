@@ -15,6 +15,14 @@ export default function GameSpiceAccountRoute() {
     const { status, user, signIn } = useAuth()
     const on = status === 'signedIn'
     const points = useQuery({ queryKey: ['gamespice', 'points'], queryFn: () => api.myPoints(), enabled: on })
+    const appIds = (points.data?.apps ?? []).map((a) => a.appId)
+    const names = useQuery({
+        queryKey: ['gamespice', 'app-names', appIds.join(',')],
+        queryFn: () => api.apps({ ids: appIds }),
+        enabled: appIds.length > 0,
+        staleTime: 300_000,
+    })
+    const nameOf = (id: number) => names.data?.apps.find((a) => a.id === id)?.name ?? `App ${id}`
     const outfits = useQuery({ queryKey: ['gamespice', 'outfits'], queryFn: () => api.avatarOutfits(), enabled: on })
 
     if (!on)
@@ -51,7 +59,7 @@ export default function GameSpiceAccountRoute() {
                         <ul className="flex flex-col gap-1 text-xs">
                             {points.data.apps.map((a) => (
                                 <li key={a.appId} className="flex justify-between rounded-lg border border-border px-3 py-1.5">
-                                    <span>{a.appId}{a.trusted ? '' : ' (unverified)'}</span>
+                                    <span>{nameOf(a.appId)}{a.trusted ? '' : ' (unverified)'}</span>
                                     <span>{a.available} available</span>
                                 </li>
                             ))}

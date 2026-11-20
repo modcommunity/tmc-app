@@ -2582,7 +2582,7 @@ export type StatDefsResponseT = z.infer<typeof StatDefsResponse>
 /*
  * The Workshop: subscriptions that load into solo games. The site's half of the
  * contract is docs/workshop.md; the client's is dot-cloud's docs/workshop.md.
- * Mirrored in tmc-app like everything above, though only Dot games read these.
+ * Mirrored in tmc-app like everything above, though only Gamespice games read these.
  */
 
 export const WorkshopQuerySchema = z.object({
@@ -2794,6 +2794,10 @@ export const AvatarWearableOptionSchema = z.object({
     credit: z.string().nullable().default(null),
     triangles: z.number().int().default(0),
     ownerName: z.string().nullable().default(null),
+    /** The GLB file (site-relative or absolute), for drawing it on the figure; null while locked. */
+    url: z.string().nullable().default(null),
+    /** Where it sits on its bone: `{position, rotation, scale}`. */
+    offset: z.object({ position: z.array(z.number()), rotation: z.array(z.number()), scale: z.number() }).partial().default({}),
     equipped: z.boolean().default(false),
     /** Sold in a store the caller has not bought from: equip is refused. */
     locked: z.boolean().default(false),
@@ -2806,3 +2810,76 @@ export const AvatarWearablesResponseSchema = z.object({
 
 export type AvatarWearableOptionT = z.infer<typeof AvatarWearableOptionSchema>
 export type AvatarWearablesResponseT = z.infer<typeof AvatarWearablesResponseSchema>
+
+/* ========================================================================== */
+
+// ------------------------------------------------------------- GameSpice hub
+//
+// The desktop app's GameSpice screens: the member's Workshop subscriptions,
+// their points in every pool and their saved avatar outfits. Written from what
+// the handlers SEND (`WorkshopMineFor`, `PointsSummary`, `ListAvatarOutfits`).
+
+/** A game a `listed` Workshop scope names. */
+export const WorkshopMineGameSchema = z.object({
+    id: z.number().int(),
+    url: z.string().nullable(),
+    contentId: z.string(),
+    name: z.string(),
+})
+
+/** One subscription in `GET /workshop/mine`: paused and unavailable ones are kept, flagged. */
+export const WorkshopMineItemSchema = z.object({
+    subscriptionId: z.string(),
+    assetId: z.number().int(),
+    name: z.string(),
+    image: z.string().nullable(),
+    webUrl: z.string(),
+    scope: z.enum(['all', 'listed']),
+    /** The games a `listed` scope names (empty for `all`). */
+    games: z.array(WorkshopMineGameSchema).default([]),
+    paused: z.boolean().default(false),
+    autoUpdate: z.boolean().default(false),
+    via: z.object({ collectionId: z.number().int(), name: z.string() }).nullable().default(null),
+    /** False when nothing would load right now. */
+    available: z.boolean().default(true),
+})
+
+export const WorkshopMineResponse = z.object({
+    items: z.array(WorkshopMineItemSchema),
+})
+
+/** `GET /me/points`: the member's points, every pool (`PointsSummaryT` on the site). */
+export const PointsSummaryResponse = z.object({
+    site: z.object({ earned: z.number(), spent: z.number(), available: z.number() }),
+    apps: z.array(
+        z.object({
+            appId: z.number().int(),
+            trusted: z.boolean(),
+            earned: z.number(),
+            spent: z.number(),
+            available: z.number(),
+        })
+    ),
+    total: z.number(),
+})
+
+/** A saved outfit; `doc` is the avatar studio's figure document, shape-checked on the site. */
+export const AvatarOutfitSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    doc: z.object({
+        version: z.number().int(),
+        schema_id: z.string(),
+        parts: z.record(z.string(), z.string()),
+        colours: z.record(z.string(), z.array(z.string())),
+    }),
+    savedAt: z.string(),
+})
+
+export const AvatarOutfitsResponse = z.object({
+    outfits: z.array(AvatarOutfitSchema),
+})
+
+export type WorkshopMineItemT = z.infer<typeof WorkshopMineItemSchema>
+export type PointsSummaryResponseT = z.infer<typeof PointsSummaryResponse>
+export type AvatarOutfitT = z.infer<typeof AvatarOutfitSchema>
