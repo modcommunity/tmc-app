@@ -426,7 +426,7 @@ pub(crate) async fn http_get(
     timeout: Duration,
 ) -> AppResult<(Vec<u8>, u32)> {
     let request = format!(
-        "GET {path} HTTP/1.1\r\nHost: {host_header}\r\nUser-Agent: TMC-App\r\nAccept: application/json\r\nConnection: close\r\n\r\n"
+        "GET {path} HTTP/1.1\r\nHost: {host_header}\r\nUser-Agent: GameSpice-App\r\nAccept: application/json\r\nConnection: close\r\n\r\n"
     );
 
     let (raw, rtt) = tcp_exchange(addr, request.as_bytes(), timeout).await?;

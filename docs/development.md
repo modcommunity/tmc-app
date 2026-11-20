@@ -100,7 +100,7 @@ The MSI registers `gs://` in `HKLM` itself, because a per-machine install is the
 
 It resolves the latest version from the **redirect** on `/releases/latest` rather than the GitHub API, which is rate-limited per IP at sixty an hour and would be spent by whoever shares the NAT.
 
-Where **libfuse2** is missing — Debian 13, Ubuntu 24.04 — the AppImage is unpacked into `~/.local/lib/tmc` and `bin/tmc` becomes a symlink to its `AppRun`. The same problem hits the BUILD side, where linuxdeploy and appimagetool are themselves AppImages: `APPIMAGE_EXTRACT_AND_RUN=1` is what both honour, and Tauri reports its absence as the unhelpful `failed to run linuxdeploy` — as it does the missing `librsvg2-dev` the GTK plugin needs. `build-linux.sh` checks for both by name.
+Where **libfuse2** is missing — Debian 13, Ubuntu 24.04 — the AppImage is unpacked into `~/.local/lib/gamespice-app` and `bin/gamespice-app` becomes a symlink to its `AppRun`. The same problem hits the BUILD side, where linuxdeploy and appimagetool are themselves AppImages: `APPIMAGE_EXTRACT_AND_RUN=1` is what both honour, and Tauri reports its absence as the unhelpful `failed to run linuxdeploy` — as it does the missing `librsvg2-dev` the GTK plugin needs. `build-linux.sh` checks for both by name.
 
 ## Working here
 

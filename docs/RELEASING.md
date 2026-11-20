@@ -1,4 +1,4 @@
-# Releasing TMC, and how it updates itself
+# Releasing the GameSpice App, and how it updates itself
 
 ```bash
 git tag v0.3.0 && git push origin v0.3.0        # a release

@@ -139,7 +139,7 @@ pub fn detect_apply(state: State<'_, AppState>, slug: String, path: String) -> A
     Ok(())
 }
 
-/// Which TMC app id a slug belongs to on this device.
+/// Which GameSpice app id a slug belongs to on this device.
 ///
 /// A slug is the plugin folder's name and an id is the API's, and everything
 /// the device stores — a game directory, a sandbox — is keyed by the id. So

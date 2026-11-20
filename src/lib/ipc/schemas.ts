@@ -607,7 +607,7 @@ export const PlayTotalsSchema = z.object({
 export type PlayTotalsT = z.infer<typeof PlayTotalsSchema>
 
 export const PlaytimeSummarySchema = z.object({
-    /** Keyed by TMC app id as a string — JSON object keys always are. */
+    /** Keyed by GameSpice app id as a string — JSON object keys always are. */
     byApp: z.record(z.string(), PlayTotalsSchema),
     bySandbox: z.record(z.string(), PlayTotalsSchema),
 })

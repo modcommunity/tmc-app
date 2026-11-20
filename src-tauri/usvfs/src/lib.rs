@@ -30,7 +30,7 @@
 //! | [`inject`] — suspended launch, remote `LoadLibrary` | **Type-checked. Argument quoting and environment building are tested; the launch itself is not.** |
 //!
 //! That is why `Strategy::Usvfs` refuses at deploy time — and at LAUNCH time,
-//! in `tmc-app`'s `spawn` module — unless the app is built with the
+//! in `gamespice-app`'s `spawn` module — unless the app is built with the
 //! `usvfs-hooks` feature, which is **off by default**. The brain is real and
 //! tested; the two hundred lines that reach into somebody else's process have
 //! been read carefully and never executed, and shipping those on by default

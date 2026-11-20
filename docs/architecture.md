@@ -12,7 +12,7 @@ There is no `fetch` in the frontend and no `get_token` command. A mod descriptio
 React (src/)                       ← untrusted content renders here
   │  invoke() via src/lib/ipc      ← every call parsed through a zod schema
   ▼
-tmc-app  (src-tauri/src/)          ← the Tauri shell, and nothing else
+gamespice-app (src-tauri/src/)     ← the Tauri shell, and nothing else
   ├── commands/   the IPC surface
   ├── state.rs    AppState, assembled once
   └── paths.rs    platform paths, from Tauri's resolver

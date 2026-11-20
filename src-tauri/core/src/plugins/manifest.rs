@@ -44,7 +44,7 @@ pub struct Manifest {
     #[serde(default)]
     pub homepage: Option<String>,
 
-    /// TMC app (game) ids this plugin handles. Empty means "any", which is
+    /// GameSpice app (game) ids this plugin handles. Empty means "any", which is
     /// only sensible for a theme.
     #[serde(default)]
     pub apps: Vec<i64>,

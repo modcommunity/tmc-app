@@ -28,7 +28,7 @@ pub struct PluginRecord {
 
     /// Which capabilities the manifest declares.
     pub kinds: Vec<String>,
-    /// TMC app ids handled. Empty = any.
+    /// GameSpice app ids handled. Empty = any.
     pub apps: Vec<i64>,
 
     /// Human-readable permission list, exactly as shown at approval time.

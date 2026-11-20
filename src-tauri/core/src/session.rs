@@ -107,7 +107,7 @@ impl SessionKind {
 pub struct Session {
     pub id: u64,
     pub kind: SessionKind,
-    /// The TMC app id, when the launch was for a known game.
+    /// The GameSpice app id, when the launch was for a known game.
     pub app_id: Option<i64>,
     /// The game's plugin slug, for artwork and rules.
     pub app_slug: Option<String>,

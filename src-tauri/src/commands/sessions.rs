@@ -93,7 +93,7 @@ pub fn session_log(state: State<'_, AppState>, id: u64, lines: Option<usize>) ->
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaytimeSummary {
-    /// Keyed by TMC app id, as a string — a JSON object's keys are strings and
+    /// Keyed by GameSpice app id, as a string — a JSON object's keys are strings and
     /// a numeric key would round-trip as one anyway.
     pub by_app: std::collections::BTreeMap<String, PlayTotals>,
     pub by_sandbox: std::collections::BTreeMap<String, PlayTotals>,

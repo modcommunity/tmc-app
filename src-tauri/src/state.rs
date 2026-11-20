@@ -69,7 +69,7 @@ pub struct AppState {
     /// reconnect per line.
     pub rcon: RconPool,
 
-    /// Slug → TMC app id, learned from the catalogue.
+    /// Slug → GameSpice app id, learned from the catalogue.
     ///
     /// The device's plugin folders are named after a game's URL slug and
     /// everything it STORES is keyed by the numeric id, and until this existed
@@ -383,7 +383,7 @@ impl AppState {
         }
     }
 
-    /// The plugin slug for a TMC app id, from anything on this device.
+    /// The plugin slug for a GameSpice app id, from anything on this device.
     ///
     /// The inverse of [`Self::cached_app_id`], and it matters for the same
     /// reason: a sandbox with no slug has no game rules at all — no preset, no

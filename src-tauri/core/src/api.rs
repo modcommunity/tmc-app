@@ -211,7 +211,7 @@ struct Envelope {
 impl ApiClient {
     pub fn new(auth: Arc<AuthState>, secure: Arc<SecureStore>, version: &str) -> AppResult<Self> {
         let http = crate::http::builder()
-            .user_agent(format!("TMC-App/{version}"))
+            .user_agent(format!("GameSpice-App/{version}"))
             .timeout(Duration::from_secs(30))
             .connect_timeout(Duration::from_secs(10))
             // The API is ours and speaks HTTPS. A redirect chain off it is

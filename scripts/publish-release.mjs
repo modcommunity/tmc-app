@@ -125,7 +125,7 @@ async function main() {
         signature: found.signature,
     }))
 
-    console.log(`\ntmc-app ${VERSION}${PROMOTE ? '  (promoting)' : ''}`)
+    console.log(`\nGameSpice App ${VERSION}${PROMOTE ? '  (promoting)' : ''}`)
 
     for (const a of artifacts) console.log(`  ${a.target.padEnd(16)} ${a.url}`)
 

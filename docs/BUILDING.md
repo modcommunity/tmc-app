@@ -1,12 +1,12 @@
-# Building and shipping TMC
+# Building and shipping the GameSpice App
 
 Five targets, one codebase — but not one machine. This is what can be produced from where, and how.
 
 | Artifact | Built on | Command |
 | --- | --- | --- |
-| `TMC.exe` (portable), `*-setup.exe`, `*.msi` | **Linux or Windows** | `npm run build:windows` |
+| `GameSpice App.exe` (portable), `*-setup.exe`, `*.msi` | **Linux or Windows** | `npm run build:windows` |
 | `*.AppImage`, `*.deb` | Linux | `npm run build:linux` |
-| `*.dmg`, `TMC.app` | **macOS only** | `npx tauri build --target universal-apple-darwin` |
+| `*.dmg`, `GameSpice App.app` | **macOS only** | `npx tauri build --target universal-apple-darwin` |
 | `*.apk` /`*.aab` | Linux, macOS or Windows | `npm run android:build` |
 | `*.ipa` | macOS only | `npm run ios:build` |
 
@@ -32,9 +32,9 @@ Three separate problems, three answers:
 Out of `npm run build:windows`:
 
 ```
-…/x86_64-pc-windows-msvc/release/bundle/portable/TMC.exe          run it, no install
-…/x86_64-pc-windows-msvc/release/bundle/nsis/TMC_x.y.z_x64-setup.exe
-…/x86_64-pc-windows-msvc/release/bundle/msi/TMC_x.y.z_x64_en-US.msi
+…/x86_64-pc-windows-msvc/release/bundle/portable/GameSpice App.exe run it, no install
+…/x86_64-pc-windows-msvc/release/bundle/nsis/GameSpice App_x.y.z_x64-setup.exe
+…/x86_64-pc-windows-msvc/release/bundle/msi/GameSpice App_x.y.z_x64_en-US.msi
 ```
 
 `npm run build:windows -- --no-installers` stops after the exe, which is the fast loop when all you want is something to run.
@@ -47,11 +47,11 @@ Out of `npm run build:windows`:
 
 ### What the MSI does
 
-`packaging/windows/tmc.wxs`, per-machine, into `Program Files\TMC`:
+`packaging/windows/tmc.wxs`, per-machine, into `Program Files\GameSpice App`:
 
-- `TMC.exe`
+- `GameSpice App.exe`
 - a Start Menu shortcut under *The Modding Community*
-- the `gs://` scheme in `HKLM\Software\Classes` — the app cannot register this for itself in a per-machine install, and without it every deep link in the app is dead
+- the `gs://` and `tmc://` schemes in `HKLM\Software\Classes` — the app cannot register this for itself in a per-machine install, and without it every deep link in the app is dead
 - an `Upgrade` row, so installing a newer version replaces the old one rather than sitting beside it
 
 Inspect one without Windows: `msiinfo tables x.msi`, `msiinfo export x.msi File`.
@@ -105,9 +105,9 @@ Downloads the AppImage for the running architecture, verifies it against the rel
 ```bash
 … | sh -s -- --uninstall           # removes exactly what it wrote
 … | sh -s -- --version v0.1.0      # a specific release
-TMC_APPIMAGE=./TMC_0.1.0_amd64.AppImage sh scripts/install.sh   # a build you made
+GS_APPIMAGE=./GameSpice-App_0.1.0_amd64.AppImage sh scripts/install.sh   # a build you made
 ```
 
-Where libfuse2 is absent the AppImage is unpacked into `~/.local/lib/tmc` and `~/.local/bin/tmc` becomes a symlink to its `AppRun` — same files, no mount.
+Where libfuse2 is absent the AppImage is unpacked into `~/.local/lib/gamespice-app` and `~/.local/bin/gamespice-app` becomes a symlink to its `AppRun` — same files, no mount.
 
 **Windows** — the `-setup.exe`, or the `.msi` for deployment. Both register `gs://`; the MSI is per-machine and needs elevation.

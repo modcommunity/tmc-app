@@ -208,7 +208,7 @@ pub struct RunRequest {
     pub plugin: String,
     /// `install` or `uninstall`.
     pub action: String,
-    /// TMC app id, which selects the `gameDir` root.
+    /// GameSpice app id, which selects the `gameDir` root.
     pub app_id: Option<i64>,
     /// Placeholder values for the plan's `{name}` templates.
     #[serde(default)]

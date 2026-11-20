@@ -48,7 +48,7 @@ Traps that do not error usefully, grouped by where they bite. The ones that belo
 ## Workflows
 
 - **No apostrophe inside `${VAR:-...}` in a workflow `run:` block.** Within double quotes bash reads it as an opening quote and the whole step dies with "unexpected EOF while looking for matching": the release's Build step failed on every platform for that reason until 0.2.0. A release tag is the only thing that runs `release.yml`, so check its blocks with `bash -n` before tagging.
-- **A play window builder call may be desktop-only.** Tauri declares `center`, `inner_size`, `decorations`, `fullscreen` and the rest of the sizing calls under `cfg(desktop)`; ungated, the Android build does not compile. `cargo check -p tmc-app --target aarch64-linux-android` needs an NDK's clang as `CC_aarch64_linux_android` (ring builds C).
+- **A play window builder call may be desktop-only.** Tauri declares `center`, `inner_size`, `decorations`, `fullscreen` and the rest of the sizing calls under `cfg(desktop)`; ungated, the Android build does not compile. `cargo check -p gamespice-app --target aarch64-linux-android` needs an NDK's clang as `CC_aarch64_linux_android` (ring builds C).
 
 ## Versions
 

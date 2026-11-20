@@ -43,7 +43,7 @@ pub struct AppSettings {
     // -------------------------------------------------------------- Behaviour
     /// Where installers put downloads before they are extracted.
     pub download_dir: Option<String>,
-    /// Game install roots, keyed by TMC app id. An installer plugin can only
+    /// Game install roots, keyed by GameSpice app id. An installer plugin can only
     /// ever write under the root for the app it is handling.
     pub game_dirs: std::collections::BTreeMap<String, String>,
     /// Check for app updates on launch.

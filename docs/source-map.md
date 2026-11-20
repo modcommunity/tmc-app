@@ -72,7 +72,7 @@ What each file owns, per crate. The shape and the rule behind it are in [archite
 | `hooks.rs` | IAT patching and the redirecting `CreateFileW`. Windows only |
 | `inject.rs` | `CREATE_SUSPENDED` + `CreateRemoteThread(LoadLibraryW)`, and the quoting `CommandLineToArgvW` demands |
 
-**`src-tauri/src/` — `tmc-app`**
+**`src-tauri/src/` — `gamespice-app`**
 
 | File | Owns |
 | --- | --- |

@@ -90,7 +90,7 @@ pub struct DetectedGame {
     /// What would start it, when the launcher offers a URI for that.
     pub launch_uri: Option<String>,
     pub size_bytes: Option<u64>,
-    /// The TMC app this was matched to, when a hint matched.
+    /// The GameSpice app this was matched to, when a hint matched.
     pub slug: Option<String>,
 }
 
