@@ -33,8 +33,8 @@ export function ActivityBars({
     const plural = (v: number) => `${v} ${unit}${v === 1 ? '' : 's'}`
 
     return (
-        <figure className="flex flex-col gap-1.5" aria-label={`Played on ${active} of the last ${n} days`}>
-            <div className="relative" style={{ height }} onMouseLeave={() => setHover(null)}>
+        <figure className="flex flex-1 flex-col gap-1.5" aria-label={`Played on ${active} of the last ${n} days`}>
+            <div className="relative flex-1" style={{ minHeight: height }} onMouseLeave={() => setHover(null)}>
                 {/* Recessive guide lines at the top and the middle. */}
                 <div className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-border/60" />
                 <div className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-border/40" />
