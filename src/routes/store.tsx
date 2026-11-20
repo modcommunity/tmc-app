@@ -1,11 +1,16 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import {
     FiCheck,
     FiChevronLeft,
+    FiActivity,
+    FiAward,
     FiClock,
+    FiCrosshair,
+    FiDroplet,
+    FiEdit3,
     FiExternalLink,
     FiGift,
     FiLock,
@@ -14,9 +19,11 @@ import {
     FiShoppingBag,
     FiStar,
     FiTag,
+    FiUser,
     FiX,
     FiZap,
 } from 'react-icons/fi'
+import type { IconType } from 'react-icons'
 
 import { api } from '~/lib/api/client'
 import type { AppSummaryT, StoreFrontItemT, StoreFrontResponseT, StorePurchasesResponseT } from '~/lib/api/contract'
@@ -37,6 +44,7 @@ import {
     newIdemKey,
     saleOff,
     slotFor,
+    slotLabel,
     type ItemStateT,
     type StoreFilterT,
     type StoreSortT,
@@ -281,7 +289,7 @@ export function GameStoreRoute() {
     const loadout = useQuery({ queryKey: ['store', 'loadout', appId], queryFn: () => api.storeLoadout(appId), enabled: on })
     const names = useAppNames(Number.isInteger(appId) && appId > 0 ? [appId] : [])
     const app = names.data?.apps[0]
-    const look = lookOf(app, front.data?.owner.name ?? String(appId))
+    const look: StoreLook = { ...lookOf(app, front.data?.owner.name ?? String(appId)), art: app?.images.card ?? app?.images.banner ?? null }
     const items = useMemo(
         () => (front.data ? filterItems(front.data.items, front.data, filter, sort) : []),
         [front.data, filter, sort]
@@ -510,20 +518,61 @@ function Price({ item, front, large }: { item: StoreFrontItemT; front: StoreFron
     )
 }
 
-function ItemArt({ item, look, className = '' }: { item: StoreFrontItemT; look: GameLook; className?: string }) {
+/** A game's look plus its card art, the backdrop for imageless items. */
+type StoreLook = GameLook & { art?: string | null }
+
+/** The icon and hue shift an imageless item is drawn with, by kind. */
+const KIND_ART: Record<string, { icon: IconType; shift: number }> = {
+    AVATAR: { icon: FiUser, shift: 0 },
+    AVATAR_ACTION: { icon: FiActivity, shift: 28 },
+    AVATAR_WEARABLE: { icon: FiAward, shift: -24 },
+    COSMETIC: { icon: FiDroplet, shift: 52 },
+    SPRAY_PAINT: { icon: FiEdit3, shift: -48 },
+    EQUIPMENT: { icon: FiCrosshair, shift: 180 },
+    OTHER: { icon: FiGift, shift: 200 },
+}
+
+/**
+ * An item's picture. Most store items have none yet, so the fallback is the
+ * game's own art, darkened and tinted per kind, under the kind's icon: the
+ * grid reads as this game's store rather than a wall of letters.
+ */
+function ItemArt({ item, look, className = '', small = false }: { item: StoreFrontItemT; look: StoreLook; className?: string; small?: boolean }) {
+    const art = look.art
     const src = item.imageUrl ?? item.images[0]
+    const kind = KIND_ART[item.kind] ?? { icon: item.bundle.length ? FiPackage : FiGift, shift: 200 }
+    const Icon = kind.icon
+    const hue = (look.hue + kind.shift + 360) % 360
+
+    if (src)
+        return (
+            <div className={`relative overflow-hidden ${className}`} style={{ background: gradient(look) }}>
+                <img src={src} alt="" loading="lazy" className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            </div>
+        )
 
     return (
-        <div className={`relative overflow-hidden ${className}`} style={{ background: gradient(look) }}>
-            {src ? (
-                <img src={src} alt="" loading="lazy" className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
-            ) : (
-                <div className="flex size-full items-center justify-center">
-                    <span className="text-5xl font-black text-white/25" style={{ fontFamily: gameHeadingStyle(look).fontFamily }}>
-                        {item.name.charAt(0).toUpperCase()}
-                    </span>
-                </div>
+        <div
+            className={`relative isolate overflow-hidden ${className}`}
+            style={{ background: `radial-gradient(120% 90% at 50% 35%, hsl(${hue} 55% 30%), hsl(${hue} 45% 9%) 75%)` }}
+        >
+            {art && !small && (
+                <img
+                    src={art}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 -z-10 size-full scale-110 object-cover opacity-25 mix-blend-luminosity blur-[2px] transition-transform duration-700 group-hover:scale-125"
+                />
             )}
+            <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+            <div className="flex size-full items-center justify-center">
+                <span
+                    className={`flex items-center justify-center border text-white shadow-lg backdrop-blur-sm transition-transform duration-300 group-hover:scale-110 ${small ? 'size-full rounded-lg border-transparent bg-transparent text-base' : 'size-16 rounded-2xl bg-white/10 text-3xl'}`}
+                    style={small ? undefined : { borderColor: `hsl(${hue} 70% 60% / 0.55)`, boxShadow: `0 0 32px hsl(${hue} 80% 55% / 0.35)` }}
+                >
+                    <Icon aria-hidden />
+                </span>
+            </div>
         </div>
     )
 }
@@ -638,6 +687,23 @@ function ItemDialog({
         },
     })
 
+    // Escape closes from anywhere, and focus starts inside the dialog.
+    const closeRef = useRef<HTMLButtonElement>(null)
+    const close = useRef(onClose)
+    useEffect(() => {
+        close.current = onClose
+    })
+    useEffect(() => {
+        closeRef.current?.focus()
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') close.current()
+        }
+
+        window.addEventListener('keydown', onKey)
+
+        return () => window.removeEventListener('keydown', onKey)
+    }, [])
+
     const gallery = [...new Set([item.imageUrl, ...item.images].filter((u): u is string => !!u))].slice(1)
     const mine = state === 'owned' || state === 'subscribed'
 
@@ -645,7 +711,6 @@ function ItemDialog({
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
             onClick={(e) => e.target === e.currentTarget && onClose()}
-            onKeyDown={(e) => e.key === 'Escape' && onClose()}
         >
             <div
                 role="dialog"
@@ -663,7 +728,7 @@ function ItemDialog({
                             </p>
                             <h2 className="text-xl font-extrabold">{item.name}</h2>
                         </div>
-                        <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-muted hover:bg-surface-hover">
+                        <button ref={closeRef} type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-muted hover:bg-surface-hover">
                             <FiX />
                         </button>
                     </div>
@@ -765,7 +830,7 @@ function ItemDialog({
                                 disabled={equip.isPending}
                                 onClick={() => equip.mutate(equipped ? null : item.key)}
                             >
-                                {equip.isPending ? 'Saving…' : equipped ? `Unequip from ${equipped}` : `Equip in ${slot}`}
+                                {equip.isPending ? 'Saving…' : equipped ? `Unequip from ${slotLabel(equipped)}` : `Equip in ${slotLabel(slot)}`}
                             </button>
                         )}
                         {mine && slot === null && (
@@ -829,17 +894,17 @@ function LoadoutPanel({
                     return (
                         <li key={l.slot} className="flex items-center gap-2.5 rounded-xl bg-surface-2 p-2">
                             {item ? (
-                                <ItemArt item={item} look={look} className="size-10 shrink-0 rounded-lg" />
+                                <ItemArt item={item} look={look} small className="size-10 shrink-0 rounded-lg" />
                             ) : (
                                 <div className="size-10 shrink-0 rounded-lg" style={{ background: gradient(look) }} />
                             )}
                             <div className="min-w-0 flex-1 leading-tight">
-                                <p className="text-[10px] uppercase tracking-wide text-muted">{l.slot}</p>
+                                <p className="text-[10px] uppercase tracking-wide text-muted">{slotLabel(l.slot)}</p>
                                 <p className="truncate text-sm font-semibold">{item?.name ?? l.key}</p>
                             </div>
                             <button
                                 type="button"
-                                aria-label={`Unequip ${l.slot}`}
+                                aria-label={`Unequip ${slotLabel(l.slot)}`}
                                 disabled={clear.isPending}
                                 onClick={() => clear.mutate(l.slot)}
                                 className="rounded-md p-1 text-muted hover:bg-surface-hover hover:text-danger"

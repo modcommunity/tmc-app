@@ -12,6 +12,7 @@ import {
     newIdemKey,
     saleOff,
     slotFor,
+    slotLabel,
 } from './store'
 
 function item(over: Partial<StoreFrontItemT> = {}): StoreFrontItemT {
@@ -132,6 +133,12 @@ describe('helpers', () => {
         expect(slotFor({ kind: 'AVATAR_WEARABLE', category: 'hat' })).toBeNull()
         expect(slotFor({ kind: 'OTHER', category: '!!!' })).toBe('other')
         expect(slotFor({ kind: 'OTHER', category: 'x'.repeat(100) })?.length).toBe(64)
+    })
+
+    it('labels slots for people', () => {
+        expect(slotLabel('spray-paint')).toBe('Spray paint')
+        expect(slotLabel('primary_weapon')).toBe('Primary weapon')
+        expect(slotLabel('--')).toBe('--')
     })
 
     it('finds the equipped slot only for this game store', () => {

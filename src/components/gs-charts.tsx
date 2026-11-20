@@ -179,7 +179,7 @@ export function ShareBar({ segments, unit }: { segments: ShareSegment[]; unit: s
                     />
                 ))}
             </div>
-            <ul className="grid grid-cols-1 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-y-1.5 text-xs">
                 {segments.map((s) => (
                     <li
                         key={s.key}

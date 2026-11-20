@@ -7,6 +7,8 @@
  */
 import { mockIPC, mockWindows } from '@tauri-apps/api/mocks'
 
+import { fixture } from './fixtures'
+
 type Def = { type: string; [k: string]: unknown }
 type Schema = { _zod?: { def: Def } }
 
@@ -94,15 +96,20 @@ mockIPC(async (cmd, args) => {
     switch (cmd) {
         case 'api_get': {
             const q = new URLSearchParams((a.query as [string, string][] | undefined) ?? [])
+            const fx = g.__reviewFixtures ? fixture('GET', String(a.path), q, undefined) : undefined
+            if (fx !== undefined) return fx
             const qs = q.toString()
             return json(await fetch(`/__api${a.path}${qs ? `?${qs}` : ''}`))
         }
-        case 'api_send':
+        case 'api_send': {
+            const fx = g.__reviewFixtures ? fixture(String(a.method), String(a.path), new URLSearchParams(), a.body as Record<string, unknown>) : undefined
+            if (fx !== undefined) return fx
             return json(await fetch(`/__api${a.path}`, {
                 method: a.method as string,
                 headers: { 'content-type': 'application/json' },
                 body: a.body === undefined ? undefined : JSON.stringify(a.body),
             }))
+        }
         case 'avatar_manifest': return json(await fetch('/__avatar/manifest'))
         case 'avatar_library': return json(await fetch(`/__avatar/library?app=${a.appId}`))
         case 'avatar_me': return json(await fetch(`/__avatar/me?app=${a.appId}`))
@@ -115,11 +122,12 @@ mockIPC(async (cmd, args) => {
             return res.arrayBuffer()
         }
         case 'session_state': {
-            const me = (await json(await fetch('/__api/me')).catch(() => null)) as Record<string, unknown> | null
+            const me = (g.__reviewFixtures ? fixture('GET', '/me', new URLSearchParams(), undefined) : await json(await fetch('/__api/me')).catch(() => null)) as Record<string, unknown> | null
             const userSchema = (schema as { shape: { user: { unwrap(): unknown } } }).shape.user.unwrap()
             const user = me ? (fake(userSchema) as Record<string, unknown>) : null
             if (user && me) for (const k of Object.keys(user)) if (k in me) user[k] = (me as Record<string, unknown>)[k]
             if (user && me && 'user' in me) Object.assign(user, me.user)
+            if (user) user.id = String(user.id)
             return { signedIn: !!me, pending: false, user }
         }
         case 'api_env': return { base: 'https://tmcdev.net', isProd: false, version: '0.0.0-review' }

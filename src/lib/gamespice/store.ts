@@ -51,6 +51,13 @@ export function kindLabel(kind: string): string {
     return KIND_LABELS[kind] ?? kind.charAt(0) + kind.slice(1).toLowerCase().replace(/_/g, ' ')
 }
 
+/** A loadout slot key as people read it: `primary-weapon` is "Primary weapon". */
+export function slotLabel(slot: string): string {
+    const t = slot.replace(/[-_]+/g, ' ').trim()
+
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : slot
+}
+
 /** The store's own name for a currency ("Points", "Credits", the game's coin). */
 export function currencyLabel(front: Pick<StoreFrontResponseT, 'labels'>, currency: StoreCurrencyT): string {
     if (currency === 'CREDITS') return front.labels.credits
