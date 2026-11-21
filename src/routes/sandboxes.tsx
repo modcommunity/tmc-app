@@ -130,7 +130,12 @@ export default function SandboxesRoute() {
             />
         )
 
-    if (loading) return <Empty title="Loading…" body="" />
+    if (loading)
+        return (
+            <div role="status" aria-live="polite">
+                <Empty title="Loading sandboxes…" body="" />
+            </div>
+        )
 
     return (
         <div className="flex flex-col gap-4 p-4">
@@ -153,7 +158,20 @@ export default function SandboxesRoute() {
                 </button>
             </header>
 
-            {error && <Banner tone="danger">{error}</Banner>}
+            {error && (
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                        <Banner tone="danger">{error}</Banner>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => void load()}
+                        className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs hover:border-accent"
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
 
             {creating && (
                 <CreateSandbox
@@ -175,13 +193,19 @@ export default function SandboxesRoute() {
 
             <div className="grid gap-3 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
                 {sandboxes.length > 0 && (
-                    <nav className="flex flex-col gap-1.5">
+                    <nav
+                        aria-label="Your sandboxes"
+                        className="flex flex-col gap-1.5"
+                    >
                         {sandboxes.map((sandbox) => (
                             <button
                                 key={sandbox.id}
                                 type="button"
                                 onClick={() => navigate(`/sandboxes/${sandbox.id}`)}
-                                className={`rounded-xl border p-3 text-left transition-colors ${
+                                aria-current={
+                                    sandbox.id === selectedId ? 'page' : undefined
+                                }
+                                className={`rounded-xl border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
                                     sandbox.id === selectedId
                                         ? 'border-accent bg-surface'
                                         : 'border-border bg-surface hover:border-accent'
@@ -206,11 +230,13 @@ export default function SandboxesRoute() {
                                     )}
                                     {sandbox.cloudSync ? (
                                         <FiCloud
+                                            role="img"
                                             aria-label="Synced to your account"
                                             className="ml-auto size-3 shrink-0 text-muted"
                                         />
                                     ) : (
                                         <FiCloudOff
+                                            role="img"
                                             aria-label="Kept on this device only"
                                             className="ml-auto size-3 shrink-0 text-muted"
                                         />
@@ -252,7 +278,9 @@ export default function SandboxesRoute() {
                 ) : (
                     sandboxes.length > 0 && (
                         <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
-                            Choose a sandbox to see what is in it.
+                            {selectedId !== null
+                                ? 'That sandbox no longer exists. Choose another from the list.'
+                                : 'Choose a sandbox to see what is in it.'}
                         </div>
                     )
                 )}
@@ -790,7 +818,7 @@ function UpdatesBanner({
     onChanged: () => Promise<void>
 }) {
     const [outdated, setOutdated] = useState<OutdatedT[]>([])
-    const [busy, setBusy] = useState(false)
+    const { busy, error, run } = useGuarded(onChanged)
 
     useEffect(() => {
         let live = true
@@ -832,19 +860,17 @@ function UpdatesBanner({
             <button
                 type="button"
                 disabled={busy}
-                onClick={() => {
-                    setBusy(true)
-
-                    void ipc
-                        .sandboxStage(sandbox.id, true)
-                        .catch(() => undefined)
-                        .then(onChanged)
-                        .finally(() => setBusy(false))
-                }}
+                onClick={() => void run(() => ipc.sandboxStage(sandbox.id, true))}
                 className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs text-accent-foreground disabled:opacity-50"
             >
                 {busy ? 'Downloading…' : 'Update now'}
             </button>
+
+            {error && (
+                <p role="alert" className="selectable w-full text-xs text-danger">
+                    {error}
+                </p>
+            )}
         </section>
     )
 }
@@ -873,7 +899,7 @@ function DependencyPanel({
     onChanged: () => Promise<void>
 }) {
     const library = useLibrary()
-    const [busy, setBusy] = useState(false)
+    const { busy, error, run } = useGuarded(onChanged)
 
     const nothing =
         report.missing.length === 0 &&
@@ -901,20 +927,16 @@ function DependencyPanel({
                 <button
                     type="button"
                     disabled={busy}
-                    onClick={() => {
-                        setBusy(true)
-
-                        void ipc
-                            .sandboxRefreshDependencies(sandboxId)
-                            .catch(() => undefined)
-                            .then(onChanged)
-                            .finally(() => setBusy(false))
-                    }}
+                    onClick={() =>
+                        void run(() => ipc.sandboxRefreshDependencies(sandboxId))
+                    }
                     className="rounded-lg border border-border px-2 py-1 text-xs hover:border-accent disabled:opacity-50"
                 >
                     {busy ? 'Checking…' : 'Check again'}
                 </button>
             </div>
+
+            {error && <Banner tone="danger">{error}</Banner>}
 
             {report.conflicts.map((clash) => (
                 <p
@@ -969,15 +991,9 @@ function DependencyPanel({
                         <button
                             type="button"
                             disabled={busy}
-                            onClick={() => {
-                                setBusy(true)
-
-                                void ipc
-                                    .sandboxAddMissing(sandboxId)
-                                    .catch(() => undefined)
-                                    .then(onChanged)
-                                    .finally(() => setBusy(false))
-                            }}
+                            onClick={() =>
+                                void run(() => ipc.sandboxAddMissing(sandboxId))
+                            }
                             className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs text-accent-foreground disabled:opacity-50"
                         >
                             Add {addable.length} subscribed item
@@ -1031,6 +1047,7 @@ function SandboxSettings({
 }) {
     const [error, setError] = useState<string | null>(null)
     const [confirming, setConfirming] = useState(false)
+    const [deleting, setDeleting] = useState(false)
 
     const patch = async (next: Parameters<typeof ipc.sandboxPatch>[1]) => {
         try {
@@ -1222,15 +1239,23 @@ function SandboxSettings({
                     <div className="mt-3 flex gap-2">
                         <button
                             type="button"
-                            onClick={() =>
+                            disabled={deleting}
+                            onClick={() => {
+                                setDeleting(true)
+                                setError(null)
+
                                 void ipc
                                     .sandboxDelete(sandbox.id, true)
                                     .then(onDeleted)
-                                    .catch(() => setConfirming(false))
-                            }
-                            className="rounded-lg bg-danger px-3 py-1.5 text-xs text-white"
+                                    .catch((err: unknown) => {
+                                        setError(messageOf(err))
+                                        setConfirming(false)
+                                    })
+                                    .finally(() => setDeleting(false))
+                            }}
+                            className="rounded-lg bg-danger px-3 py-1.5 text-xs text-white disabled:opacity-50"
                         >
-                            Delete
+                            {deleting ? 'Deleting…' : 'Delete'}
                         </button>
                         <button
                             type="button"
@@ -1742,6 +1767,7 @@ function Banner({
 }) {
     return (
         <p
+            role={tone === 'danger' ? 'alert' : undefined}
             className={`selectable rounded-lg border px-3 py-2 text-xs ${
                 tone === 'danger'
                     ? 'border-danger/50 text-danger'
@@ -1751,6 +1777,28 @@ function Banner({
             {children}
         </p>
     )
+}
+
+/** Runs one action with a busy flag, then refreshes; a failure is kept for display. */
+function useGuarded(onChanged: () => Promise<void>) {
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    const run = async (fn: () => Promise<unknown>) => {
+        setBusy(true)
+        setError(null)
+
+        try {
+            await fn()
+            await onChanged()
+        } catch (err) {
+            setError(messageOf(err))
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return { busy, error, run }
 }
 
 function Empty({ title, body }: { title: string; body: string }) {

@@ -18,11 +18,13 @@ const FOCUSABLE =
 
 function focusables(root: HTMLElement): HTMLElement[] {
     return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-        (el) => !el.hasAttribute('inert') && el.getClientRects().length > 0,
+        (el) => !el.hasAttribute('inert') && el.getClientRects().length > 0
     )
 }
 
-export function useDialog<T extends HTMLElement>(onClose: () => void): RefObject<T | null> {
+export function useDialog<T extends HTMLElement>(
+    onClose: () => void
+): RefObject<T | null> {
     const ref = useRef<T>(null)
     const close = useRef(onClose)
 
@@ -32,7 +34,10 @@ export function useDialog<T extends HTMLElement>(onClose: () => void): RefObject
 
     useEffect(() => {
         const id = Symbol('dialog')
-        const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        const opener =
+            document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null
 
         stack.push(id)
 
@@ -70,7 +75,10 @@ export function useDialog<T extends HTMLElement>(onClose: () => void): RefObject
             const last = items[items.length - 1]!
             const active = document.activeElement
 
-            if (e.shiftKey && (active === first || active === root || !root.contains(active))) {
+            if (
+                e.shiftKey &&
+                (active === first || active === root || !root.contains(active))
+            ) {
                 e.preventDefault()
                 last.focus()
             } else if (!e.shiftKey && (active === last || !root.contains(active))) {
