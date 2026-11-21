@@ -110,8 +110,8 @@ function TrustedKeys() {
 
     return (
         <section className="flex flex-col gap-2 rounded-xl border border-border p-3">
-            <div className="flex items-center justify-between gap-2">
-                <div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0 flex-1 basis-56">
                     <h2 className="text-sm font-semibold">Trusted publishers</h2>
                     <p className="text-xs text-muted">
                         A plugin signed by one of these keys is verified. A
@@ -159,12 +159,22 @@ function TrustedKeys() {
                         />
                     </label>
 
-                    {error && <p className="text-xs text-danger">{error}</p>}
+                    {error && (
+                        <p role="alert" className="text-xs text-danger">
+                            {error}
+                        </p>
+                    )}
 
                     <Button btnType="primary" onClick={() => void add()}>
                         Trust this key
                     </Button>
                 </div>
+            )}
+
+            {keys.isError && !keys.data && (
+                <p role="alert" className="text-xs text-danger">
+                    Could not load the trusted keys.
+                </p>
             )}
 
             {keys.data?.length === 0 && !adding && (
@@ -245,6 +255,8 @@ export default function PluginsRoute() {
     const approve = async () => {
         if (!preview) return
 
+        setError(null)
+
         try {
             await ipc.pluginApprove(preview.dir, preview.fingerprint)
             setPreview(null)
@@ -256,8 +268,8 @@ export default function PluginsRoute() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-3">
-                <p className="text-xs text-muted">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <p className="min-w-0 flex-1 basis-56 text-xs text-muted">
                     Plugins add game support, server queries and themes. They are
                     declarative — a plugin describes steps this app carries out, it
                     never runs code of its own.
@@ -268,7 +280,7 @@ export default function PluginsRoute() {
             </div>
 
             {error && (
-                <p className="rounded-lg border border-danger p-3 text-xs text-danger">
+                <p role="alert" className="rounded-lg border border-danger p-3 text-xs text-danger">
                     {error}
                 </p>
             )}
@@ -331,6 +343,17 @@ export default function PluginsRoute() {
 
             {plugins.isPending ? (
                 <p className="text-sm text-muted">Loading…</p>
+            ) : plugins.isError && !plugins.data ? (
+                <p role="alert" className="py-8 text-center text-sm text-danger">
+                    Could not load the plugins.{' '}
+                    <button
+                        type="button"
+                        onClick={() => void plugins.refetch()}
+                        className="underline"
+                    >
+                        Try again
+                    </button>
+                </p>
             ) : (plugins.data?.length ?? 0) === 0 ? (
                 <p className="py-8 text-center text-sm text-muted">
                     No plugins installed.
@@ -393,7 +416,8 @@ function PluginRow({
                     onChange={(enabled) => {
                         void ipc
                             .pluginSetEnabled(plugin.id, enabled)
-                            .then(onChanged)
+                            .catch(() => undefined)
+                            .finally(onChanged)
                     }}
                 />
             </div>

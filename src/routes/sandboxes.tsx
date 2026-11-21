@@ -837,6 +837,7 @@ function UpdatesBanner({
 
                     void ipc
                         .sandboxStage(sandbox.id, true)
+                        .catch(() => undefined)
                         .then(onChanged)
                         .finally(() => setBusy(false))
                 }}
@@ -905,6 +906,7 @@ function DependencyPanel({
 
                         void ipc
                             .sandboxRefreshDependencies(sandboxId)
+                            .catch(() => undefined)
                             .then(onChanged)
                             .finally(() => setBusy(false))
                     }}
@@ -972,6 +974,7 @@ function DependencyPanel({
 
                                 void ipc
                                     .sandboxAddMissing(sandboxId)
+                                    .catch(() => undefined)
                                     .then(onChanged)
                                     .finally(() => setBusy(false))
                             }}
@@ -1187,7 +1190,10 @@ function SandboxSettings({
                     <button
                         type="button"
                         onClick={() =>
-                            void ipc.sandboxSetDefault(sandbox.id).then(onChanged)
+                            void ipc
+                                .sandboxSetDefault(sandbox.id)
+                                .catch(() => undefined)
+                                .then(onChanged)
                         }
                         className="rounded-lg border border-border px-3 py-1.5 text-xs hover:border-accent"
                     >
@@ -1220,6 +1226,7 @@ function SandboxSettings({
                                 void ipc
                                     .sandboxDelete(sandbox.id, true)
                                     .then(onDeleted)
+                                    .catch(() => setConfirming(false))
                             }
                             className="rounded-lg bg-danger px-3 py-1.5 text-xs text-white"
                         >

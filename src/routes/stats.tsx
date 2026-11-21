@@ -186,6 +186,18 @@ export function GameStatsRoute() {
     })
     const art = app?.images.banner ?? app?.images.card
 
+    // A hand-edited link: the per-game queries are disabled, so they would sit on
+    // their skeletons forever.
+    if (!valid)
+        return (
+            <div className="flex flex-col gap-5 p-4 md:p-6">
+                <Link to="/stats" className="flex w-fit items-center gap-1 text-xs text-muted hover:text-accent">
+                    <FiChevronLeft aria-hidden /> All stats
+                </Link>
+                <Empty icon={<FiBarChart2 />} title="That game does not exist" />
+            </div>
+        )
+
     return (
         <div className="flex flex-col gap-5 p-4 md:p-6">
             <Link to="/stats" className="flex w-fit items-center gap-1 text-xs text-muted hover:text-accent">
@@ -249,6 +261,8 @@ export function GameStatsRoute() {
                             <ActivityBars series={game.recent} since={overview.data?.since ?? ''} accent={look.accent} unit="day" />
                         ) : overview.isPending && on ? (
                             <RowSkeleton rows={2} />
+                        ) : overview.isError ? (
+                            <ErrorNote error={overview.error} />
                         ) : (
                             <p className="text-sm text-muted">No play recorded for this game yet.</p>
                         )}

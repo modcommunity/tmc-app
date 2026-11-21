@@ -296,6 +296,14 @@ export function GameStoreRoute() {
     )
     const open = front.data?.items.find((i) => i.id === openId) ?? null
 
+    // A hand-edited link: the query is disabled, so it would sit on the skeleton forever.
+    if (!Number.isInteger(appId) || appId <= 0)
+        return (
+            <div className="flex flex-col gap-4 p-4 md:p-6">
+                <BackLink />
+                <Empty icon={<FiShoppingBag />} title="That store does not exist" />
+            </div>
+        )
     if (front.isPending)
         return (
             <div className="flex flex-col gap-5 p-4 md:p-6">
@@ -718,7 +726,7 @@ function ItemDialog({
                 aria-label={item.name}
                 className="gs-rise flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl md:flex-row"
             >
-                <ItemArt item={item} look={look} className="aspect-square w-full shrink-0 md:w-72" />
+                <ItemArt item={item} look={look} className="aspect-square max-h-44 w-full shrink-0 md:max-h-none md:w-72" />
                 <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
                     <div className="flex items-start justify-between gap-3">
                         <div>
@@ -809,7 +817,7 @@ function ItemDialog({
                             <button
                                 type="button"
                                 className={BTN_PRIMARY}
-                                onClick={() => void openUrl(webUrl(env, front.storeUrl))}
+                                onClick={() => void openUrl(webUrl(env, front.storeUrl)).catch(() => undefined)}
                             >
                                 <FiExternalLink aria-hidden /> Buy on the website
                             </button>

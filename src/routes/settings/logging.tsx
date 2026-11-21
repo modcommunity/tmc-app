@@ -102,6 +102,17 @@ export default function LoggingRoute() {
 
             {entries.isPending ? (
                 <p className="text-sm text-muted">Loading…</p>
+            ) : entries.isError && !entries.data ? (
+                <p role="alert" className="py-8 text-center text-sm text-danger">
+                    Could not read the log.{' '}
+                    <button
+                        type="button"
+                        onClick={() => void entries.refetch()}
+                        className="underline"
+                    >
+                        Try again
+                    </button>
+                </p>
             ) : (entries.data?.length ?? 0) === 0 ? (
                 <p className="py-8 text-center text-sm text-muted">
                     Nothing recorded at this level yet.
