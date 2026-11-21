@@ -1,5 +1,9 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
+## 0.5.1
+
+- Release fix: the Linux AppImage build failed on the CI runner ("Can't detect any appindicator library") because the tray icon needs `libayatana-appindicator3`; the release and CI workflows now install it. No app changes since 0.5.0, which was never published.
+
 ## 0.5.0
 
 - Visual review pass: Play, Apps, game pages and the view page share one load-error banner (danger border, detail line, Try again button) instead of bare text; Installs, when signed out, shows a Sign in card; Settings > Games shows a retry row when the game list fails and a message when it is empty.
