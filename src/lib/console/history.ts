@@ -28,9 +28,15 @@ export function walkHistory(
     direction: 'up' | 'down',
     draft: string
 ): { cursor: number; text: string } {
-    const next = direction === 'up' ? Math.max(0, cursor - 1) : Math.min(list.length, cursor + 1)
+    const next =
+        direction === 'up'
+            ? Math.max(0, cursor - 1)
+            : Math.min(list.length, cursor + 1)
 
-    return { cursor: next, text: next >= list.length ? draft : (list[next] ?? draft) }
+    return {
+        cursor: next,
+        text: next >= list.length ? draft : (list[next] ?? draft),
+    }
 }
 
 export function loadHistory(): string[] {
@@ -38,7 +44,9 @@ export function loadHistory(): string[] {
         const raw: unknown = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
 
         return Array.isArray(raw)
-            ? raw.filter((x): x is string => typeof x === 'string').slice(-MAX_HISTORY)
+            ? raw
+                  .filter((x): x is string => typeof x === 'string')
+                  .slice(-MAX_HISTORY)
             : []
     } catch {
         return []

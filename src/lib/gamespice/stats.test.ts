@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { completion, currentStreak, dayLabel, lastPlayedLabel, longestStreak, playShare, sparkPath, statValue } from './stats'
+import {
+    completion,
+    currentStreak,
+    dayLabel,
+    lastPlayedLabel,
+    longestStreak,
+    playShare,
+    sparkPath,
+    statValue,
+} from './stats'
 
 describe('streaks', () => {
     it('counts back from today, forgiving an unplayed today', () => {

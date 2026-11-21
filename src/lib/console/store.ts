@@ -2,7 +2,12 @@ import { ipc } from '~/lib/ipc/commands'
 import { messageOf, subscribe } from '~/lib/ipc'
 import { ConsoleEventSchema, type ConsoleEventT } from '~/lib/ipc/schemas'
 
-import { appendLine, appendOutput, emptyTranscript, type Transcript } from './transcript'
+import {
+    appendLine,
+    appendOutput,
+    emptyTranscript,
+    type Transcript,
+} from './transcript'
 
 /**
  * The Console's state, held above the screen.
@@ -53,7 +58,9 @@ class ConsoleStore {
 
     /** Listen for Rust's events, once for the life of the window. */
     private attach(): Promise<void> {
-        this.attached ??= subscribe('tmc://console', ConsoleEventSchema, (e) => this.handle(e))
+        this.attached ??= subscribe('tmc://console', ConsoleEventSchema, (e) =>
+            this.handle(e)
+        )
             .then(() => undefined)
             .catch(() => {
                 // No Tauri bridge (a plain browser): the screen shows its own state.
@@ -191,7 +198,11 @@ class ConsoleStore {
             const id = await ipc.consoleRunning()
 
             if (id !== null && !this.running) {
-                this.running = { runId: id, display: '(running)', startedAt: Date.now() }
+                this.running = {
+                    runId: id,
+                    display: '(running)',
+                    startedAt: Date.now(),
+                }
                 this.bump()
             }
         } catch {

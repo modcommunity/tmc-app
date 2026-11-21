@@ -35,12 +35,17 @@ import fixtures from './play.fixtures.json'
 const q = (search: string) => new URLSearchParams(search)
 
 describe('responses', () => {
-    it.each(['games', 'gamesLast', 'servers', 'lobbies', 'invites', 'emptyNothing', 'emptySearch'] as const)(
-        'parses the %s page',
-        (key) => {
-            expect(PlayPageEnvelopeSchema.safeParse(fixtures[key]).success).toBe(true)
-        }
-    )
+    it.each([
+        'games',
+        'gamesLast',
+        'servers',
+        'lobbies',
+        'invites',
+        'emptyNothing',
+        'emptySearch',
+    ] as const)('parses the %s page', (key) => {
+        expect(PlayPageEnvelopeSchema.safeParse(fixtures[key]).success).toBe(true)
+    })
 
     it('keeps the other tabs empty and the cursor for the next page', () => {
         const page = PlayPageEnvelopeSchema.parse(fixtures.games)
@@ -57,7 +62,9 @@ describe('responses', () => {
     })
 
     it('rejects a page whose rows are missing a field', () => {
-        const broken = structuredClone(fixtures.servers) as unknown as { servers: { curUsers?: number }[] }
+        const broken = structuredClone(fixtures.servers) as unknown as {
+            servers: { curUsers?: number }[]
+        }
 
         delete broken.servers[0]?.curUsers
 
@@ -65,11 +72,17 @@ describe('responses', () => {
     })
 
     it('defaults a game with no launch options to an empty list', () => {
-        const row = structuredClone(fixtures.games.apps[0]) as Record<string, unknown>
+        const row = structuredClone(fixtures.games.apps[0]) as Record<
+            string,
+            unknown
+        >
 
         delete row.options
 
-        const page = PlayPageEnvelopeSchema.parse({ ...fixtures.games, apps: [row] })
+        const page = PlayPageEnvelopeSchema.parse({
+            ...fixtures.games,
+            apps: [row],
+        })
 
         expect(page?.apps[0]?.options).toEqual([])
     })
@@ -82,7 +95,9 @@ describe('responses', () => {
         const quick = PlayQuickMatchResponseSchema.parse(fixtures.quick)
 
         expect(quick?.best?.id).toBe(quick?.top[0]?.id)
-        expect(PlayQuickMatchResponseSchema.parse(fixtures.quickNone)?.best).toBeNull()
+        expect(
+            PlayQuickMatchResponseSchema.parse(fixtures.quickNone)?.best
+        ).toBeNull()
     })
 
     it('parses the party invites the invites tab shows', () => {
@@ -104,7 +119,9 @@ describe('filters in the URL', () => {
     })
 
     it('drops a bad value instead of the page', () => {
-        const f = filtersFromParams(q('tab=nope&sort=sideways&mode=vr&app=abc&populated=true'))
+        const f = filtersFromParams(
+            q('tab=nope&sort=sideways&mode=vr&app=abc&populated=true')
+        )
 
         expect(f.tab).toBe('games')
         expect(f.sort).toBeUndefined()
@@ -125,11 +142,18 @@ describe('filters in the URL', () => {
             populated: true,
         }
 
-        expect(filtersFromParams(filtersToParams(f))).toEqual({ ...f, joinable: false })
+        expect(filtersFromParams(filtersToParams(f))).toEqual({
+            ...f,
+            joinable: false,
+        })
         expect(filtersToParams(DEFAULT_FILTERS).toString()).toBe('')
-        expect(filtersToParams({ ...DEFAULT_FILTERS, tab: 'lobbies', sort: 'recent' }).toString()).toBe(
-            'tab=lobbies'
-        )
+        expect(
+            filtersToParams({
+                ...DEFAULT_FILTERS,
+                tab: 'lobbies',
+                sort: 'recent',
+            }).toString()
+        ).toBe('tab=lobbies')
     })
 
     it('caps a hand-edited search at the contract limit', () => {
@@ -149,25 +173,41 @@ describe('the request for a page', () => {
     })
 
     it('leaves out a sort the tab cannot express', () => {
-        expect(pageQuery({ ...DEFAULT_FILTERS, tab: 'servers', sort: 'trending' }).sort).toBeUndefined()
-        expect(pageQuery({ ...DEFAULT_FILTERS, tab: 'games', sort: 'trending' }).sort).toBe('trending')
+        expect(
+            pageQuery({ ...DEFAULT_FILTERS, tab: 'servers', sort: 'trending' }).sort
+        ).toBeUndefined()
+        expect(
+            pageQuery({ ...DEFAULT_FILTERS, tab: 'games', sort: 'trending' }).sort
+        ).toBe('trending')
     })
 
     it('sends nothing but the tab for invites', () => {
-        expect(pageQuery({ ...DEFAULT_FILTERS, tab: 'invites', q: 'x', appId: 3 })).toEqual({ tab: 'invites' })
+        expect(
+            pageQuery({ ...DEFAULT_FILTERS, tab: 'invites', q: 'x', appId: 3 })
+        ).toEqual({ tab: 'invites' })
     })
 
     it('does not narrow the games list by a game', () => {
         expect(pageQuery({ ...DEFAULT_FILTERS, appId: 4 }).appId).toBeUndefined()
-        expect(pageQuery({ ...DEFAULT_FILTERS, tab: 'servers', appId: 4 }).appId).toBe(4)
+        expect(
+            pageQuery({ ...DEFAULT_FILTERS, tab: 'servers', appId: 4 }).appId
+        ).toBe(4)
     })
 
     it('is accepted by the contract, and carries the cursor', () => {
         const parsed = PlayPageQuerySchema.parse(
-            pageQuery({ ...DEFAULT_FILTERS, tab: 'servers', q: 'surf', populated: true }, 40)
+            pageQuery(
+                { ...DEFAULT_FILTERS, tab: 'servers', q: 'surf', populated: true },
+                40
+            )
         )
 
-        expect(parsed).toMatchObject({ tab: 'servers', q: 'surf', populated: true, cursor: 40 })
+        expect(parsed).toMatchObject({
+            tab: 'servers',
+            q: 'surf',
+            populated: true,
+            cursor: 40,
+        })
         expect(PlayPageQuerySchema.parse(pageQuery(DEFAULT_FILTERS)).cursor).toBe(0)
     })
 
@@ -198,13 +238,16 @@ describe('row facts', () => {
 
 describe('app-mode launch response', () => {
     it('carries the solo pack, and an older answer without it still parses', () => {
-        const uri = 'tmc://play/app/fatal-contact?solo=tmc/fatal-contact&solo-version=1.2.0'
+        const uri =
+            'tmc://play/app/fatal-contact?solo=tmc/fatal-contact&solo-version=1.2.0'
         const withSolo = PlayLaunchResponseSchema.parse({
             mode: 'app',
             uri,
             solo: { contentId: 'tmc/fatal-contact', version: '1.2.0' },
         })
-        expect(withSolo).toMatchObject({ solo: { contentId: 'tmc/fatal-contact', version: '1.2.0' } })
+        expect(withSolo).toMatchObject({
+            solo: { contentId: 'tmc/fatal-contact', version: '1.2.0' },
+        })
 
         const latest = PlayLaunchResponseSchema.parse({
             mode: 'app',
@@ -213,7 +256,11 @@ describe('app-mode launch response', () => {
         })
         expect(latest).toMatchObject({ solo: { version: null } })
 
-        expect(PlayLaunchResponseSchema.parse({ mode: 'app', uri })).toMatchObject({ uri })
-        expect(PlayLaunchResponseSchema.parse({ mode: 'app', uri, solo: null })).toMatchObject({ uri })
+        expect(PlayLaunchResponseSchema.parse({ mode: 'app', uri })).toMatchObject({
+            uri,
+        })
+        expect(
+            PlayLaunchResponseSchema.parse({ mode: 'app', uri, solo: null })
+        ).toMatchObject({ uri })
     })
 })

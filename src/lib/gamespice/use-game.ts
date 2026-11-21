@@ -19,9 +19,14 @@ export function useGameBySlug(slug: string | undefined) {
             for (;;) {
                 // No `q`: the site searches NAMES, so a slug (`fatal-contact`)
                 // or a former url (`arena`) never matches. The list is short.
-                const page = await api.playPage(pageQuery({ ...DEFAULT_FILTERS, tab: 'games' }, cursor))
+                const page = await api.playPage(
+                    pageQuery({ ...DEFAULT_FILTERS, tab: 'games' }, cursor)
+                )
                 const hit = page?.apps.find(
-                    (a) => a.url !== null && slug !== undefined && canonicalSlug(a.url) === canonicalSlug(slug)
+                    (a) =>
+                        a.url !== null &&
+                        slug !== undefined &&
+                        canonicalSlug(a.url) === canonicalSlug(slug)
                 )
 
                 if (hit) return hit
@@ -43,7 +48,9 @@ export function usePlatformGames() {
             let cursor = 0
 
             for (;;) {
-                const page = await api.playPage(pageQuery({ ...DEFAULT_FILTERS, tab: 'games' }, cursor))
+                const page = await api.playPage(
+                    pageQuery({ ...DEFAULT_FILTERS, tab: 'games' }, cursor)
+                )
 
                 if (!page) return out
 

@@ -649,8 +649,8 @@ function PasswordForm({
 
             <p className="text-[0.7rem] text-muted">
                 Encrypted with a key held in your operating system&rsquo;s
-                credential store. It is never sent to GameSpice and no
-                part of the app can read it back.
+                credential store. It is never sent to GameSpice and no part of the
+                app can read it back.
             </p>
 
             {error && <p className="text-xs text-danger">{error}</p>}

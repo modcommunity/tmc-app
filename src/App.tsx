@@ -55,14 +55,50 @@ const router = createHashRouter([
             { path: 'play', element: <PlayRoute /> },
             { path: 'games', element: <Navigate to="/play" replace /> },
             { path: 'games/:slug', element: <GameHubRoute /> },
-            { path: 'games/:slug/avatar', lazy: () => import('~/routes/avatar-games').then((m) => ({ Component: m.default })) },
-            { path: 'avatar', lazy: () => import('~/routes/avatar-member').then((m) => ({ Component: m.default })) },
+            {
+                path: 'games/:slug/avatar',
+                lazy: () =>
+                    import('~/routes/avatar-games').then((m) => ({
+                        Component: m.default,
+                    })),
+            },
+            {
+                path: 'avatar',
+                lazy: () =>
+                    import('~/routes/avatar-member').then((m) => ({
+                        Component: m.default,
+                    })),
+            },
             { path: 'workshop', element: <WorkshopRoute /> },
             { path: 'me', element: <GameSpiceAccountRoute /> },
-            { path: 'store', lazy: () => import('~/routes/store').then((m) => ({ Component: m.StoreDirectoryRoute })) },
-            { path: 'store/:appId', lazy: () => import('~/routes/store').then((m) => ({ Component: m.GameStoreRoute })) },
-            { path: 'stats', lazy: () => import('~/routes/stats').then((m) => ({ Component: m.StatsRoute })) },
-            { path: 'stats/:appId', lazy: () => import('~/routes/stats').then((m) => ({ Component: m.GameStatsRoute })) },
+            {
+                path: 'store',
+                lazy: () =>
+                    import('~/routes/store').then((m) => ({
+                        Component: m.StoreDirectoryRoute,
+                    })),
+            },
+            {
+                path: 'store/:appId',
+                lazy: () =>
+                    import('~/routes/store').then((m) => ({
+                        Component: m.GameStoreRoute,
+                    })),
+            },
+            {
+                path: 'stats',
+                lazy: () =>
+                    import('~/routes/stats').then((m) => ({
+                        Component: m.StatsRoute,
+                    })),
+            },
+            {
+                path: 'stats/:appId',
+                lazy: () =>
+                    import('~/routes/stats').then((m) => ({
+                        Component: m.GameStatsRoute,
+                    })),
+            },
             { path: 'discover', element: <DiscoverRoute /> },
             { path: 'apps', element: <AppsRoute /> },
             { path: 'apps/:id', element: <GameRoute /> },
@@ -131,11 +167,13 @@ attachOfflineCache(queryClient)
 const monitorRouter = createHashRouter([
     {
         path: '/monitor/server/:id',
-        lazy: () => import('~/routes/monitor').then((m) => ({ Component: m.default })),
+        lazy: () =>
+            import('~/routes/monitor').then((m) => ({ Component: m.default })),
     },
     {
         path: '/monitor/addr',
-        lazy: () => import('~/routes/monitor').then((m) => ({ Component: m.default })),
+        lazy: () =>
+            import('~/routes/monitor').then((m) => ({ Component: m.default })),
     },
     { path: '*', element: <Navigate to="/" replace /> },
 ])
@@ -146,7 +184,10 @@ const isMonitorWindow = window.location.hash.startsWith('#/monitor')
 if (!isMonitorWindow && '__TAURI_INTERNALS__' in window) {
     void import('@tauri-apps/api/event').then(({ listen }) =>
         listen<{ path: string }>('monitor:navigate', (e) => {
-            if (typeof e.payload?.path === 'string' && e.payload.path.startsWith('/'))
+            if (
+                typeof e.payload?.path === 'string' &&
+                e.payload.path.startsWith('/')
+            )
                 void router.navigate(e.payload.path)
         })
     )

@@ -28,9 +28,17 @@ describe('usageFraction', () => {
 
 describe('canBeDefault', () => {
     it('only a present permanent non-default store', () => {
-        expect(canBeDefault({ kind: 'permanent', isDefault: false, exists: true })).toBe(true)
-        expect(canBeDefault({ kind: 'temporary', isDefault: false, exists: true })).toBe(false)
-        expect(canBeDefault({ kind: 'permanent', isDefault: true, exists: true })).toBe(false)
-        expect(canBeDefault({ kind: 'permanent', isDefault: false, exists: false })).toBe(false)
+        expect(
+            canBeDefault({ kind: 'permanent', isDefault: false, exists: true })
+        ).toBe(true)
+        expect(
+            canBeDefault({ kind: 'temporary', isDefault: false, exists: true })
+        ).toBe(false)
+        expect(
+            canBeDefault({ kind: 'permanent', isDefault: true, exists: true })
+        ).toBe(false)
+        expect(
+            canBeDefault({ kind: 'permanent', isDefault: false, exists: false })
+        ).toBe(false)
     })
 })

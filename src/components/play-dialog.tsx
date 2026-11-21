@@ -703,7 +703,9 @@ export default function PlayDialog({
                 return
             }
 
-            setAutoNote(`${why} Opening the web version instead; it may run slower.`)
+            setAutoNote(
+                `${why} Opening the web version instead; it may run slower.`
+            )
 
             try {
                 await ipc.playOpenWeb({
@@ -722,7 +724,19 @@ export default function PlayDialog({
                 setAuto(false)
             }
         })()
-    }, [auto, factsIn, canNative, canWeb, app, server, values, locale, fullscreen, target.solo, onClose])
+    }, [
+        auto,
+        factsIn,
+        canNative,
+        canWeb,
+        app,
+        server,
+        values,
+        locale,
+        fullscreen,
+        target.solo,
+        onClose,
+    ])
 
     if (auto)
         return (
@@ -756,7 +770,14 @@ export default function PlayDialog({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Play ${app.name}`} className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-surface focus:outline-none">
+            <div
+                ref={dialogRef}
+                tabIndex={-1}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Play ${app.name}`}
+                className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-surface focus:outline-none"
+            >
                 <header className="flex items-start gap-3 border-b border-border p-4">
                     <GameIcon
                         app={{ id: app.id, name: app.name, icon: app.images.icon }}

@@ -245,8 +245,8 @@ export default function LibraryTmcGames() {
         <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[11px] text-muted">
-                    Games GameSpice publishes, installed on this machine and kept up to
-                    date.
+                    Games GameSpice publishes, installed on this machine and kept up
+                    to date.
                 </p>
 
                 <button

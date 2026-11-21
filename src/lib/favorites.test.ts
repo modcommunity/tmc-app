@@ -9,7 +9,11 @@ import {
     toggleFavorite,
 } from './favorites'
 
-function srv(id: number, over: Partial<ContentSummaryT> = {}, s: object = {}): ContentSummaryT {
+function srv(
+    id: number,
+    over: Partial<ContentSummaryT> = {},
+    s: object = {}
+): ContentSummaryT {
     return {
         id,
         name: `Server ${id}`,
@@ -35,7 +39,8 @@ describe('toggleFavorite', () => {
     it('caps at MAX_FAVORITES dropping the oldest', () => {
         let map = {}
 
-        for (let i = 1; i <= MAX_FAVORITES + 2; i++) map = toggleFavorite(map, srv(i))
+        for (let i = 1; i <= MAX_FAVORITES + 2; i++)
+            map = toggleFavorite(map, srv(i))
 
         expect(Object.keys(map)).toHaveLength(MAX_FAVORITES)
         expect('1' in map).toBe(false)
@@ -56,17 +61,27 @@ describe('filterFavorites', () => {
     const list = [
         srv(1, { name: 'Alpha' }, { curUsers: 0 }),
         srv(2, { name: 'Beta' }, { curUsers: 10, maxUsers: 10 }),
-        srv(3, { name: 'Gamma', app: { id: 2, name: 'H' } } as never, { online: false }),
+        srv(3, { name: 'Gamma', app: { id: 2, name: 'H' } } as never, {
+            online: false,
+        }),
     ]
 
     it('searches by name', () => {
-        expect(filterFavorites(list, { search: 'alp' }).map((x) => x.id)).toEqual([1])
+        expect(filterFavorites(list, { search: 'alp' }).map((x) => x.id)).toEqual([
+            1,
+        ])
     })
 
     it('hides empty, full and offline', () => {
-        expect(filterFavorites(list, { hideEmpty: true }).map((x) => x.id)).toEqual([2, 3])
-        expect(filterFavorites(list, { hideFull: true }).map((x) => x.id)).toEqual([1, 3])
-        expect(filterFavorites(list, { onlineOnly: true }).map((x) => x.id)).toEqual([1, 2])
+        expect(filterFavorites(list, { hideEmpty: true }).map((x) => x.id)).toEqual(
+            [2, 3]
+        )
+        expect(filterFavorites(list, { hideFull: true }).map((x) => x.id)).toEqual([
+            1, 3,
+        ])
+        expect(
+            filterFavorites(list, { onlineOnly: true }).map((x) => x.id)
+        ).toEqual([1, 2])
     })
 
     it('filters by game', () => {

@@ -12,7 +12,11 @@ import {
 import { BTN_GHOST, BTN_PRIMARY } from '~/components/play-center'
 import { useApiEnv } from '~/lib/api/env'
 import { useAuth } from '~/lib/auth/provider'
-import { loadGameStudio, loadMemberStudio, writeStudio } from '~/lib/avatar/studio-data'
+import {
+    loadGameStudio,
+    loadMemberStudio,
+    writeStudio,
+} from '~/lib/avatar/studio-data'
 import { canonicalSlug, isPlatformSlug } from '~/lib/gamespice/games'
 import { useGameBySlug } from '~/lib/gamespice/use-game'
 import { messageOf } from '~/lib/ipc'
@@ -40,7 +44,9 @@ function Note({ children, back }: { children: ReactNode; back?: string }) {
 }
 
 /** The studio's `host`: writes over IPC, models through Rust, nothing else. */
-function useHost(appId: number | null): Partial<StudioHostT> & Pick<StudioHostT, 'write'> {
+function useHost(
+    appId: number | null
+): Partial<StudioHostT> & Pick<StudioHostT, 'write'> {
     return useMemo(
         () => ({
             write: writeStudio,
@@ -74,7 +80,11 @@ function Frame({
         return (
             <div className="flex flex-col items-start gap-3 p-4">
                 <p className="text-sm text-muted">Sign in to edit your avatar.</p>
-                <button type="button" className={BTN_PRIMARY} onClick={() => void signIn()}>
+                <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    onClick={() => void signIn()}
+                >
                     Sign in
                 </button>
             </div>
@@ -83,10 +93,15 @@ function Frame({
 
     return (
         <div className="avatar-studio p-3">
-            <Link to={back} className="mb-3 block text-xs text-muted hover:text-foreground">
+            <Link
+                to={back}
+                className="mb-3 block text-xs text-muted hover:text-foreground"
+            >
                 Back
             </Link>
-            <AvatarStudioHost host={host}>{children(new URL(env.base).origin)}</AvatarStudioHost>
+            <AvatarStudioHost host={host}>
+                {children(new URL(env.base).origin)}
+            </AvatarStudioHost>
         </div>
     )
 }
@@ -119,7 +134,8 @@ export function GameAvatarPage() {
     const slug = raw ? canonicalSlug(raw) : undefined
     const game = useGameBySlug(slug)
 
-    if (!slug || !isPlatformSlug(slug)) return <Note back="/play">That is not a GameSpice game.</Note>
+    if (!slug || !isPlatformSlug(slug))
+        return <Note back="/play">That is not a GameSpice game.</Note>
     if (game.isPending) return <Note>Loading…</Note>
     if (!game.data) return <Note back="/play">No such game.</Note>
 

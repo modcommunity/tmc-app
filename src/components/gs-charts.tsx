@@ -33,8 +33,15 @@ export function ActivityBars({
     const plural = (v: number) => `${v} ${unit}${v === 1 ? '' : 's'}`
 
     return (
-        <figure className="flex flex-1 flex-col gap-1.5" aria-label={`Played on ${active} of the last ${n} days`}>
-            <div className="relative flex-1" style={{ minHeight: height }} onMouseLeave={() => setHover(null)}>
+        <figure
+            className="flex flex-1 flex-col gap-1.5"
+            aria-label={`Played on ${active} of the last ${n} days`}
+        >
+            <div
+                className="relative flex-1"
+                style={{ minHeight: height }}
+                onMouseLeave={() => setHover(null)}
+            >
                 {/* Recessive guide lines at the top and the middle. */}
                 <div className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-border/60" />
                 <div className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-dashed border-border/40" />
@@ -53,9 +60,13 @@ export function ActivityBars({
                             <span
                                 className="gs-grow block w-full rounded-t-[4px] transition-[opacity,transform] duration-200 group-focus-visible:ring-2 group-focus-visible:ring-accent"
                                 style={{
-                                    height: v > 0 ? `${Math.max(6, (v / max) * 100)}%` : 3,
+                                    height:
+                                        v > 0
+                                            ? `${Math.max(6, (v / max) * 100)}%`
+                                            : 3,
                                     background: v > 0 ? accent : 'var(--border)',
-                                    opacity: shown === null || shown === i ? 1 : 0.45,
+                                    opacity:
+                                        shown === null || shown === i ? 1 : 0.45,
                                     animationDelay: `${i * 12}ms`,
                                 }}
                             />
@@ -68,8 +79,12 @@ export function ActivityBars({
                         className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-[11px] shadow-lg"
                         style={{ left: `${(shown + 0.5) * w}%` }}
                     >
-                        <span className="font-semibold text-foreground">{dayLabel(since, shown)}</span>
-                        <span className="ml-1.5 text-muted">{plural(series[shown] ?? 0)}</span>
+                        <span className="font-semibold text-foreground">
+                            {dayLabel(since, shown)}
+                        </span>
+                        <span className="ml-1.5 text-muted">
+                            {plural(series[shown] ?? 0)}
+                        </span>
                     </div>
                 )}
             </div>
@@ -116,7 +131,14 @@ export function Sparkline({
                 </linearGradient>
             </defs>
             <path d={area} fill={`url(#${id})`} />
-            <path d={line} fill="none" stroke={accent} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            <path
+                d={line}
+                fill="none"
+                stroke={accent}
+                strokeWidth={2}
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+            />
         </svg>
     )
 }
@@ -138,9 +160,26 @@ export function ProgressRing({
     const pct = Math.max(0, Math.min(100, value))
 
     return (
-        <div className="relative shrink-0" style={{ width: size, height: size }} role="img" aria-label={`${label}: ${pct}%`}>
-            <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} className="-rotate-90">
-                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border)" strokeWidth={6} />
+        <div
+            className="relative shrink-0"
+            style={{ width: size, height: size }}
+            role="img"
+            aria-label={`${label}: ${pct}%`}
+        >
+            <svg
+                viewBox={`0 0 ${size} ${size}`}
+                width={size}
+                height={size}
+                className="-rotate-90"
+            >
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={r}
+                    fill="none"
+                    stroke="var(--border)"
+                    strokeWidth={6}
+                />
                 <circle
                     cx={size / 2}
                     cy={size / 2}
@@ -154,20 +193,40 @@ export function ProgressRing({
                     className="transition-[stroke-dashoffset] duration-700 ease-out"
                 />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">{pct}%</span>
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">
+                {pct}%
+            </span>
         </div>
     )
 }
 
-export type ShareSegment = { key: string; label: string; value: number; share: number; color: string }
+export type ShareSegment = {
+    key: string
+    label: string
+    value: number
+    share: number
+    color: string
+}
 
 /** One horizontal bar split by share, with a legend that names each part and its figure. */
-export function ShareBar({ segments, unit }: { segments: ShareSegment[]; unit: string }) {
+export function ShareBar({
+    segments,
+    unit,
+}: {
+    segments: ShareSegment[]
+    unit: string
+}) {
     const [hover, setHover] = useState<string | null>(null)
 
     return (
         <div className="flex flex-col gap-3">
-            <div className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full" role="img" aria-label={segments.map((s) => `${s.label} ${Math.round(s.share * 100)}%`).join(', ')}>
+            <div
+                className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full"
+                role="img"
+                aria-label={segments
+                    .map((s) => `${s.label} ${Math.round(s.share * 100)}%`)
+                    .join(', ')}
+            >
                 {segments.map((s) => (
                     <span
                         key={s.key}
@@ -175,7 +234,11 @@ export function ShareBar({ segments, unit }: { segments: ShareSegment[]; unit: s
                         onMouseEnter={() => setHover(s.key)}
                         onMouseLeave={() => setHover(null)}
                         className="gs-grow-x h-full transition-opacity first:rounded-l-full last:rounded-r-full"
-                        style={{ width: `${s.share * 100}%`, background: s.color, opacity: hover === null || hover === s.key ? 1 : 0.4 }}
+                        style={{
+                            width: `${s.share * 100}%`,
+                            background: s.color,
+                            opacity: hover === null || hover === s.key ? 1 : 0.4,
+                        }}
                     />
                 ))}
             </div>
@@ -187,8 +250,13 @@ export function ShareBar({ segments, unit }: { segments: ShareSegment[]; unit: s
                         onMouseEnter={() => setHover(s.key)}
                         onMouseLeave={() => setHover(null)}
                     >
-                        <span className="size-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
-                        <span className="min-w-0 flex-1 truncate text-foreground">{s.label}</span>
+                        <span
+                            className="size-2.5 shrink-0 rounded-sm"
+                            style={{ background: s.color }}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-foreground">
+                            {s.label}
+                        </span>
                         <span className="tabular-nums text-muted">
                             {s.value} {unit} · {Math.round(s.share * 100)}%
                         </span>

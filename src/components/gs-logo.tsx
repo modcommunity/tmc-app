@@ -22,13 +22,7 @@ export function GsLogo({
             className={className}
         >
             <defs>
-                <linearGradient
-                    id={`gs-${id}-potion`}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                >
+                <linearGradient id={`gs-${id}-potion`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0" stopColor="#ffb02e" />
                     <stop offset="0.5" stopColor="#f2542d" />
                     <stop offset="1" stopColor="#b8193c" />

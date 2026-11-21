@@ -1,983 +1,885 @@
 {
-  "games": {
-    "tab": "games",
-    "apps": [
-      {
-        "id": 1,
-        "name": "Fatal Contact",
-        "url": "https://tmcdev.net/apps/1",
-        "iconUrl": "https://cdn.example.test/icon/1.png",
-        "bannerUrl": "https://cdn.example.test/banner/1.png",
-        "description": "Fast first person deathmatch on small maps. Pick a server or let quick play choose one for you.",
-        "modes": [
-          "web",
-          "app"
+    "games": {
+        "tab": "games",
+        "apps": [
+            {
+                "id": 1,
+                "name": "Fatal Contact",
+                "url": "https://tmcdev.net/apps/1",
+                "iconUrl": "https://cdn.example.test/icon/1.png",
+                "bannerUrl": "https://cdn.example.test/banner/1.png",
+                "description": "Fast first person deathmatch on small maps. Pick a server or let quick play choose one for you.",
+                "modes": ["web", "app"],
+                "help": null,
+                "options": [],
+                "serverCnt": 14,
+                "playerCnt": 212,
+                "lobbyCnt": 3,
+                "rotationCnt": 2,
+                "isOfficial": true,
+                "graphics": "THREE_D",
+                "directPlay": true,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 2,
+                "name": "Hungario",
+                "url": "https://tmcdev.net/apps/2",
+                "iconUrl": "https://cdn.example.test/icon/2.png",
+                "bannerUrl": "https://cdn.example.test/banner/2.png",
+                "description": "Eat, grow, do not get eaten. Online party arena with short rounds.",
+                "modes": ["web"],
+                "help": null,
+                "options": [],
+                "serverCnt": 6,
+                "playerCnt": 48,
+                "lobbyCnt": 1,
+                "rotationCnt": 0,
+                "isOfficial": false,
+                "graphics": "TWO_D",
+                "directPlay": false,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 3,
+                "name": "Zombie Zone",
+                "url": "https://tmcdev.net/apps/3",
+                "iconUrl": "https://cdn.example.test/icon/3.png",
+                "bannerUrl": "https://cdn.example.test/banner/3.png",
+                "description": "Hold out together against waves of the undead.",
+                "modes": ["web", "app"],
+                "help": null,
+                "options": [],
+                "serverCnt": 9,
+                "playerCnt": 77,
+                "lobbyCnt": 2,
+                "rotationCnt": 0,
+                "isOfficial": false,
+                "graphics": "THREE_D",
+                "directPlay": true,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 4,
+                "name": "Airdrift",
+                "url": "https://tmcdev.net/apps/4",
+                "iconUrl": "https://cdn.example.test/icon/4.png",
+                "bannerUrl": "https://cdn.example.test/banner/4.png",
+                "description": "Bunny hop and surf timer with global records and a hundred community maps.",
+                "modes": ["app"],
+                "help": null,
+                "options": [],
+                "serverCnt": 22,
+                "playerCnt": 1304,
+                "lobbyCnt": 0,
+                "rotationCnt": 5,
+                "isOfficial": false,
+                "graphics": "THREE_D",
+                "directPlay": false,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 5,
+                "name": "Deathrun",
+                "url": "https://tmcdev.net/apps/5",
+                "iconUrl": "https://cdn.example.test/icon/5.png",
+                "bannerUrl": "https://cdn.example.test/banner/5.png",
+                "description": null,
+                "modes": ["web", "app"],
+                "help": null,
+                "options": [],
+                "serverCnt": 2,
+                "playerCnt": 0,
+                "lobbyCnt": 0,
+                "rotationCnt": 0,
+                "isOfficial": false,
+                "graphics": "THREE_D",
+                "directPlay": false,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 6,
+                "name": "Smash Copter",
+                "url": "https://tmcdev.net/apps/6",
+                "iconUrl": "https://cdn.example.test/icon/6.png",
+                "bannerUrl": "https://cdn.example.test/banner/6.png",
+                "description": "Fly a tiny helicopter into other tiny helicopters.",
+                "modes": ["web"],
+                "help": null,
+                "options": [],
+                "serverCnt": 0,
+                "playerCnt": 0,
+                "lobbyCnt": 0,
+                "rotationCnt": 0,
+                "isOfficial": false,
+                "graphics": "TWO_HALF_D",
+                "directPlay": true,
+                "solo": true,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 7,
+                "name": "Prop Hunt",
+                "url": "https://tmcdev.net/apps/7",
+                "iconUrl": "https://cdn.example.test/icon/7.png",
+                "bannerUrl": "https://cdn.example.test/banner/7.png",
+                "description": "Hide as a prop, or hunt the props down before the clock runs out.",
+                "modes": ["web", "app"],
+                "help": null,
+                "options": [],
+                "serverCnt": 4,
+                "playerCnt": 19,
+                "lobbyCnt": 1,
+                "rotationCnt": 0,
+                "isOfficial": false,
+                "graphics": "THREE_D",
+                "directPlay": false,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 8,
+                "name": "Wipeout",
+                "url": "https://tmcdev.net/apps/8",
+                "iconUrl": "https://cdn.example.test/icon/8.png",
+                "bannerUrl": "https://cdn.example.test/banner/8.png",
+                "description": "Obstacle courses for people who enjoy being knocked into the water.",
+                "modes": ["web", "app"],
+                "help": null,
+                "options": [],
+                "serverCnt": 1,
+                "playerCnt": 6,
+                "lobbyCnt": 0,
+                "rotationCnt": 0,
+                "isOfficial": false,
+                "graphics": "THREE_D",
+                "directPlay": true,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 9,
+                "name": "Look At Me",
+                "url": "https://tmcdev.net/apps/9",
+                "iconUrl": null,
+                "bannerUrl": null,
+                "description": "A staring contest.",
+                "modes": ["web"],
+                "help": null,
+                "options": [],
+                "serverCnt": 0,
+                "playerCnt": 0,
+                "lobbyCnt": 0,
+                "rotationCnt": 0,
+                "isOfficial": false,
+                "graphics": "THREE_D",
+                "directPlay": true,
+                "solo": true,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            }
         ],
-        "help": null,
-        "options": [],
-        "serverCnt": 14,
-        "playerCnt": 212,
-        "lobbyCnt": 3,
-        "rotationCnt": 2,
-        "isOfficial": true,
-        "graphics": "THREE_D",
-        "directPlay": true,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
+        "servers": [],
+        "lobbies": [],
+        "nextCursor": 40,
+        "anyPlayable": true,
+        "party": {
+            "id": "42",
+            "name": "Late night crew",
+            "role": "LEADER",
+            "stage": "LOBBY",
+            "users": 3,
+            "maxUsers": 8,
+            "app": {
+                "id": 1,
+                "name": "Fatal Contact",
+                "url": "https://tmcdev.net/apps/1",
+                "iconUrl": "https://cdn.example.test/icon/1.png",
+                "modes": ["web", "app"]
+            },
+            "server": {
+                "id": 102,
+                "name": "Fatal Contact Official EU West",
+                "online": true,
+                "curUsers": 14,
+                "maxUsers": 16
+            },
+            "inGame": 1,
+            "present": [
+                {
+                    "userId": "a",
+                    "name": "Mira",
+                    "avatarUrl": null,
+                    "confident": true,
+                    "gameName": "Fatal Contact"
+                },
+                {
+                    "userId": "b",
+                    "name": "Kestrel",
+                    "avatarUrl": null,
+                    "confident": true,
+                    "gameName": null
+                },
+                {
+                    "userId": "c",
+                    "name": "You",
+                    "avatarUrl": null,
+                    "confident": false,
+                    "gameName": null
+                }
+            ],
+            "reserve": null,
+            "reservation": null
         },
-        "isEngine": false
-      },
-      {
-        "id": 2,
-        "name": "Hungario",
-        "url": "https://tmcdev.net/apps/2",
-        "iconUrl": "https://cdn.example.test/icon/2.png",
-        "bannerUrl": "https://cdn.example.test/banner/2.png",
-        "description": "Eat, grow, do not get eaten. Online party arena with short rounds.",
-        "modes": [
-          "web"
-        ],
-        "help": null,
-        "options": [],
-        "serverCnt": 6,
-        "playerCnt": 48,
-        "lobbyCnt": 1,
-        "rotationCnt": 0,
-        "isOfficial": false,
-        "graphics": "TWO_D",
-        "directPlay": false,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
-        },
-        "isEngine": false
-      },
-      {
-        "id": 3,
-        "name": "Zombie Zone",
-        "url": "https://tmcdev.net/apps/3",
-        "iconUrl": "https://cdn.example.test/icon/3.png",
-        "bannerUrl": "https://cdn.example.test/banner/3.png",
-        "description": "Hold out together against waves of the undead.",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "help": null,
-        "options": [],
-        "serverCnt": 9,
-        "playerCnt": 77,
-        "lobbyCnt": 2,
-        "rotationCnt": 0,
-        "isOfficial": false,
-        "graphics": "THREE_D",
-        "directPlay": true,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
-        },
-        "isEngine": false
-      },
-      {
-        "id": 4,
-        "name": "Airdrift",
-        "url": "https://tmcdev.net/apps/4",
-        "iconUrl": "https://cdn.example.test/icon/4.png",
-        "bannerUrl": "https://cdn.example.test/banner/4.png",
-        "description": "Bunny hop and surf timer with global records and a hundred community maps.",
-        "modes": [
-          "app"
-        ],
-        "help": null,
-        "options": [],
-        "serverCnt": 22,
-        "playerCnt": 1304,
-        "lobbyCnt": 0,
-        "rotationCnt": 5,
-        "isOfficial": false,
-        "graphics": "THREE_D",
-        "directPlay": false,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
-        },
-        "isEngine": false
-      },
-      {
-        "id": 5,
-        "name": "Deathrun",
-        "url": "https://tmcdev.net/apps/5",
-        "iconUrl": "https://cdn.example.test/icon/5.png",
-        "bannerUrl": "https://cdn.example.test/banner/5.png",
-        "description": null,
-        "modes": [
-          "web",
-          "app"
-        ],
-        "help": null,
-        "options": [],
-        "serverCnt": 2,
-        "playerCnt": 0,
-        "lobbyCnt": 0,
-        "rotationCnt": 0,
-        "isOfficial": false,
-        "graphics": "THREE_D",
-        "directPlay": false,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
-        },
-        "isEngine": false
-      },
-      {
-        "id": 6,
-        "name": "Smash Copter",
-        "url": "https://tmcdev.net/apps/6",
-        "iconUrl": "https://cdn.example.test/icon/6.png",
-        "bannerUrl": "https://cdn.example.test/banner/6.png",
-        "description": "Fly a tiny helicopter into other tiny helicopters.",
-        "modes": [
-          "web"
-        ],
-        "help": null,
-        "options": [],
-        "serverCnt": 0,
-        "playerCnt": 0,
-        "lobbyCnt": 0,
-        "rotationCnt": 0,
-        "isOfficial": false,
-        "graphics": "TWO_HALF_D",
-        "directPlay": true,
-        "solo": true,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
-        },
-        "isEngine": false
-      },
-      {
-        "id": 7,
-        "name": "Prop Hunt",
-        "url": "https://tmcdev.net/apps/7",
-        "iconUrl": "https://cdn.example.test/icon/7.png",
-        "bannerUrl": "https://cdn.example.test/banner/7.png",
-        "description": "Hide as a prop, or hunt the props down before the clock runs out.",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "help": null,
-        "options": [],
-        "serverCnt": 4,
-        "playerCnt": 19,
-        "lobbyCnt": 1,
-        "rotationCnt": 0,
-        "isOfficial": false,
-        "graphics": "THREE_D",
-        "directPlay": false,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
-        },
-        "isEngine": false
-      },
-      {
-        "id": 8,
-        "name": "Wipeout",
-        "url": "https://tmcdev.net/apps/8",
-        "iconUrl": "https://cdn.example.test/icon/8.png",
-        "bannerUrl": "https://cdn.example.test/banner/8.png",
-        "description": "Obstacle courses for people who enjoy being knocked into the water.",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "help": null,
-        "options": [],
-        "serverCnt": 1,
-        "playerCnt": 6,
-        "lobbyCnt": 0,
-        "rotationCnt": 0,
-        "isOfficial": false,
-        "graphics": "THREE_D",
-        "directPlay": true,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
-        },
-        "isEngine": false
-      },
-      {
-        "id": 9,
-        "name": "Look At Me",
-        "url": "https://tmcdev.net/apps/9",
-        "iconUrl": null,
-        "bannerUrl": null,
-        "description": "A staring contest.",
-        "modes": [
-          "web"
-        ],
-        "help": null,
-        "options": [],
-        "serverCnt": 0,
-        "playerCnt": 0,
-        "lobbyCnt": 0,
-        "rotationCnt": 0,
-        "isOfficial": false,
-        "graphics": "THREE_D",
-        "directPlay": true,
-        "solo": true,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
-        },
-        "isEngine": false
-      }
-    ],
-    "servers": [],
-    "lobbies": [],
-    "nextCursor": 40,
-    "anyPlayable": true,
-    "party": {
-      "id": "42",
-      "name": "Late night crew",
-      "role": "LEADER",
-      "stage": "LOBBY",
-      "users": 3,
-      "maxUsers": 8,
-      "app": {
-        "id": 1,
-        "name": "Fatal Contact",
-        "url": "https://tmcdev.net/apps/1",
-        "iconUrl": "https://cdn.example.test/icon/1.png",
-        "modes": [
-          "web",
-          "app"
-        ]
-      },
-      "server": {
-        "id": 102,
-        "name": "Fatal Contact Official EU West",
-        "online": true,
-        "curUsers": 14,
-        "maxUsers": 16
-      },
-      "inGame": 1,
-      "present": [
-        {
-          "userId": "a",
-          "name": "Mira",
-          "avatarUrl": null,
-          "confident": true,
-          "gameName": "Fatal Contact"
-        },
-        {
-          "userId": "b",
-          "name": "Kestrel",
-          "avatarUrl": null,
-          "confident": true,
-          "gameName": null
-        },
-        {
-          "userId": "c",
-          "name": "You",
-          "avatarUrl": null,
-          "confident": false,
-          "gameName": null
+        "totals": {
+            "games": 9,
+            "servers": 58,
+            "players": 1666,
+            "lobbies": 7
         }
-      ],
-      "reserve": null,
-      "reservation": null
     },
-    "totals": {
-      "games": 9,
-      "servers": 58,
-      "players": 1666,
-      "lobbies": 7
-    }
-  },
-  "gamesLast": {
-    "tab": "games",
-    "apps": [
-      {
-        "id": 1,
-        "name": "Fatal Contact",
-        "url": "https://tmcdev.net/apps/1",
-        "iconUrl": "https://cdn.example.test/icon/1.png",
-        "bannerUrl": "https://cdn.example.test/banner/1.png",
-        "description": "Fast first person deathmatch on small maps. Pick a server or let quick play choose one for you.",
-        "modes": [
-          "web",
-          "app"
+    "gamesLast": {
+        "tab": "games",
+        "apps": [
+            {
+                "id": 1,
+                "name": "Fatal Contact",
+                "url": "https://tmcdev.net/apps/1",
+                "iconUrl": "https://cdn.example.test/icon/1.png",
+                "bannerUrl": "https://cdn.example.test/banner/1.png",
+                "description": "Fast first person deathmatch on small maps. Pick a server or let quick play choose one for you.",
+                "modes": ["web", "app"],
+                "help": null,
+                "options": [],
+                "serverCnt": 14,
+                "playerCnt": 212,
+                "lobbyCnt": 3,
+                "rotationCnt": 2,
+                "isOfficial": true,
+                "graphics": "THREE_D",
+                "directPlay": true,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 2,
+                "name": "Hungario",
+                "url": "https://tmcdev.net/apps/2",
+                "iconUrl": "https://cdn.example.test/icon/2.png",
+                "bannerUrl": "https://cdn.example.test/banner/2.png",
+                "description": "Eat, grow, do not get eaten. Online party arena with short rounds.",
+                "modes": ["web"],
+                "help": null,
+                "options": [],
+                "serverCnt": 6,
+                "playerCnt": 48,
+                "lobbyCnt": 1,
+                "rotationCnt": 0,
+                "isOfficial": false,
+                "graphics": "TWO_D",
+                "directPlay": false,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            },
+            {
+                "id": 3,
+                "name": "Zombie Zone",
+                "url": "https://tmcdev.net/apps/3",
+                "iconUrl": "https://cdn.example.test/icon/3.png",
+                "bannerUrl": "https://cdn.example.test/banner/3.png",
+                "description": "Hold out together against waves of the undead.",
+                "modes": ["web", "app"],
+                "help": null,
+                "options": [],
+                "serverCnt": 9,
+                "playerCnt": 77,
+                "lobbyCnt": 2,
+                "rotationCnt": 0,
+                "isOfficial": false,
+                "graphics": "THREE_D",
+                "directPlay": true,
+                "solo": false,
+                "owner": {
+                    "id": "u1",
+                    "username": "zee",
+                    "name": "Zee",
+                    "role": "USER",
+                    "avatarKey": null,
+                    "linkable": true
+                },
+                "isEngine": false
+            }
         ],
-        "help": null,
-        "options": [],
-        "serverCnt": 14,
-        "playerCnt": 212,
-        "lobbyCnt": 3,
-        "rotationCnt": 2,
-        "isOfficial": true,
-        "graphics": "THREE_D",
-        "directPlay": true,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
+        "servers": [],
+        "lobbies": [],
+        "nextCursor": null,
+        "anyPlayable": true,
+        "party": null,
+        "totals": {
+            "games": 9,
+            "servers": 58,
+            "players": 1666,
+            "lobbies": 7
+        }
+    },
+    "servers": {
+        "tab": "servers",
+        "apps": [],
+        "servers": [
+            {
+                "id": 101,
+                "name": "TMC Surf #1 | Fast DL",
+                "url": "https://tmcdev.net/servers/101",
+                "appId": 4,
+                "appName": "Airdrift",
+                "modes": ["web", "app"],
+                "graphics": "THREE_D",
+                "online": true,
+                "curUsers": 31,
+                "maxUsers": 32,
+                "map": "surf_utopia",
+                "host": "10.0.0.101",
+                "port": 27015,
+                "lastOnline": "2026-10-18T09:00:00.000Z"
+            },
+            {
+                "id": 102,
+                "name": "Fatal Contact Official EU West",
+                "url": "https://tmcdev.net/servers/102",
+                "appId": 1,
+                "appName": "Fatal Contact",
+                "modes": ["web", "app"],
+                "graphics": "THREE_D",
+                "online": true,
+                "curUsers": 14,
+                "maxUsers": 16,
+                "map": "dm_foundry",
+                "host": "10.0.0.102",
+                "port": 27015,
+                "lastOnline": "2026-10-18T09:00:00.000Z"
+            },
+            {
+                "id": 103,
+                "name": "Zombie Zone | Hard Mode",
+                "url": "https://tmcdev.net/servers/103",
+                "appId": 3,
+                "appName": "Zombie Zone",
+                "modes": ["web", "app"],
+                "graphics": "THREE_D",
+                "online": true,
+                "curUsers": 9,
+                "maxUsers": 12,
+                "map": "zz_ruins",
+                "host": "10.0.0.103",
+                "port": 27015,
+                "lastOnline": "2026-10-18T09:00:00.000Z"
+            },
+            {
+                "id": 104,
+                "name": "Fatal Contact Late Night",
+                "url": "https://tmcdev.net/servers/104",
+                "appId": 1,
+                "appName": "Fatal Contact",
+                "modes": ["app"],
+                "graphics": "THREE_D",
+                "online": true,
+                "curUsers": 3,
+                "maxUsers": 16,
+                "map": "dm_rooftops",
+                "host": "10.0.0.104",
+                "port": 27015,
+                "lastOnline": "2026-10-18T09:00:00.000Z"
+            },
+            {
+                "id": 105,
+                "name": "Hungario Open Lobby",
+                "url": "https://tmcdev.net/servers/105",
+                "appId": 2,
+                "appName": "Hungario",
+                "modes": ["web"],
+                "graphics": "TWO_D",
+                "online": true,
+                "curUsers": 0,
+                "maxUsers": 24,
+                "map": null,
+                "host": "10.0.0.105",
+                "port": 27015,
+                "lastOnline": "2026-10-18T09:00:00.000Z"
+            },
+            {
+                "id": 106,
+                "name": "Prop Hunt | Classic",
+                "url": "https://tmcdev.net/servers/106",
+                "appId": 7,
+                "appName": "Prop Hunt",
+                "modes": ["web", "app"],
+                "graphics": "THREE_D",
+                "online": true,
+                "curUsers": 12,
+                "maxUsers": 20,
+                "map": "ph_office",
+                "host": "10.0.0.106",
+                "port": 27015,
+                "lastOnline": "2026-10-18T09:00:00.000Z"
+            },
+            {
+                "id": 107,
+                "name": "Bhop Practice",
+                "url": "https://tmcdev.net/servers/107",
+                "appId": 4,
+                "appName": "Airdrift",
+                "modes": ["web", "app"],
+                "graphics": "THREE_D",
+                "online": false,
+                "curUsers": 0,
+                "maxUsers": 0,
+                "map": "bhop_arcane",
+                "host": null,
+                "port": null,
+                "lastOnline": "2026-10-17T21:00:00.000Z"
+            }
+        ],
+        "lobbies": [],
+        "nextCursor": null,
+        "anyPlayable": true,
+        "party": {
+            "id": "42",
+            "name": "Late night crew",
+            "role": "LEADER",
+            "stage": "LOBBY",
+            "users": 3,
+            "maxUsers": 8,
+            "app": {
+                "id": 1,
+                "name": "Fatal Contact",
+                "url": "https://tmcdev.net/apps/1",
+                "iconUrl": "https://cdn.example.test/icon/1.png",
+                "modes": ["web", "app"]
+            },
+            "server": {
+                "id": 102,
+                "name": "Fatal Contact Official EU West",
+                "online": true,
+                "curUsers": 14,
+                "maxUsers": 16
+            },
+            "inGame": 1,
+            "present": [
+                {
+                    "userId": "a",
+                    "name": "Mira",
+                    "avatarUrl": null,
+                    "confident": true,
+                    "gameName": "Fatal Contact"
+                },
+                {
+                    "userId": "b",
+                    "name": "Kestrel",
+                    "avatarUrl": null,
+                    "confident": true,
+                    "gameName": null
+                },
+                {
+                    "userId": "c",
+                    "name": "You",
+                    "avatarUrl": null,
+                    "confident": false,
+                    "gameName": null
+                }
+            ],
+            "reserve": null,
+            "reservation": null
         },
-        "isEngine": false
-      },
-      {
-        "id": 2,
-        "name": "Hungario",
-        "url": "https://tmcdev.net/apps/2",
-        "iconUrl": "https://cdn.example.test/icon/2.png",
-        "bannerUrl": "https://cdn.example.test/banner/2.png",
-        "description": "Eat, grow, do not get eaten. Online party arena with short rounds.",
-        "modes": [
-          "web"
+        "totals": {
+            "games": 9,
+            "servers": 58,
+            "players": 1666,
+            "lobbies": 7
+        }
+    },
+    "lobbies": {
+        "tab": "lobbies",
+        "apps": [],
+        "servers": [],
+        "lobbies": [
+            {
+                "id": "9001",
+                "name": "Friday scrims",
+                "url": "https://tmcdev.net/parties/9001",
+                "appId": 1,
+                "appName": "Fatal Contact",
+                "modes": ["web", "app"],
+                "graphics": "THREE_D",
+                "hostName": "Mira",
+                "hostAvatarUrl": null,
+                "needsPassword": false,
+                "stage": "LOBBY",
+                "users": 5,
+                "maxUsers": 8,
+                "serverId": null,
+                "startTime": "2026-10-18T09:10:00.000Z"
+            },
+            {
+                "id": "9002",
+                "name": null,
+                "url": "https://tmcdev.net/parties/9002",
+                "appId": 3,
+                "appName": "Zombie Zone",
+                "modes": ["web", "app"],
+                "graphics": "THREE_D",
+                "hostName": "Kestrel",
+                "hostAvatarUrl": null,
+                "needsPassword": true,
+                "stage": "LOBBY",
+                "users": 2,
+                "maxUsers": 4,
+                "serverId": null,
+                "startTime": "2026-10-18T09:10:00.000Z"
+            },
+            {
+                "id": "9003",
+                "name": "Office rounds",
+                "url": "https://tmcdev.net/parties/9003",
+                "appId": 7,
+                "appName": "Prop Hunt",
+                "modes": ["web", "app"],
+                "graphics": "THREE_D",
+                "hostName": "Nox",
+                "hostAvatarUrl": null,
+                "needsPassword": false,
+                "stage": "IN_GAME",
+                "users": 11,
+                "maxUsers": 12,
+                "serverId": 106,
+                "startTime": "2026-10-18T09:10:00.000Z"
+            }
         ],
-        "help": null,
-        "options": [],
-        "serverCnt": 6,
-        "playerCnt": 48,
-        "lobbyCnt": 1,
-        "rotationCnt": 0,
-        "isOfficial": false,
-        "graphics": "TWO_D",
-        "directPlay": false,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
+        "nextCursor": null,
+        "anyPlayable": true,
+        "party": {
+            "id": "42",
+            "name": "Late night crew",
+            "role": "LEADER",
+            "stage": "LOBBY",
+            "users": 3,
+            "maxUsers": 8,
+            "app": {
+                "id": 1,
+                "name": "Fatal Contact",
+                "url": "https://tmcdev.net/apps/1",
+                "iconUrl": "https://cdn.example.test/icon/1.png",
+                "modes": ["web", "app"]
+            },
+            "server": {
+                "id": 102,
+                "name": "Fatal Contact Official EU West",
+                "online": true,
+                "curUsers": 14,
+                "maxUsers": 16
+            },
+            "inGame": 1,
+            "present": [
+                {
+                    "userId": "a",
+                    "name": "Mira",
+                    "avatarUrl": null,
+                    "confident": true,
+                    "gameName": "Fatal Contact"
+                },
+                {
+                    "userId": "b",
+                    "name": "Kestrel",
+                    "avatarUrl": null,
+                    "confident": true,
+                    "gameName": null
+                },
+                {
+                    "userId": "c",
+                    "name": "You",
+                    "avatarUrl": null,
+                    "confident": false,
+                    "gameName": null
+                }
+            ],
+            "reserve": null,
+            "reservation": null
         },
-        "isEngine": false
-      },
-      {
-        "id": 3,
-        "name": "Zombie Zone",
-        "url": "https://tmcdev.net/apps/3",
-        "iconUrl": "https://cdn.example.test/icon/3.png",
-        "bannerUrl": "https://cdn.example.test/banner/3.png",
-        "description": "Hold out together against waves of the undead.",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "help": null,
-        "options": [],
-        "serverCnt": 9,
-        "playerCnt": 77,
-        "lobbyCnt": 2,
-        "rotationCnt": 0,
-        "isOfficial": false,
-        "graphics": "THREE_D",
-        "directPlay": true,
-        "solo": false,
-        "owner": {
-          "id": "u1",
-          "username": "zee",
-          "name": "Zee",
-          "role": "USER",
-          "avatarKey": null,
-          "linkable": true
+        "totals": {
+            "games": 9,
+            "servers": 58,
+            "players": 1666,
+            "lobbies": 7
+        }
+    },
+    "invites": {
+        "tab": "invites",
+        "apps": [],
+        "servers": [],
+        "lobbies": [],
+        "nextCursor": null,
+        "anyPlayable": true,
+        "party": {
+            "id": "42",
+            "name": "Late night crew",
+            "role": "LEADER",
+            "stage": "LOBBY",
+            "users": 3,
+            "maxUsers": 8,
+            "app": {
+                "id": 1,
+                "name": "Fatal Contact",
+                "url": "https://tmcdev.net/apps/1",
+                "iconUrl": "https://cdn.example.test/icon/1.png",
+                "modes": ["web", "app"]
+            },
+            "server": {
+                "id": 102,
+                "name": "Fatal Contact Official EU West",
+                "online": true,
+                "curUsers": 14,
+                "maxUsers": 16
+            },
+            "inGame": 1,
+            "present": [
+                {
+                    "userId": "a",
+                    "name": "Mira",
+                    "avatarUrl": null,
+                    "confident": true,
+                    "gameName": "Fatal Contact"
+                },
+                {
+                    "userId": "b",
+                    "name": "Kestrel",
+                    "avatarUrl": null,
+                    "confident": true,
+                    "gameName": null
+                },
+                {
+                    "userId": "c",
+                    "name": "You",
+                    "avatarUrl": null,
+                    "confident": false,
+                    "gameName": null
+                }
+            ],
+            "reserve": null,
+            "reservation": null
         },
-        "isEngine": false
-      }
-    ],
-    "servers": [],
-    "lobbies": [],
-    "nextCursor": null,
-    "anyPlayable": true,
-    "party": null,
-    "totals": {
-      "games": 9,
-      "servers": 58,
-      "players": 1666,
-      "lobbies": 7
-    }
-  },
-  "servers": {
-    "tab": "servers",
-    "apps": [],
-    "servers": [
-      {
-        "id": 101,
-        "name": "TMC Surf #1 | Fast DL",
-        "url": "https://tmcdev.net/servers/101",
-        "appId": 4,
-        "appName": "Airdrift",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "graphics": "THREE_D",
-        "online": true,
-        "curUsers": 31,
-        "maxUsers": 32,
-        "map": "surf_utopia",
-        "host": "10.0.0.101",
-        "port": 27015,
-        "lastOnline": "2026-10-18T09:00:00.000Z"
-      },
-      {
-        "id": 102,
-        "name": "Fatal Contact Official EU West",
-        "url": "https://tmcdev.net/servers/102",
-        "appId": 1,
+        "totals": {
+            "games": 9,
+            "servers": 58,
+            "players": 1666,
+            "lobbies": 7
+        }
+    },
+    "emptyNothing": {
+        "tab": "games",
+        "apps": [],
+        "servers": [],
+        "lobbies": [],
+        "nextCursor": null,
+        "anyPlayable": false,
+        "party": null,
+        "totals": {
+            "games": 0,
+            "servers": 0,
+            "players": 0,
+            "lobbies": 0
+        }
+    },
+    "emptySearch": {
+        "tab": "games",
+        "apps": [],
+        "servers": [],
+        "lobbies": [],
+        "nextCursor": null,
+        "anyPlayable": true,
+        "party": null,
+        "totals": {
+            "games": 9,
+            "servers": 58,
+            "players": 1666,
+            "lobbies": 7
+        }
+    },
+    "playable": {
+        "enabled": true,
+        "appIds": [1, 2, 3, 4, 6, 7, 8, 9],
+        "directIds": [1, 3, 6, 8, 9],
+        "soloIds": [6, 9]
+    },
+    "quick": {
         "appName": "Fatal Contact",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "graphics": "THREE_D",
-        "online": true,
-        "curUsers": 14,
-        "maxUsers": 16,
-        "map": "dm_foundry",
-        "host": "10.0.0.102",
-        "port": 27015,
-        "lastOnline": "2026-10-18T09:00:00.000Z"
-      },
-      {
-        "id": 103,
-        "name": "Zombie Zone | Hard Mode",
-        "url": "https://tmcdev.net/servers/103",
-        "appId": 3,
-        "appName": "Zombie Zone",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "graphics": "THREE_D",
-        "online": true,
-        "curUsers": 9,
-        "maxUsers": 12,
-        "map": "zz_ruins",
-        "host": "10.0.0.103",
-        "port": 27015,
-        "lastOnline": "2026-10-18T09:00:00.000Z"
-      },
-      {
-        "id": 104,
-        "name": "Fatal Contact Late Night",
-        "url": "https://tmcdev.net/servers/104",
-        "appId": 1,
-        "appName": "Fatal Contact",
-        "modes": [
-          "app"
-        ],
-        "graphics": "THREE_D",
-        "online": true,
-        "curUsers": 3,
-        "maxUsers": 16,
-        "map": "dm_rooftops",
-        "host": "10.0.0.104",
-        "port": 27015,
-        "lastOnline": "2026-10-18T09:00:00.000Z"
-      },
-      {
-        "id": 105,
-        "name": "Hungario Open Lobby",
-        "url": "https://tmcdev.net/servers/105",
-        "appId": 2,
-        "appName": "Hungario",
-        "modes": [
-          "web"
-        ],
-        "graphics": "TWO_D",
-        "online": true,
-        "curUsers": 0,
-        "maxUsers": 24,
-        "map": null,
-        "host": "10.0.0.105",
-        "port": 27015,
-        "lastOnline": "2026-10-18T09:00:00.000Z"
-      },
-      {
-        "id": 106,
-        "name": "Prop Hunt | Classic",
-        "url": "https://tmcdev.net/servers/106",
-        "appId": 7,
-        "appName": "Prop Hunt",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "graphics": "THREE_D",
-        "online": true,
-        "curUsers": 12,
-        "maxUsers": 20,
-        "map": "ph_office",
-        "host": "10.0.0.106",
-        "port": 27015,
-        "lastOnline": "2026-10-18T09:00:00.000Z"
-      },
-      {
-        "id": 107,
-        "name": "Bhop Practice",
-        "url": "https://tmcdev.net/servers/107",
-        "appId": 4,
-        "appName": "Airdrift",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "graphics": "THREE_D",
-        "online": false,
-        "curUsers": 0,
-        "maxUsers": 0,
-        "map": "bhop_arcane",
-        "host": null,
-        "port": null,
-        "lastOnline": "2026-10-17T21:00:00.000Z"
-      }
-    ],
-    "lobbies": [],
-    "nextCursor": null,
-    "anyPlayable": true,
-    "party": {
-      "id": "42",
-      "name": "Late night crew",
-      "role": "LEADER",
-      "stage": "LOBBY",
-      "users": 3,
-      "maxUsers": 8,
-      "app": {
-        "id": 1,
-        "name": "Fatal Contact",
-        "url": "https://tmcdev.net/apps/1",
-        "iconUrl": "https://cdn.example.test/icon/1.png",
-        "modes": [
-          "web",
-          "app"
-        ]
-      },
-      "server": {
-        "id": 102,
-        "name": "Fatal Contact Official EU West",
-        "online": true,
-        "curUsers": 14,
-        "maxUsers": 16
-      },
-      "inGame": 1,
-      "present": [
-        {
-          "userId": "a",
-          "name": "Mira",
-          "avatarUrl": null,
-          "confident": true,
-          "gameName": "Fatal Contact"
+        "country": {
+            "code": "DE",
+            "region": "Europe"
         },
-        {
-          "userId": "b",
-          "name": "Kestrel",
-          "avatarUrl": null,
-          "confident": true,
-          "gameName": null
+        "rotation": false,
+        "scanned": 14,
+        "full": 3,
+        "stale": 2,
+        "rotationHits": 0,
+        "top": [
+            {
+                "id": 102,
+                "name": "Fatal Contact Official EU West",
+                "curUsers": 14,
+                "maxUsers": 16,
+                "map": "dm_foundry",
+                "countryCode": "DE",
+                "score": 91.4,
+                "why": ["close to you", "busy but not full"],
+                "viaRotation": false
+            },
+            {
+                "id": 104,
+                "name": "Fatal Contact Late Night",
+                "curUsers": 3,
+                "maxUsers": 16,
+                "map": "dm_rooftops",
+                "countryCode": "DE",
+                "score": 64.2,
+                "why": ["close to you", "quiet"],
+                "viaRotation": false
+            }
+        ],
+        "best": {
+            "id": 102,
+            "name": "Fatal Contact Official EU West",
+            "url": "https://tmcdev.net/servers/102",
+            "appId": 1,
+            "appName": "Fatal Contact",
+            "modes": ["web", "app"],
+            "graphics": "THREE_D",
+            "online": true,
+            "curUsers": 14,
+            "maxUsers": 16,
+            "map": "dm_foundry",
+            "host": "10.0.0.102",
+            "port": 27015,
+            "lastOnline": "2026-10-18T09:00:00.000Z"
         },
-        {
-          "userId": "c",
-          "name": "You",
-          "avatarUrl": null,
-          "confident": false,
-          "gameName": null
-        }
-      ],
-      "reserve": null,
-      "reservation": null
+        "tookMs": 38
     },
-    "totals": {
-      "games": 9,
-      "servers": 58,
-      "players": 1666,
-      "lobbies": 7
-    }
-  },
-  "lobbies": {
-    "tab": "lobbies",
-    "apps": [],
-    "servers": [],
-    "lobbies": [
-      {
-        "id": "9001",
-        "name": "Friday scrims",
-        "url": "https://tmcdev.net/parties/9001",
-        "appId": 1,
-        "appName": "Fatal Contact",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "graphics": "THREE_D",
-        "hostName": "Mira",
-        "hostAvatarUrl": null,
-        "needsPassword": false,
-        "stage": "LOBBY",
-        "users": 5,
-        "maxUsers": 8,
-        "serverId": null,
-        "startTime": "2026-10-18T09:10:00.000Z"
-      },
-      {
-        "id": "9002",
-        "name": null,
-        "url": "https://tmcdev.net/parties/9002",
-        "appId": 3,
-        "appName": "Zombie Zone",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "graphics": "THREE_D",
-        "hostName": "Kestrel",
-        "hostAvatarUrl": null,
-        "needsPassword": true,
-        "stage": "LOBBY",
-        "users": 2,
-        "maxUsers": 4,
-        "serverId": null,
-        "startTime": "2026-10-18T09:10:00.000Z"
-      },
-      {
-        "id": "9003",
-        "name": "Office rounds",
-        "url": "https://tmcdev.net/parties/9003",
-        "appId": 7,
-        "appName": "Prop Hunt",
-        "modes": [
-          "web",
-          "app"
-        ],
-        "graphics": "THREE_D",
-        "hostName": "Nox",
-        "hostAvatarUrl": null,
-        "needsPassword": false,
-        "stage": "IN_GAME",
-        "users": 11,
-        "maxUsers": 12,
-        "serverId": 106,
-        "startTime": "2026-10-18T09:10:00.000Z"
-      }
-    ],
-    "nextCursor": null,
-    "anyPlayable": true,
-    "party": {
-      "id": "42",
-      "name": "Late night crew",
-      "role": "LEADER",
-      "stage": "LOBBY",
-      "users": 3,
-      "maxUsers": 8,
-      "app": {
-        "id": 1,
-        "name": "Fatal Contact",
-        "url": "https://tmcdev.net/apps/1",
-        "iconUrl": "https://cdn.example.test/icon/1.png",
-        "modes": [
-          "web",
-          "app"
-        ]
-      },
-      "server": {
-        "id": 102,
-        "name": "Fatal Contact Official EU West",
-        "online": true,
-        "curUsers": 14,
-        "maxUsers": 16
-      },
-      "inGame": 1,
-      "present": [
-        {
-          "userId": "a",
-          "name": "Mira",
-          "avatarUrl": null,
-          "confident": true,
-          "gameName": "Fatal Contact"
-        },
-        {
-          "userId": "b",
-          "name": "Kestrel",
-          "avatarUrl": null,
-          "confident": true,
-          "gameName": null
-        },
-        {
-          "userId": "c",
-          "name": "You",
-          "avatarUrl": null,
-          "confident": false,
-          "gameName": null
-        }
-      ],
-      "reserve": null,
-      "reservation": null
+    "quickNone": {
+        "appName": "Deathrun",
+        "country": null,
+        "rotation": false,
+        "scanned": 2,
+        "full": 0,
+        "stale": 2,
+        "rotationHits": 0,
+        "top": [],
+        "best": null,
+        "tookMs": 12
     },
-    "totals": {
-      "games": 9,
-      "servers": 58,
-      "players": 1666,
-      "lobbies": 7
-    }
-  },
-  "invites": {
-    "tab": "invites",
-    "apps": [],
-    "servers": [],
-    "lobbies": [],
-    "nextCursor": null,
-    "anyPlayable": true,
-    "party": {
-      "id": "42",
-      "name": "Late night crew",
-      "role": "LEADER",
-      "stage": "LOBBY",
-      "users": 3,
-      "maxUsers": 8,
-      "app": {
-        "id": 1,
-        "name": "Fatal Contact",
-        "url": "https://tmcdev.net/apps/1",
-        "iconUrl": "https://cdn.example.test/icon/1.png",
-        "modes": [
-          "web",
-          "app"
-        ]
-      },
-      "server": {
-        "id": 102,
-        "name": "Fatal Contact Official EU West",
-        "online": true,
-        "curUsers": 14,
-        "maxUsers": 16
-      },
-      "inGame": 1,
-      "present": [
+    "invitesList": [
         {
-          "userId": "a",
-          "name": "Mira",
-          "avatarUrl": null,
-          "confident": true,
-          "gameName": "Fatal Contact"
+            "id": "i1",
+            "partyId": "77",
+            "partyName": "Sunday zombies",
+            "inviterId": "u9",
+            "message": "Bring a friend, we are one short."
         },
         {
-          "userId": "b",
-          "name": "Kestrel",
-          "avatarUrl": null,
-          "confident": true,
-          "gameName": null
-        },
-        {
-          "userId": "c",
-          "name": "You",
-          "avatarUrl": null,
-          "confident": false,
-          "gameName": null
+            "id": "i2",
+            "partyId": "78",
+            "partyName": null,
+            "inviterId": null,
+            "message": null
         }
-      ],
-      "reserve": null,
-      "reservation": null
-    },
-    "totals": {
-      "games": 9,
-      "servers": 58,
-      "players": 1666,
-      "lobbies": 7
-    }
-  },
-  "emptyNothing": {
-    "tab": "games",
-    "apps": [],
-    "servers": [],
-    "lobbies": [],
-    "nextCursor": null,
-    "anyPlayable": false,
-    "party": null,
-    "totals": {
-      "games": 0,
-      "servers": 0,
-      "players": 0,
-      "lobbies": 0
-    }
-  },
-  "emptySearch": {
-    "tab": "games",
-    "apps": [],
-    "servers": [],
-    "lobbies": [],
-    "nextCursor": null,
-    "anyPlayable": true,
-    "party": null,
-    "totals": {
-      "games": 9,
-      "servers": 58,
-      "players": 1666,
-      "lobbies": 7
-    }
-  },
-  "playable": {
-    "enabled": true,
-    "appIds": [
-      1,
-      2,
-      3,
-      4,
-      6,
-      7,
-      8,
-      9
-    ],
-    "directIds": [
-      1,
-      3,
-      6,
-      8,
-      9
-    ],
-    "soloIds": [
-      6,
-      9
     ]
-  },
-  "quick": {
-    "appName": "Fatal Contact",
-    "country": {
-      "code": "DE",
-      "region": "Europe"
-    },
-    "rotation": false,
-    "scanned": 14,
-    "full": 3,
-    "stale": 2,
-    "rotationHits": 0,
-    "top": [
-      {
-        "id": 102,
-        "name": "Fatal Contact Official EU West",
-        "curUsers": 14,
-        "maxUsers": 16,
-        "map": "dm_foundry",
-        "countryCode": "DE",
-        "score": 91.4,
-        "why": [
-          "close to you",
-          "busy but not full"
-        ],
-        "viaRotation": false
-      },
-      {
-        "id": 104,
-        "name": "Fatal Contact Late Night",
-        "curUsers": 3,
-        "maxUsers": 16,
-        "map": "dm_rooftops",
-        "countryCode": "DE",
-        "score": 64.2,
-        "why": [
-          "close to you",
-          "quiet"
-        ],
-        "viaRotation": false
-      }
-    ],
-    "best": {
-      "id": 102,
-      "name": "Fatal Contact Official EU West",
-      "url": "https://tmcdev.net/servers/102",
-      "appId": 1,
-      "appName": "Fatal Contact",
-      "modes": [
-        "web",
-        "app"
-      ],
-      "graphics": "THREE_D",
-      "online": true,
-      "curUsers": 14,
-      "maxUsers": 16,
-      "map": "dm_foundry",
-      "host": "10.0.0.102",
-      "port": 27015,
-      "lastOnline": "2026-10-18T09:00:00.000Z"
-    },
-    "tookMs": 38
-  },
-  "quickNone": {
-    "appName": "Deathrun",
-    "country": null,
-    "rotation": false,
-    "scanned": 2,
-    "full": 0,
-    "stale": 2,
-    "rotationHits": 0,
-    "top": [],
-    "best": null,
-    "tookMs": 12
-  },
-  "invitesList": [
-    {
-      "id": "i1",
-      "partyId": "77",
-      "partyName": "Sunday zombies",
-      "inviterId": "u9",
-      "message": "Bring a friend, we are one short."
-    },
-    {
-      "id": "i2",
-      "partyId": "78",
-      "partyName": null,
-      "inviterId": null,
-      "message": null
-    }
-  ]
 }

@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
-import { filterGames, matchesChip, mergeGames, splitSections, type CatalogueRow } from './catalogue'
+import {
+    filterGames,
+    matchesChip,
+    mergeGames,
+    splitSections,
+    type CatalogueRow,
+} from './catalogue'
 
-const row = (id: number, name: string, over: Partial<CatalogueRow> = {}): CatalogueRow => ({
+const row = (
+    id: number,
+    name: string,
+    over: Partial<CatalogueRow> = {}
+): CatalogueRow => ({
     id,
     name,
     url: null,

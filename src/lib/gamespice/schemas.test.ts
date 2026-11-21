@@ -13,7 +13,14 @@ describe('gamespice schemas', () => {
     it('parses a workshop subscription list', () => {
         const r = WorkshopMineResponse.parse({
             items: [
-                { subscriptionId: 's1', assetId: 4, name: 'Pack', image: null, webUrl: '/a/4', scope: 'all' },
+                {
+                    subscriptionId: 's1',
+                    assetId: 4,
+                    name: 'Pack',
+                    image: null,
+                    webUrl: '/a/4',
+                    scope: 'all',
+                },
             ],
         })
 
@@ -44,17 +51,53 @@ describe('gamespice schemas', () => {
     })
 
     it('accepts exactly the two scope request shapes the site accepts', () => {
-        expect(WorkshopScopeRequest.safeParse({ subscriptionId: 's', all: false }).success).toBe(true)
-        expect(WorkshopScopeRequest.safeParse({ subscriptionId: 's', game: 'fatal-contact', on: true }).success).toBe(true)
-        expect(WorkshopScopeRequest.safeParse({ subscriptionId: 's', game: 'fatal-contact' }).success).toBe(false)
-        expect(WorkshopScopeRequest.safeParse({ subscriptionId: 's', all: true, game: 'fatal-contact', on: true }).success).toBe(false)
-        expect(WorkshopScopeResponse.parse({ subscriptionId: 's', scope: 'listed', games: [] }).scope).toBe('listed')
+        expect(
+            WorkshopScopeRequest.safeParse({ subscriptionId: 's', all: false })
+                .success
+        ).toBe(true)
+        expect(
+            WorkshopScopeRequest.safeParse({
+                subscriptionId: 's',
+                game: 'fatal-contact',
+                on: true,
+            }).success
+        ).toBe(true)
+        expect(
+            WorkshopScopeRequest.safeParse({
+                subscriptionId: 's',
+                game: 'fatal-contact',
+            }).success
+        ).toBe(false)
+        expect(
+            WorkshopScopeRequest.safeParse({
+                subscriptionId: 's',
+                all: true,
+                game: 'fatal-contact',
+                on: true,
+            }).success
+        ).toBe(false)
+        expect(
+            WorkshopScopeResponse.parse({
+                subscriptionId: 's',
+                scope: 'listed',
+                games: [],
+            }).scope
+        ).toBe('listed')
     })
 
     it('rejects an unknown scope', () => {
         expect(() =>
             WorkshopMineResponse.parse({
-                items: [{ subscriptionId: 's', assetId: 1, name: 'x', image: null, webUrl: '/', scope: 'some' }],
+                items: [
+                    {
+                        subscriptionId: 's',
+                        assetId: 1,
+                        name: 'x',
+                        image: null,
+                        webUrl: '/',
+                        scope: 'some',
+                    },
+                ],
             })
         ).toThrow()
     })
@@ -67,7 +110,18 @@ describe('gamespice schemas', () => {
         })
 
         expect(p.site.available).toBe(4)
-        expect(AvatarOutfitsResponse.parse({ outfits: [{ id: 'a', name: 'Red', savedAt: '2026-11-20', doc: { version: 1, schema_id: 's', parts: {}, colours: {} } }] }).outfits).toHaveLength(1)
+        expect(
+            AvatarOutfitsResponse.parse({
+                outfits: [
+                    {
+                        id: 'a',
+                        name: 'Red',
+                        savedAt: '2026-11-20',
+                        doc: { version: 1, schema_id: 's', parts: {}, colours: {} },
+                    },
+                ],
+            }).outfits
+        ).toHaveLength(1)
     })
 })
 

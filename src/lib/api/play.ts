@@ -91,7 +91,10 @@ export function filtersFromParams(search: URLSearchParams): PlayFilters {
     return {
         tab: oneOf(search, 'tab', PlayTabVals) ?? 'games',
         q: (text(search, 'q') ?? '').slice(0, 120),
-        appId: appId !== undefined && Number.isInteger(appId) && appId > 0 ? appId : undefined,
+        appId:
+            appId !== undefined && Number.isInteger(appId) && appId > 0
+                ? appId
+                : undefined,
         mode: oneOf(search, 'mode', PlayModeVals),
         sort: oneOf(search, 'sort', PlaySortVals),
         populated: flag(search, 'populated') === true,
@@ -132,7 +135,9 @@ export function pageQuery(filters: PlayFilters, cursor = 0): PlayPageQueryT {
     if (tab === 'invites') return { tab }
 
     const sort =
-        filters.sort && TAB_SORTS[tab].includes(filters.sort) ? filters.sort : undefined
+        filters.sort && TAB_SORTS[tab].includes(filters.sort)
+            ? filters.sort
+            : undefined
 
     return {
         tab,
@@ -151,10 +156,10 @@ export function pageQuery(filters: PlayFilters, cursor = 0): PlayPageQueryT {
 export function isNarrowed(filters: PlayFilters): boolean {
     return Boolean(
         filters.q ||
-            filters.appId ||
-            filters.mode ||
-            filters.populated ||
-            filters.joinable
+        filters.appId ||
+        filters.mode ||
+        filters.populated ||
+        filters.joinable
     )
 }
 

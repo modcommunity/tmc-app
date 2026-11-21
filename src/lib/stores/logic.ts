@@ -7,7 +7,10 @@ export const MAX_STORE_NAME = 64
  * The reason a store name is unusable, or null. Rust is the authority (it also
  * checks uniqueness against the saved list); this only spares a round trip.
  */
-export function storeNameProblem(raw: string, others: readonly string[] = []): string | null {
+export function storeNameProblem(
+    raw: string,
+    others: readonly string[] = []
+): string | null {
     const name = raw.trim()
 
     if (name === '') return 'Give this store a name.'
@@ -28,7 +31,9 @@ export function storeNameProblem(raw: string, others: readonly string[] = []): s
  * Share of the volume this store's files take: used / (used + free). Null when
  * free space is unknown or there is nothing to draw.
  */
-export function usageFraction(store: Pick<StoreT, 'usedBytes' | 'freeBytes'>): number | null {
+export function usageFraction(
+    store: Pick<StoreT, 'usedBytes' | 'freeBytes'>
+): number | null {
     if (store.freeBytes === null) return null
 
     const total = store.usedBytes + store.freeBytes
@@ -39,6 +44,8 @@ export function usageFraction(store: Pick<StoreT, 'usedBytes' | 'freeBytes'>): n
 }
 
 /** Whether a store can be made the default (Rust enforces it too). */
-export function canBeDefault(store: Pick<StoreT, 'kind' | 'isDefault' | 'exists'>): boolean {
+export function canBeDefault(
+    store: Pick<StoreT, 'kind' | 'isDefault' | 'exists'>
+): boolean {
     return !store.isDefault && store.exists && store.kind === 'permanent'
 }

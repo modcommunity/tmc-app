@@ -75,8 +75,7 @@ export default function NotificationToast({ data }: { data: ToastData }) {
                 display: 'flex',
                 overflow: 'hidden',
                 cursor: 'pointer',
-                background:
-                    'linear-gradient(135deg, #241510 0%, #1a0f0c 70%)',
+                background: 'linear-gradient(135deg, #241510 0%, #1a0f0c 70%)',
                 color: '#fff6e6',
                 font: '13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif',
                 border: `1px solid ${accent}55`,

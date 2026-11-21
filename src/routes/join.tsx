@@ -49,7 +49,10 @@ export default function JoinRoute() {
     const parsedPort = portRaw ? Number(portRaw) : undefined
     // A malformed port in a link is dropped rather than sent to the lookup as NaN.
     const port =
-        parsedPort !== undefined && Number.isInteger(parsedPort) && parsedPort > 0 && parsedPort < 65536
+        parsedPort !== undefined &&
+        Number.isInteger(parsedPort) &&
+        parsedPort > 0 &&
+        parsedPort < 65536
             ? parsedPort
             : undefined
 
@@ -97,8 +100,8 @@ export default function JoinRoute() {
 
             {lookup.isSuccess && servers.length === 0 && (
                 <Notice>
-                    No server GameSpice lists is at that address. It may be unlisted, or
-                    the link may be out of date — you can still
+                    No server GameSpice lists is at that address. It may be
+                    unlisted, or the link may be out of date — you can still
                     <Link to="/browse/server" className="mx-1 underline">
                         browse servers
                     </Link>

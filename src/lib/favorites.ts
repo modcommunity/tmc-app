@@ -20,7 +20,10 @@ export const MAX_FAVORITES = 500
 export type FavoriteMap = Readonly<Record<string, ContentSummaryT>>
 
 /** Pure toggle: add when absent, remove when present. Never mutates. */
-export function toggleFavorite(map: FavoriteMap, item: ContentSummaryT): FavoriteMap {
+export function toggleFavorite(
+    map: FavoriteMap,
+    item: ContentSummaryT
+): FavoriteMap {
     const id = String(item.id)
 
     if (id in map) {
@@ -34,14 +37,18 @@ export function toggleFavorite(map: FavoriteMap, item: ContentSummaryT): Favorit
 
     // Oldest-inserted first; drop the overflow rather than refusing to save.
     if (keys.length > MAX_FAVORITES) {
-        for (const key of keys.slice(0, keys.length - MAX_FAVORITES)) delete next[key]
+        for (const key of keys.slice(0, keys.length - MAX_FAVORITES))
+            delete next[key]
     }
 
     return next
 }
 
 /** Replace snapshots for ids that are still favourites; never adds. */
-export function refreshFavorites(map: FavoriteMap, fresh: ContentSummaryT[]): FavoriteMap {
+export function refreshFavorites(
+    map: FavoriteMap,
+    fresh: ContentSummaryT[]
+): FavoriteMap {
     const next: Record<string, ContentSummaryT> = { ...map }
 
     for (const item of fresh) {
@@ -79,7 +86,8 @@ export function filterFavorites(
         if (f.onlineOnly && s && !s.online) return false
         if (f.isOfficial && !item.isOfficial) return false
         if (f.hideEmpty && s && s.curUsers <= 0) return false
-        if (f.hideFull && s && s.maxUsers > 0 && s.curUsers >= s.maxUsers) return false
+        if (f.hideFull && s && s.maxUsers > 0 && s.curUsers >= s.maxUsers)
+            return false
 
         return true
     })
@@ -89,7 +97,8 @@ export function parseFavorites(raw: string | null): FavoriteMap {
     try {
         const value: unknown = JSON.parse(raw ?? '{}')
 
-        if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
+        if (typeof value !== 'object' || value === null || Array.isArray(value))
+            return {}
 
         const out: Record<string, ContentSummaryT> = {}
 
@@ -115,7 +124,10 @@ function read(): FavoriteMap {
         let raw: string | null = null
 
         try {
-            raw = typeof localStorage === 'undefined' ? null : localStorage.getItem(FAVORITES_KEY)
+            raw =
+                typeof localStorage === 'undefined'
+                    ? null
+                    : localStorage.getItem(FAVORITES_KEY)
         } catch {
             // Blocked storage: start empty rather than crash every render.
         }

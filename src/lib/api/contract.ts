@@ -55,14 +55,7 @@ export function ApiOk<S extends z.ZodTypeAny>(schema: S) {
 /** Self-reported client identity. Untrusted — a label for the approval screen. */
 export const ClientInfoSchema = z.object({
     name: z.string().min(1).max(64),
-    platform: z.enum([
-        'windows',
-        'macos',
-        'linux',
-        'android',
-        'ios',
-        'unknown',
-    ]),
+    platform: z.enum(['windows', 'macos', 'linux', 'android', 'ios', 'unknown']),
     version: z.string().min(1).max(32),
 })
 
@@ -1096,14 +1089,7 @@ export const InstallItemRequest = z.object({
 export const DeviceDownloadItemSchema = z.object({
     id: z.string().max(128),
     label: z.string().max(200),
-    status: z.enum([
-        'queued',
-        'running',
-        'paused',
-        'done',
-        'failed',
-        'cancelled',
-    ]),
+    status: z.enum(['queued', 'running', 'paused', 'done', 'failed', 'cancelled']),
     done: z.number().int().nonnegative(),
     total: z.number().int().nonnegative().nullable(),
     speedBps: z.number().int().nonnegative(),
@@ -1457,16 +1443,9 @@ export const PlayOptionSchema = z.discriminatedUnion('kind', [
 
 export type PlayOptionT = z.infer<typeof PlayOptionSchema>
 
-export const PlayOptionValueSchema = z.union([
-    z.string(),
-    z.number(),
-    z.boolean(),
-])
+export const PlayOptionValueSchema = z.union([z.string(), z.number(), z.boolean()])
 
-export const PlayOptionValuesSchema = z.record(
-    z.string(),
-    PlayOptionValueSchema
-)
+export const PlayOptionValuesSchema = z.record(z.string(), PlayOptionValueSchema)
 
 export type PlayOptionValuesT = z.infer<typeof PlayOptionValuesSchema>
 
@@ -1613,9 +1592,7 @@ export const ReleasePublishResponseSchema = z.object({
     promoted: z.boolean(),
 })
 
-export type ReleasePublishResponseT = z.infer<
-    typeof ReleasePublishResponseSchema
->
+export type ReleasePublishResponseT = z.infer<typeof ReleasePublishResponseSchema>
 
 /* ------------------------------------------------------ Installing a game */
 
@@ -2281,9 +2258,7 @@ export const PlayQuickResultSchema = z.object({
 /** `data` is null when the play center is off or the game is not listed. */
 export const PlayQuickMatchResponseSchema = PlayQuickResultSchema.nullable()
 
-export type PlayQuickMatchResponseT = z.infer<
-    typeof PlayQuickMatchResponseSchema
->
+export type PlayQuickMatchResponseT = z.infer<typeof PlayQuickMatchResponseSchema>
 
 /* ========================================================================== */
 
@@ -2309,12 +2284,7 @@ const IdString = z.string().min(1).max(20).regex(/^\d+$/)
 // ---------------------------------------------------------------- Presence
 
 /** Mirrors `PresenceStatusVals` in `~/types/user/presence`, which re-exports it. */
-export const PresenceStatusVals = [
-    'offline',
-    'online',
-    'in_game',
-    'away',
-] as const
+export const PresenceStatusVals = ['offline', 'online', 'in_game', 'away'] as const
 export const PresenceStatusSchema = z.enum(PresenceStatusVals)
 export type PresenceStatusT = z.infer<typeof PresenceStatusSchema>
 
@@ -2396,9 +2366,7 @@ export const FriendCancelRequest = FriendRespondRequest.omit({ accept: true })
  * the request accepted theirs and this is the friendship's id.
  */
 export const FriendRequestSentResponse = z.object({ id: z.number().int() })
-export type FriendRequestSentResponseT = z.infer<
-    typeof FriendRequestSentResponse
->
+export type FriendRequestSentResponseT = z.infer<typeof FriendRequestSentResponse>
 
 // ----------------------------------------------------------------- Parties
 
@@ -2610,9 +2578,7 @@ export const WorkshopItemSchema = z.object({
     name: z.string(),
     image: z.string().nullable(),
     webUrl: z.string(),
-    via: z
-        .object({ collectionId: z.number().int(), name: z.string() })
-        .nullable(),
+    via: z.object({ collectionId: z.number().int(), name: z.string() }).nullable(),
     scope: z.enum(['all', 'listed']),
     autoUpdate: z.boolean(),
     pack: z.object({
@@ -2721,11 +2687,7 @@ export const AvatarResponseSchema = z.object({
         .nullable()
         .default(null),
     updatedAt: z.string().nullable().default(null),
-    model: z
-        .object({ name: z.string() })
-        .passthrough()
-        .nullable()
-        .default(null),
+    model: z.object({ name: z.string() }).passthrough().nullable().default(null),
     actions: z
         .object({
             EMOTE: z.array(AvatarActionSchema).default([]),
@@ -2797,7 +2759,14 @@ export const AvatarWearableOptionSchema = z.object({
     /** The GLB file (site-relative or absolute), for drawing it on the figure; null while locked. */
     url: z.string().nullable().default(null),
     /** Where it sits on its bone: `{position, rotation, scale}`. */
-    offset: z.object({ position: z.array(z.number()), rotation: z.array(z.number()), scale: z.number() }).partial().default({}),
+    offset: z
+        .object({
+            position: z.array(z.number()),
+            rotation: z.array(z.number()),
+            scale: z.number(),
+        })
+        .partial()
+        .default({}),
     equipped: z.boolean().default(false),
     /** Sold in a store the caller has not bought from: equip is refused. */
     locked: z.boolean().default(false),
@@ -2839,7 +2808,10 @@ export const WorkshopMineItemSchema = z.object({
     games: z.array(WorkshopMineGameSchema).default([]),
     paused: z.boolean().default(false),
     autoUpdate: z.boolean().default(false),
-    via: z.object({ collectionId: z.number().int(), name: z.string() }).nullable().default(null),
+    via: z
+        .object({ collectionId: z.number().int(), name: z.string() })
+        .nullable()
+        .default(null),
     /** False when nothing would load right now. */
     available: z.boolean().default(true),
     /**
@@ -2859,7 +2831,11 @@ export const WorkshopMineResponse = z.object({
 
 /** `GET /me/points`: the member's points, every pool (`PointsSummaryT` on the site). */
 export const PointsSummaryResponse = z.object({
-    site: z.object({ earned: z.number(), spent: z.number(), available: z.number() }),
+    site: z.object({
+        earned: z.number(),
+        spent: z.number(),
+        available: z.number(),
+    }),
     apps: z.array(
         z.object({
             appId: z.number().int(),
@@ -2982,7 +2958,9 @@ export const WorkshopOwnedItemSchema = z.object({
 export const WorkshopOwnedResponse = z.object({
     items: z.array(WorkshopOwnedItemSchema),
     /** Every game that takes subscriptions: the choices for a `listed` pack. */
-    choices: z.array(z.object({ id: z.number().int(), contentId: z.string(), name: z.string() })),
+    choices: z.array(
+        z.object({ id: z.number().int(), contentId: z.string(), name: z.string() })
+    ),
 })
 
 /** `PATCH /workshop/item`: the owner's edit. Absent fields are left alone. */
@@ -3001,9 +2979,14 @@ export const WorkshopItemPatchRequest = z
     })
 
 /** `DELETE /workshop/item`. */
-export const WorkshopItemDeleteRequest = z.object({ id: z.number().int().positive() })
+export const WorkshopItemDeleteRequest = z.object({
+    id: z.number().int().positive(),
+})
 
-export const WorkshopItemWriteResponse = z.object({ ok: z.literal(true), id: z.number().int() })
+export const WorkshopItemWriteResponse = z.object({
+    ok: z.literal(true),
+    id: z.number().int(),
+})
 
 export type WorkshopCatalogQueryT = z.infer<typeof WorkshopCatalogQuery>
 export type WorkshopCatalogItemAppT = z.infer<typeof WorkshopCatalogItemSchema>
@@ -3047,7 +3030,9 @@ export const StoreFrontItemSchema = z.object({
     availableUntil: z.string().nullable().default(null),
     /** `soon` (before its window), `live`; ended items are not sent. */
     window: z.string(),
-    bundle: z.array(z.object({ id: z.number().int(), name: z.string() })).default([]),
+    bundle: z
+        .array(z.object({ id: z.number().int(), name: z.string() }))
+        .default([]),
 })
 
 export const StoreWalletSchema = z.object({
@@ -3060,7 +3045,12 @@ export const StoreWalletSchema = z.object({
 
 /** `GET store/front?appId=` (or `?serverId=`). Signed out: `wallet: null`, nothing owned. */
 export const StoreFrontResponse = z.object({
-    owner: z.object({ kind: z.enum(['app', 'server']), id: z.number().int(), appId: z.number().int(), name: z.string() }),
+    owner: z.object({
+        kind: z.enum(['app', 'server']),
+        id: z.number().int(),
+        appId: z.number().int(),
+        name: z.string(),
+    }),
     /** TMC's store page for this store, a site path: where a paid (credits) checkout happens. */
     storeUrl: z.string(),
     availability: z.object({
@@ -3070,13 +3060,27 @@ export const StoreFrontResponse = z.object({
         credits: z.boolean(),
         appPoints: z.boolean(),
     }),
-    labels: z.object({ points: z.string(), credits: z.string(), appPoints: z.string() }),
+    labels: z.object({
+        points: z.string(),
+        credits: z.string(),
+        appPoints: z.string(),
+    }),
     items: z.array(StoreFrontItemSchema),
     wallet: StoreWalletSchema.nullable(),
     owned: z.array(z.number().int()),
     held: z.record(z.string(), z.number().int()).default({}),
-    subscribed: z.array(z.object({ itemId: z.number().int(), cancelAtPeriodEnd: z.boolean(), currentPeriodEnd: z.string() })).default([]),
-    servers: z.array(z.object({ id: z.number().int(), name: z.string() })).optional(),
+    subscribed: z
+        .array(
+            z.object({
+                itemId: z.number().int(),
+                cancelAtPeriodEnd: z.boolean(),
+                currentPeriodEnd: z.string(),
+            })
+        )
+        .default([]),
+    servers: z
+        .array(z.object({ id: z.number().int(), name: z.string() }))
+        .optional(),
 })
 
 /** `POST store/purchase`: `price`/`currency` are what was shown; `idemKey` is made once per confirmed buy. */
@@ -3105,7 +3109,9 @@ export const StorePurchaseResponse = z.object({
 /** `GET`/`PUT store/loadout`: what the member has equipped in one game (`maxSlots` 0 = unlimited). */
 export const StoreLoadoutResponse = z.object({
     appId: z.number().int(),
-    loadout: z.array(z.object({ slot: z.string(), store: z.string(), key: z.string() })),
+    loadout: z.array(
+        z.object({ slot: z.string(), store: z.string(), key: z.string() })
+    ),
     maxSlots: z.number().int(),
 })
 
@@ -3118,7 +3124,13 @@ export const StoreLoadoutPutRequest = z.object({
 
 /** `GET store/directory`: every game whose own store is open. */
 export const StoreDirectoryResponse = z.object({
-    stores: z.array(z.object({ appId: z.number().int(), name: z.string(), items: z.number().int() })),
+    stores: z.array(
+        z.object({
+            appId: z.number().int(),
+            name: z.string(),
+            items: z.number().int(),
+        })
+    ),
 })
 
 /** `GET store/purchases?limit=&cursor=`: the member's purchases, newest first. */

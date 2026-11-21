@@ -198,7 +198,11 @@ export const api = {
         ),
 
     avatarWearableEquip: (wearableId: number, equipped: boolean, appId?: number) =>
-        send('PUT', '/avatar/wearables', z.unknown(), { wearableId, equipped, appId }),
+        send('PUT', '/avatar/wearables', z.unknown(), {
+            wearableId,
+            equipped,
+            appId,
+        }),
 
     // ---- Avatar studio (`@modcommunity/shared/avatar`): the documents are handed
     // on as the server sent them; the studio's own guards (ParseManifest and
@@ -209,25 +213,32 @@ export const api = {
         get(path, StudioDocSchema, query, true),
 
     /** One studio write to `/api/app/v1` (`avatar`, `avatar/wearables`, `avatar/actions`, `avatar/outfits`). */
-    studioPut: (path: string, body: unknown) => send('PUT', path, z.unknown(), body),
+    studioPut: (path: string, body: unknown) =>
+        send('PUT', path, z.unknown(), body),
 
     // ---- GameSpice hub reads (shapes in the contract, section GameSpice hub)
 
     /** Every Workshop subscription of the member, across games. */
-    workshopMine: () => get('/workshop/mine', WorkshopMineResponse, undefined, true),
+    workshopMine: () =>
+        get('/workshop/mine', WorkshopMineResponse, undefined, true),
 
     /** Which games a subscription loads into: every game, or one game on or off. */
     workshopScope: (
         subscriptionId: string,
         change: { all: boolean } | { game: string; on: boolean }
-    ) => send('POST', '/workshop/scope', WorkshopScopeResponse, { subscriptionId, ...change }),
+    ) =>
+        send('POST', '/workshop/scope', WorkshopScopeResponse, {
+            subscriptionId,
+            ...change,
+        }),
 
     /** The whole Workshop: search, kind and game filters, sort, page; plus what is subscribed. */
     workshopCatalog: (q: Partial<WorkshopCatalogQueryT> = {}) =>
         get('/workshop/catalog', WorkshopCatalogResponse, q, true),
 
     /** The member's own packs that are, or can be, offered in the Workshop. */
-    workshopOwned: () => get('/workshop/owned', WorkshopOwnedResponse, undefined, true),
+    workshopOwned: () =>
+        get('/workshop/owned', WorkshopOwnedResponse, undefined, true),
 
     /** Owner edit: name, summary, and where it is offered (`none`/`any`/`listed` + game ids). */
     workshopItemPatch: (patch: {
@@ -246,7 +257,8 @@ export const api = {
     myPoints: () => get('/me/points', PointsSummaryResponse, undefined, true),
 
     /** The member's saved outfits; 404 (avatars off) surfaces as an error. */
-    avatarOutfits: () => get('/avatar/outfits', AvatarOutfitsResponse, undefined, true),
+    avatarOutfits: () =>
+        get('/avatar/outfits', AvatarOutfitsResponse, undefined, true),
 
     facets: (kind: ContentKindT, online = true) =>
         get('/facets', FacetsResponseSchema, {
@@ -557,10 +569,12 @@ export const api = {
     statsDefs: (app: number) => get('/stats/defs', StatDefsResponse, { app }, true),
 
     /** Every game whose own store is open, most items first. Signed-out works. */
-    storeDirectory: () => get('/store/directory', StoreDirectoryResponse, undefined, false),
+    storeDirectory: () =>
+        get('/store/directory', StoreDirectoryResponse, undefined, false),
 
     /** One game's store: items, the member's wallet, what they own. */
-    storeFront: (appId: number) => get('/store/front', StoreFrontResponse, { appId }, false),
+    storeFront: (appId: number) =>
+        get('/store/front', StoreFrontResponse, { appId }, false),
 
     /**
      * Buy one item with points (or the game's own points). `idemKey` is made
@@ -568,15 +582,24 @@ export const api = {
      * `price`/`currency` are what the member saw, and the server answers 409
      * `changed` if that is no longer true.
      */
-    storePurchase: (req: { itemId: number; idemKey: string; price: number; currency: StoreCurrencyT }) =>
-        send('POST', '/store/purchase', StorePurchaseResponse, req),
+    storePurchase: (req: {
+        itemId: number
+        idemKey: string
+        price: number
+        currency: StoreCurrencyT
+    }) => send('POST', '/store/purchase', StorePurchaseResponse, req),
 
     /** What the member has equipped in one game. */
-    storeLoadout: (appId: number) => get('/store/loadout', StoreLoadoutResponse, { appId }, true),
+    storeLoadout: (appId: number) =>
+        get('/store/loadout', StoreLoadoutResponse, { appId }, true),
 
     /** Equip `key` in `slot` (or clear it with `null`). */
-    storeLoadoutPut: (req: { appId: number; slot: string; key: string | null; store?: string }) =>
-        send('PUT', '/store/loadout', StoreLoadoutResponse, req),
+    storeLoadoutPut: (req: {
+        appId: number
+        slot: string
+        key: string | null
+        store?: string
+    }) => send('PUT', '/store/loadout', StoreLoadoutResponse, req),
 
     /** The member's purchases across every store, newest first. */
     storePurchases: (cursor?: number, limit = 50) =>

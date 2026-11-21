@@ -147,7 +147,8 @@ export const ipc = {
     /** TMC's built-in figure; null when TMC has none. */
     avatarManifest: () => call('avatar_manifest', AvatarDocOrNull),
     /** One game's avatar library; null when avatars are off for it. */
-    avatarLibrary: (appId: number) => call('avatar_library', AvatarDocOrNull, { appId }),
+    avatarLibrary: (appId: number) =>
+        call('avatar_library', AvatarDocOrNull, { appId }),
     /** The member's avatar for one game; null when none is saved. */
     avatarMe: (appId: number) => call('avatar_me', AvatarDocOrNull, { appId }),
     avatarMePut: (body: unknown) => call('avatar_me_put', z.unknown(), { body }),
@@ -879,7 +880,8 @@ export const ipc = {
     storageDelete: (id: number, confirmWipe: boolean) =>
         call('storage_delete', z.void(), { id, confirmWipe }),
 
-    storageSetDefault: (id: number) => call('storage_set_default', z.void(), { id }),
+    storageSetDefault: (id: number) =>
+        call('storage_set_default', z.void(), { id }),
 
     rconList: () => call('rcon_list', z.array(RconServerSchema)),
 

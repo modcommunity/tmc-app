@@ -11,8 +11,13 @@ describe('activeChips', () => {
 
     it('names filters, resolving game and country names', () => {
         const chips = activeChips(
-            p('q=x&app=3&countries=5,6&password=1&minUsers=2&online=0&ages=ADULT_18'),
-            { apps: new Map([['3', 'Quake']]), countries: new Map([['5', 'France']]) }
+            p(
+                'q=x&app=3&countries=5,6&password=1&minUsers=2&online=0&ages=ADULT_18'
+            ),
+            {
+                apps: new Map([['3', 'Quake']]),
+                countries: new Map([['5', 'France']]),
+            }
         )
 
         expect(chips.map((c) => c.label)).toEqual([
@@ -35,13 +40,20 @@ describe('activeChips', () => {
 
 describe('removeChip', () => {
     it('removes one value from a list', () => {
-        const next = removeChip(p('countries=5,6'), { keys: ['countries:5'], label: '' })
+        const next = removeChip(p('countries=5,6'), {
+            keys: ['countries:5'],
+            label: '',
+        })
 
         expect(next.get('countries')).toBe('6')
     })
 
     it('deletes the key when the list empties and clears ranges', () => {
-        expect(removeChip(p('countries=5'), { keys: ['countries:5'], label: '' }).has('countries')).toBe(false)
+        expect(
+            removeChip(p('countries=5'), { keys: ['countries:5'], label: '' }).has(
+                'countries'
+            )
+        ).toBe(false)
 
         const next = removeChip(p('minUsers=1&maxUsers=9&sort=name'), {
             keys: ['minUsers', 'maxUsers'],

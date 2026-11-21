@@ -122,9 +122,11 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
                 )}
 
                 {item.isOfficial && (
-                    <span className={`absolute top-2 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-medium text-accent-foreground ${
+                    <span
+                        className={`absolute top-2 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-medium text-accent-foreground ${
                             item.server ? 'right-11' : 'right-2'
-                        }`}>
+                        }`}
+                    >
                         Official
                     </span>
                 )}

@@ -79,7 +79,10 @@ export async function loadMemberStudio(base: string): Promise<MemberStudioT> {
     const w = as<WearablesT>(wearables)
 
     return {
-        avatar: { ...avatar, twoD: avatar.twoD && url ? { ...avatar.twoD, url } : null },
+        avatar: {
+            ...avatar,
+            twoD: avatar.twoD && url ? { ...avatar.twoD, url } : null,
+        },
         schema: as<AvatarSchemaT>(schema),
         wearables: {
             ...w,
@@ -102,12 +105,24 @@ export async function loadGameStudio(appId: number): Promise<GameStudioT | null>
 
     const me = as<AppAvatarT>(await ipc.avatarMe(appId))
     const [actions, points, man] = await Promise.all([
-        api.studioGet('/avatar/actions', { appId }).then(as<ActionsT>).catch(() => null),
-        api.studioGet('/me/points').then((p) => AppPoints(as<MemberPointsT>(p), appId)).catch(() => null),
+        api
+            .studioGet('/avatar/actions', { appId })
+            .then(as<ActionsT>)
+            .catch(() => null),
+        api
+            .studioGet('/me/points')
+            .then((p) => AppPoints(as<MemberPointsT>(p), appId))
+            .catch(() => null),
         manifest(),
     ])
 
-    return { library: as<AvatarLibraryT>(library), me, actions, points, manifest: man }
+    return {
+        library: as<AvatarLibraryT>(library),
+        me,
+        actions,
+        points,
+        manifest: man,
+    }
 }
 
 /** Where each studio write goes: one `/api/app/v1` path, or the game's own avatar route. */
@@ -133,7 +148,10 @@ export function statusOf(err: unknown): number {
     }
 }
 
-export async function writeStudio(what: StudioWriteT, body: unknown): Promise<WriteResultT<unknown>> {
+export async function writeStudio(
+    what: StudioWriteT,
+    body: unknown
+): Promise<WriteResultT<unknown>> {
     try {
         const data =
             what === 'app-avatar'

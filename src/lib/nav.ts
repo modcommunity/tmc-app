@@ -125,7 +125,8 @@ export const DISCOVER: NavNode = {
             to: '/apps',
             label: 'Apps',
             icon: FiGrid,
-            description: 'Every game, engine and platform, and what you can do with each.',
+            description:
+                'Every game, engine and platform, and what you can do with each.',
         },
         {
             id: 'mods',
@@ -148,7 +149,8 @@ export const DISCOVER: NavNode = {
             to: '/browse/server',
             label: 'Servers',
             icon: FiServer,
-            description: 'Live servers with real latency measured from this device.',
+            description:
+                'Live servers with real latency measured from this device.',
             match: ['/view/server', '/view/serverMap', '/browse/serverMap'],
             items: [
                 {

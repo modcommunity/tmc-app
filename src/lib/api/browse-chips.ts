@@ -24,7 +24,11 @@ const FLAGS: Record<string, string> = {
     mine: 'Mine',
 }
 
-const OS: Record<string, string> = { WINDOWS: 'Windows', LINUX: 'Linux', MAC: 'macOS' }
+const OS: Record<string, string> = {
+    WINDOWS: 'Windows',
+    LINUX: 'Linux',
+    MAC: 'macOS',
+}
 const AGES: Record<string, string> = {
     NONE: 'No age limit',
     ADULT_18: '18+',
@@ -32,7 +36,12 @@ const AGES: Record<string, string> = {
     ADULT_25: '25+',
 }
 
-function range(search: URLSearchParams, label: string, lo: string, hi: string): ChipT | null {
+function range(
+    search: URLSearchParams,
+    label: string,
+    lo: string,
+    hi: string
+): ChipT | null {
     const a = search.get(lo)
     const b = search.get(hi)
 
@@ -55,10 +64,14 @@ export function activeChips(
 
     const app = search.get('app')
 
-    if (app) out.push({ keys: ['app'], label: names.apps?.get(app) ?? `Game ${app}` })
+    if (app)
+        out.push({ keys: ['app'], label: names.apps?.get(app) ?? `Game ${app}` })
 
     for (const id of (search.get('countries') ?? '').split(',').filter(Boolean)) {
-        out.push({ keys: [`countries:${id}`], label: names.countries?.get(id) ?? `Country ${id}` })
+        out.push({
+            keys: [`countries:${id}`],
+            label: names.countries?.get(id) ?? `Country ${id}`,
+        })
     }
 
     for (const [key, label] of Object.entries(FLAGS)) {
@@ -66,8 +79,13 @@ export function activeChips(
     }
 
     // Online is on by default for the listing, and off by default for favourites.
-    if (opts.favorites ? search.get('online') === '1' : search.get('online') === '0') {
-        out.push({ keys: ['online'], label: opts.favorites ? 'Online only' : 'Including offline' })
+    if (
+        opts.favorites ? search.get('online') === '1' : search.get('online') === '0'
+    ) {
+        out.push({
+            keys: ['online'],
+            label: opts.favorites ? 'Online only' : 'Including offline',
+        })
     }
 
     const os = search.get('os')
@@ -109,7 +127,9 @@ export function removeChip(search: URLSearchParams, chip: ChipT): URLSearchParam
             continue
         }
 
-        const rest = (next.get(name) ?? '').split(',').filter((v) => v && v !== value)
+        const rest = (next.get(name) ?? '')
+            .split(',')
+            .filter((v) => v && v !== value)
 
         if (rest.length > 0) next.set(name, rest.join(','))
         else next.delete(name)

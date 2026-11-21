@@ -100,14 +100,22 @@ function InstallCard({
 
         if (dir === null) return
 
-        await attempt(() => ipc.librarySetInstallDir(install.id, dir).then(() => undefined))
+        await attempt(() =>
+            ipc.librarySetInstallDir(install.id, dir).then(() => undefined)
+        )
     }
 
     const clearDir = () =>
-        attempt(() => ipc.librarySetInstallDir(install.id, null).then(() => undefined))
+        attempt(() =>
+            ipc.librarySetInstallDir(install.id, null).then(() => undefined)
+        )
 
     const makeDefault = () =>
-        attempt(() => api.installUpdate({ id: install.id, isDefault: true }).then(() => undefined))
+        attempt(() =>
+            api
+                .installUpdate({ id: install.id, isDefault: true })
+                .then(() => undefined)
+        )
 
     const remove = async () => {
         if (

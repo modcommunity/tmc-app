@@ -19,7 +19,9 @@ export default function FavoriteStar({
 }) {
     const favorites = useFavorites()
     const on = String(item.id) in favorites
-    const label = on ? `Remove ${item.name} from favourites` : `Add ${item.name} to favourites`
+    const label = on
+        ? `Remove ${item.name} from favourites`
+        : `Add ${item.name} to favourites`
 
     return (
         <button

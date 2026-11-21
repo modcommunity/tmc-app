@@ -7,7 +7,12 @@ import { isPlatformSlug } from './games'
 
 export type CatalogueChip = 'all' | 'multiplayer' | 'singleplayer' | 'gamespice'
 
-export const CHIPS: readonly CatalogueChip[] = ['all', 'multiplayer', 'singleplayer', 'gamespice']
+export const CHIPS: readonly CatalogueChip[] = [
+    'all',
+    'multiplayer',
+    'singleplayer',
+    'gamespice',
+]
 
 export const CHIP_LABELS: Record<CatalogueChip, string> = {
     all: 'All',
@@ -72,16 +77,24 @@ export function matchesChip(row: CatalogueRow, chip: CatalogueChip): boolean {
     }
 }
 
-export function filterGames<T extends CatalogueRow>(rows: readonly T[], chip: CatalogueChip, q: string): T[] {
+export function filterGames<T extends CatalogueRow>(
+    rows: readonly T[],
+    chip: CatalogueChip,
+    q: string
+): T[] {
     const needle = q.trim().toLowerCase()
 
     return rows.filter(
-        (r) => matchesChip(r, chip) && (!needle || r.name.toLowerCase().includes(needle))
+        (r) =>
+            matchesChip(r, chip) &&
+            (!needle || r.name.toLowerCase().includes(needle))
     )
 }
 
 /** Platform games first (busiest first), every other game once, in its given order. */
-export function splitSections<T extends CatalogueRow>(rows: readonly T[]): { platform: T[]; others: T[] } {
+export function splitSections<T extends CatalogueRow>(
+    rows: readonly T[]
+): { platform: T[]; others: T[] } {
     const platform = rows
         .filter(isPlatform)
         .sort((a, b) => b.playerCnt - a.playerCnt || a.name.localeCompare(b.name))

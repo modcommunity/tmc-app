@@ -15,7 +15,11 @@ export function dayAfter(since: string, offset: number): Date {
 
 /** "Nov 3" for a series index; the API's days are UTC days. */
 export function dayLabel(since: string, offset: number): string {
-    return dayAfter(since, offset).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+    return dayAfter(since, offset).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC',
+    })
 }
 
 /** Consecutive days with play, counting back from the last day of the series (today). */
@@ -48,10 +52,17 @@ export function longestStreak(series: readonly number[]): number {
 }
 
 /** "today", "yesterday", "5 days ago", or the date for anything older than a month. */
-export function lastPlayedLabel(day: string | null, now: Date = new Date()): string {
+export function lastPlayedLabel(
+    day: string | null,
+    now: Date = new Date()
+): string {
     if (!day) return 'never'
 
-    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    const today = Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate()
+    )
     const diff = Math.round((today - Date.parse(`${day}T00:00:00Z`)) / DAY_MS)
 
     if (diff <= 0) return 'today'
@@ -67,7 +78,9 @@ export function lastPlayedLabel(day: string | null, now: Date = new Date()): str
 }
 
 /** Unlocked over total as a whole percent; 0 when the game declares none. */
-export function completion(ach: { unlocked: number; total: number } | null): number {
+export function completion(
+    ach: { unlocked: number; total: number } | null
+): number {
     if (!ach || ach.total <= 0) return 0
 
     return Math.min(100, Math.round((ach.unlocked / ach.total) * 100))
@@ -78,13 +91,22 @@ export function completion(ach: { unlocked: number; total: number } | null): num
  * at the top so a peak does not touch the edge. The y scale is the series'
  * own max with a floor of 1, so an all-zero series is a flat baseline.
  */
-export function sparkPath(series: readonly number[], w: number, h: number, pad = 2): { line: string; area: string } {
+export function sparkPath(
+    series: readonly number[],
+    w: number,
+    h: number,
+    pad = 2
+): { line: string; area: string } {
     if (series.length === 0) return { line: '', area: '' }
 
     const max = Math.max(1, ...series)
     const step = series.length > 1 ? w / (series.length - 1) : 0
-    const pts = series.map((v, i) => [i * step, h - (Math.max(0, v) / max) * (h - pad)] as const)
-    const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ')
+    const pts = series.map(
+        (v, i) => [i * step, h - (Math.max(0, v) / max) * (h - pad)] as const
+    )
+    const line = pts
+        .map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`)
+        .join(' ')
 
     return { line, area: `${line} L${w.toFixed(1)} ${h} L0 ${h} Z` }
 }
@@ -98,8 +120,12 @@ export function playShare(
 
     if (total <= 0) return []
 
-    const sorted = [...games].sort((a, b) => b.daysPlayed - a.daysPlayed || a.appId - b.appId)
-    const head: { appId: number | null; days: number }[] = sorted.slice(0, top).map((g) => ({ appId: g.appId, days: g.daysPlayed }))
+    const sorted = [...games].sort(
+        (a, b) => b.daysPlayed - a.daysPlayed || a.appId - b.appId
+    )
+    const head: { appId: number | null; days: number }[] = sorted
+        .slice(0, top)
+        .map((g) => ({ appId: g.appId, days: g.daysPlayed }))
     const rest = sorted.slice(top).reduce((n, g) => n + g.daysPlayed, 0)
 
     if (rest > 0) head.push({ appId: null, days: rest })

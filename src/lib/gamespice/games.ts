@@ -42,7 +42,10 @@ const ALL_SLUGS: ReadonlySet<string> = new Set(PLATFORM_GAMES.flat())
  * sites, `fatal-contact` on others, so slashes are trimmed before any lookup.
  */
 export function slugOf(url: string): string {
-    return url.trim().replace(/^\/+|\/+$/g, '').toLowerCase()
+    return url
+        .trim()
+        .replace(/^\/+|\/+$/g, '')
+        .toLowerCase()
 }
 
 /** Whether a url slug (current or former) is a platform game. */
@@ -71,10 +74,34 @@ export type GameLook = {
 
 /** The four games with their own look (website-gs `KNOWN_GAMES`). */
 const KNOWN: Record<string, GameLook> = {
-    'prop-hunt': { accent: '#c026d3', hue: 292, font: 'jakarta', uppercase: false, name: 'Prop Hunt' },
-    playlot: { accent: '#84cc16', hue: 150, font: 'jakarta', uppercase: false, name: 'Playlot' },
-    'fatal-contact': { accent: '#f97316', hue: 18, font: 'display', uppercase: true, name: 'Fatal Contact' },
-    airdrift: { accent: '#06b6d4', hue: 195, font: 'mono', uppercase: true, name: 'Airdrift' },
+    'prop-hunt': {
+        accent: '#c026d3',
+        hue: 292,
+        font: 'jakarta',
+        uppercase: false,
+        name: 'Prop Hunt',
+    },
+    playlot: {
+        accent: '#84cc16',
+        hue: 150,
+        font: 'jakarta',
+        uppercase: false,
+        name: 'Playlot',
+    },
+    'fatal-contact': {
+        accent: '#f97316',
+        hue: 18,
+        font: 'display',
+        uppercase: true,
+        name: 'Fatal Contact',
+    },
+    airdrift: {
+        accent: '#06b6d4',
+        hue: 195,
+        font: 'mono',
+        uppercase: true,
+        name: 'Airdrift',
+    },
 }
 
 /** FNV-1a, so an unknown game keeps one hue everywhere. */

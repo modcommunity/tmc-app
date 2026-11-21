@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
     FiAlertTriangle,
-        FiClock,
+    FiClock,
     FiExternalLink,
     FiLock,
     FiLogOut,
@@ -81,7 +81,15 @@ function Pill({
 }
 
 /** Players against capacity. The bar is a hint; the number beside it is the fact. */
-function Occupancy({ cur, max, offline }: { cur: number; max: number; offline?: boolean }) {
+function Occupancy({
+    cur,
+    max,
+    offline,
+}: {
+    cur: number
+    max: number
+    offline?: boolean
+}) {
     const ratio = fill(cur, max)
     const full = ratio !== null && ratio >= 1
     const tone =
@@ -98,14 +106,18 @@ function Occupancy({ cur, max, offline }: { cur: number; max: number; offline?: 
                     {offline ? 'Offline' : players(cur, max)}
                 </span>
                 {full && !offline && (
-                    <span className="text-[10px] font-medium text-danger">Full</span>
+                    <span className="text-[10px] font-medium text-danger">
+                        Full
+                    </span>
                 )}
             </div>
             <div className="h-1 overflow-hidden rounded-full bg-surface-2">
                 {!offline && (
                     <div
                         className={`h-full rounded-full ${tone}`}
-                        style={{ width: `${Math.max(ratio ?? (cur > 0 ? 0.25 : 0), cur > 0 ? 0.06 : 0) * 100}%` }}
+                        style={{
+                            width: `${Math.max(ratio ?? (cur > 0 ? 0.25 : 0), cur > 0 ? 0.06 : 0) * 100}%`,
+                        }}
                     />
                 )}
             </div>
@@ -197,7 +209,9 @@ export function GameCard({
                         className="shrink-0 shadow-md ring-2 ring-surface"
                     />
                     <div className="min-w-0 pb-0.5">
-                        <h3 className="truncate text-sm font-semibold">{appLabel(app)}</h3>
+                        <h3 className="truncate text-sm font-semibold">
+                            {appLabel(app)}
+                        </h3>
                         <div className="flex items-center gap-3 text-[11px] text-muted">
                             {app.serverCnt > 0 ? (
                                 <button
@@ -207,7 +221,8 @@ export function GameCard({
                                     className="flex items-center gap-1 transition hover:text-accent"
                                 >
                                     <FiServer className="size-3" />
-                                    {app.serverCnt} {app.serverCnt === 1 ? 'server' : 'servers'}
+                                    {app.serverCnt}{' '}
+                                    {app.serverCnt === 1 ? 'server' : 'servers'}
                                 </button>
                             ) : (
                                 <span className="flex items-center gap-1">
@@ -216,9 +231,13 @@ export function GameCard({
                                 </span>
                             )}
                             {app.lobbyCnt > 0 && (
-                                <span className="flex items-center gap-1" title={`${app.lobbyCnt} lobbies`}>
+                                <span
+                                    className="flex items-center gap-1"
+                                    title={`${app.lobbyCnt} lobbies`}
+                                >
                                     <FiUsers className="size-3" />
-                                    {app.lobbyCnt} {app.lobbyCnt === 1 ? 'lobby' : 'lobbies'}
+                                    {app.lobbyCnt}{' '}
+                                    {app.lobbyCnt === 1 ? 'lobby' : 'lobbies'}
                                 </span>
                             )}
                         </div>
@@ -233,7 +252,12 @@ export function GameCard({
                     <ModePills modes={app.modes} />
                 </div>
 
-                <GameActions app={app} canQuick={canQuick} onPlay={onPlay} onQuick={onQuick} />
+                <GameActions
+                    app={app}
+                    canQuick={canQuick}
+                    onPlay={onPlay}
+                    onQuick={onQuick}
+                />
             </div>
         </article>
     )
@@ -255,42 +279,42 @@ function GameActions({
 
     return (
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
-                    {canQuick && (
-                        <button
-                            type="button"
-                            title="Right-click for advanced options"
-                            onClick={() => onQuick(app, false)}
-                            onContextMenu={(e) => {
-                                e.preventDefault()
-                                onQuick(app, true)
-                            }}
-                            className={BTN_PRIMARY}
-                        >
-                            <FiZap className="size-3.5" />
-                            Quick play
-                        </button>
-                    )}
-                    {app.directPlay && (
-                        <button
-                            type="button"
-                            title="Right-click for advanced options"
-                            onClick={() => onPlay(app, false)}
-                            onContextMenu={(e) => {
-                                e.preventDefault()
-                                onPlay(app, true)
-                            }}
-                            className={canQuick ? BTN_GHOST : BTN_PRIMARY}
-                        >
-                            <FiPlay className="size-3.5" />
-                            {app.solo ? 'Play solo' : 'Play'}
-                        </button>
-                    )}
-                    {nothingToDo && (
-                        <span className="text-[11px] text-muted">
-                            Nothing to join right now.
-                        </span>
-                    )}
-                </div>
+            {canQuick && (
+                <button
+                    type="button"
+                    title="Right-click for advanced options"
+                    onClick={() => onQuick(app, false)}
+                    onContextMenu={(e) => {
+                        e.preventDefault()
+                        onQuick(app, true)
+                    }}
+                    className={BTN_PRIMARY}
+                >
+                    <FiZap className="size-3.5" />
+                    Quick play
+                </button>
+            )}
+            {app.directPlay && (
+                <button
+                    type="button"
+                    title="Right-click for advanced options"
+                    onClick={() => onPlay(app, false)}
+                    onContextMenu={(e) => {
+                        e.preventDefault()
+                        onPlay(app, true)
+                    }}
+                    className={canQuick ? BTN_GHOST : BTN_PRIMARY}
+                >
+                    <FiPlay className="size-3.5" />
+                    {app.solo ? 'Play solo' : 'Play'}
+                </button>
+            )}
+            {nothingToDo && (
+                <span className="text-[11px] text-muted">
+                    Nothing to join right now.
+                </span>
+            )}
+        </div>
     )
 }
 
@@ -361,7 +385,10 @@ export function PlatformGameCard({
 
             <div className="flex flex-1 flex-col gap-3 p-4">
                 <div>
-                    <h3 className="text-xl font-extrabold leading-tight" style={gameHeadingStyle(look)}>
+                    <h3
+                        className="text-xl font-extrabold leading-tight"
+                        style={gameHeadingStyle(look)}
+                    >
                         {app.name}
                     </h3>
                     <p className="mt-1 line-clamp-2 min-h-[2rem] text-xs text-muted">
@@ -382,7 +409,8 @@ export function PlatformGameCard({
                     {app.lobbyCnt > 0 && (
                         <span className="flex items-center gap-1">
                             <FiUsers className="size-3" />
-                            {app.lobbyCnt} {app.lobbyCnt === 1 ? 'lobby' : 'lobbies'}
+                            {app.lobbyCnt}{' '}
+                            {app.lobbyCnt === 1 ? 'lobby' : 'lobbies'}
                         </span>
                     )}
                     {app.solo && (
@@ -393,10 +421,18 @@ export function PlatformGameCard({
                     )}
                 </p>
 
-                <GameActions app={app} canQuick={canQuick} onPlay={onPlay} onQuick={onQuick} />
+                <GameActions
+                    app={app}
+                    canQuick={canQuick}
+                    onPlay={onPlay}
+                    onQuick={onQuick}
+                />
 
                 {slug && (
-                    <Link to={`/games/${slug}`} className="text-[11px] text-muted transition hover:text-accent">
+                    <Link
+                        to={`/games/${slug}`}
+                        className="text-[11px] text-muted transition hover:text-accent"
+                    >
                         Game page
                     </Link>
                 )}
@@ -431,7 +467,11 @@ export function ServerRow({
     return (
         <li className={`${ROW} ${server.online ? '' : 'opacity-70'}`}>
             <GameIcon
-                app={{ id: server.appId, name: server.appName, icon: iconOf(server.appId) }}
+                app={{
+                    id: server.appId,
+                    name: server.appName,
+                    icon: iconOf(server.appId),
+                }}
                 size="md"
             />
 
@@ -455,14 +495,22 @@ export function ServerRow({
                 <ModePills modes={server.modes} />
             </div>
 
-            <Occupancy cur={server.curUsers} max={server.maxUsers} offline={!server.online} />
+            <Occupancy
+                cur={server.curUsers}
+                max={server.maxUsers}
+                offline={!server.online}
+            />
 
             {joinable ? (
                 <button
                     type="button"
                     disabled={!server.online || busy}
                     onClick={() =>
-                        onJoin({ serverId: server.id, appId: server.appId, appName: server.appName })
+                        onJoin({
+                            serverId: server.id,
+                            appId: server.appId,
+                            appName: server.appName,
+                        })
                     }
                     className={BTN_PRIMARY}
                 >
@@ -470,7 +518,12 @@ export function ServerRow({
                     {busy ? 'Opening' : 'Join'}
                 </button>
             ) : (
-                <button type="button" disabled className={BTN_GHOST} title="This game cannot be launched from here yet.">
+                <button
+                    type="button"
+                    disabled
+                    className={BTN_GHOST}
+                    title="This game cannot be launched from here yet."
+                >
                     Not playable
                 </button>
             )}
@@ -490,12 +543,18 @@ export function LobbyRow({
     onJoin: (target: JoinTarget) => void
 }) {
     const gathering = lobby.stage === 'LOBBY'
-    const name = lobby.name?.trim() || (lobby.hostName ? `${lobby.hostName}'s lobby` : `Lobby ${lobby.id}`)
+    const name =
+        lobby.name?.trim() ||
+        (lobby.hostName ? `${lobby.hostName}'s lobby` : `Lobby ${lobby.id}`)
 
     return (
         <li className={ROW}>
             <GameIcon
-                app={{ id: lobby.appId, name: lobby.appName, icon: iconOf(lobby.appId) }}
+                app={{
+                    id: lobby.appId,
+                    name: lobby.appName,
+                    icon: iconOf(lobby.appId),
+                }}
                 size="md"
             />
 
@@ -503,7 +562,10 @@ export function LobbyRow({
                 <p className="flex items-center gap-1.5 truncate text-sm font-medium">
                     <span className="truncate">{name}</span>
                     {lobby.needsPassword && (
-                        <FiLock className="size-3 shrink-0 text-muted" aria-label="Needs a password" />
+                        <FiLock
+                            className="size-3 shrink-0 text-muted"
+                            aria-label="Needs a password"
+                        />
                     )}
                 </p>
                 <p className="truncate text-[11px] text-muted">
@@ -513,14 +575,22 @@ export function LobbyRow({
             </div>
 
             <Pill tone={gathering ? 'success' : 'warning'}>
-                {gathering ? <FiClock className="size-2.5" /> : <FiPlay className="size-2.5" />}
+                {gathering ? (
+                    <FiClock className="size-2.5" />
+                ) : (
+                    <FiPlay className="size-2.5" />
+                )}
                 {gathering ? 'Gathering' : 'In a match'}
             </Pill>
 
             <Occupancy cur={lobby.users} max={lobby.maxUsers} />
 
             <div className="flex items-center gap-2">
-                <button type="button" onClick={() => void openExternally({ webUrl: lobby.url })} className={BTN_GHOST}>
+                <button
+                    type="button"
+                    onClick={() => void openExternally({ webUrl: lobby.url })}
+                    className={BTN_GHOST}
+                >
                     <FiExternalLink className="size-3.5" />
                     Open
                 </button>
@@ -529,7 +599,11 @@ export function LobbyRow({
                         type="button"
                         disabled={busy}
                         onClick={() =>
-                            onJoin({ serverId: lobby.serverId as number, appId: lobby.appId, appName: lobby.appName })
+                            onJoin({
+                                serverId: lobby.serverId as number,
+                                appId: lobby.appId,
+                                appName: lobby.appName,
+                            })
                         }
                         className={BTN_PRIMARY}
                     >
@@ -590,7 +664,11 @@ export function PartyBar({
             className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-accent/30 bg-gradient-to-r from-accent/10 via-surface to-surface px-4 py-3"
         >
             <GameIcon
-                app={{ id: party.app.id, name: party.app.name, icon: party.app.iconUrl }}
+                app={{
+                    id: party.app.id,
+                    name: party.app.name,
+                    icon: party.app.iconUrl,
+                }}
                 size="lg"
             />
 
@@ -602,11 +680,14 @@ export function PartyBar({
                     {party.name ?? `Party ${party.id}`}
                 </p>
                 <p className="truncate text-[11px] text-muted">
-                    {party.app.name} · {party.stage.toLowerCase()} · {players(party.users, party.maxUsers)}
+                    {party.app.name} · {party.stage.toLowerCase()} ·{' '}
+                    {players(party.users, party.maxUsers)}
                     {party.inGame > 0 ? ` · ${party.inGame} in game` : ''}
                 </p>
                 {leave.error && (
-                    <p className="text-[11px] text-danger">{messageOf(leave.error)}</p>
+                    <p className="text-[11px] text-danger">
+                        {messageOf(leave.error)}
+                    </p>
                 )}
             </div>
 
@@ -627,7 +708,11 @@ export function PartyBar({
                         type="button"
                         disabled={busy}
                         onClick={() =>
-                            onJoin({ serverId: server.id, appId: party.app.id, appName: party.app.name })
+                            onJoin({
+                                serverId: server.id,
+                                appId: party.app.id,
+                                appName: party.app.name,
+                            })
                         }
                         className={BTN_PRIMARY}
                     >
@@ -696,9 +781,7 @@ export function QuickMatchDialog({
         onJoin({ serverId, appId: app.id, appName: result?.appName ?? app.name })
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
             <div
                 ref={dialogRef}
                 tabIndex={-1}
@@ -712,8 +795,12 @@ export function QuickMatchDialog({
                         <FiZap className="size-4" />
                     </span>
                     <div className="min-w-0 flex-1">
-                        <h2 className="truncate text-sm font-semibold">Quick play</h2>
-                        <p className="truncate text-[11px] text-muted">{app.name}</p>
+                        <h2 className="truncate text-sm font-semibold">
+                            Quick play
+                        </h2>
+                        <p className="truncate text-[11px] text-muted">
+                            {app.name}
+                        </p>
                     </div>
                     <button
                         type="button"
@@ -737,7 +824,9 @@ export function QuickMatchDialog({
                                 <FiAlertTriangle className="size-3.5" />
                                 The search failed.
                             </p>
-                            <p className="text-[11px] text-muted">{messageOf(search.error)}</p>
+                            <p className="text-[11px] text-muted">
+                                {messageOf(search.error)}
+                            </p>
                         </div>
                     ) : result == null ? (
                         <p className="py-4 text-xs text-muted">
@@ -745,12 +834,15 @@ export function QuickMatchDialog({
                         </p>
                     ) : !best ? (
                         <div className="space-y-1 py-4">
-                            <p className="text-sm font-medium">No open server right now</p>
+                            <p className="text-sm font-medium">
+                                No open server right now
+                            </p>
                             <p className="text-[11px] text-muted">
                                 {result.scanned === 0
                                     ? `${result.appName} has no servers listed.`
                                     : `Checked ${result.scanned}: ${result.full} full, ${result.stale} not responding.`}{' '}
-                                {!rotation && 'You can include servers that are between maps.'}
+                                {!rotation &&
+                                    'You can include servers that are between maps.'}
                             </p>
                         </div>
                     ) : (
@@ -773,7 +865,13 @@ export function QuickMatchDialog({
                                         <FiUsers className="size-2.5" />
                                         {players(best.curUsers, best.maxUsers)}
                                     </span>
-                                    {result.country && <span>near {result.country.region ?? result.country.code}</span>}
+                                    {result.country && (
+                                        <span>
+                                            near{' '}
+                                            {result.country.region ??
+                                                result.country.code}
+                                        </span>
+                                    )}
                                 </p>
                                 {result.top[0] && result.top[0].why.length > 0 && (
                                     <div className="mt-2 flex flex-wrap gap-1">
@@ -802,13 +900,21 @@ export function QuickMatchDialog({
                                     </p>
                                     <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
                                         {others.map((c) => (
-                                            <li key={c.id} className="flex items-center gap-3 px-3 py-2">
+                                            <li
+                                                key={c.id}
+                                                className="flex items-center gap-3 px-3 py-2"
+                                            >
                                                 <div className="min-w-0 flex-1">
                                                     <p className="truncate text-xs font-medium">
                                                         {c.name ?? `Server ${c.id}`}
                                                     </p>
                                                     <p className="truncate text-[11px] text-muted">
-                                                        {c.map ?? 'No map reported'} · {players(c.curUsers, c.maxUsers)}
+                                                        {c.map ?? 'No map reported'}{' '}
+                                                        ·{' '}
+                                                        {players(
+                                                            c.curUsers,
+                                                            c.maxUsers
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <button
@@ -829,9 +935,13 @@ export function QuickMatchDialog({
 
                     {result && (
                         <p className="text-[10px] text-muted">
-                            Looked at {result.scanned} servers in {Math.round(result.tookMs)} ms
+                            Looked at {result.scanned} servers in{' '}
+                            {Math.round(result.tookMs)} ms
                             {result.full > 0 ? `, ${result.full} full` : ''}
-                            {result.stale > 0 ? `, ${result.stale} not responding` : ''}.
+                            {result.stale > 0
+                                ? `, ${result.stale} not responding`
+                                : ''}
+                            .
                         </p>
                     )}
                 </div>
