@@ -64,12 +64,15 @@ export default function LoggingRoute() {
                         <Button
                             btnType="danger"
                             onClick={() => {
-                                void ipc.logClear().then(() => {
-                                    setConfirmClear(false)
-                                    void queryClient.invalidateQueries({
-                                        queryKey: ['log'],
+                                void ipc
+                                    .logClear()
+                                    .then(() => {
+                                        void queryClient.invalidateQueries({
+                                            queryKey: ['log'],
+                                        })
                                     })
-                                })
+                                    .catch(() => undefined)
+                                    .finally(() => setConfirmClear(false))
                             }}
                         >
                             Clear

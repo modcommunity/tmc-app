@@ -194,7 +194,10 @@ function TrustedKeys() {
                         type="button"
                         aria-label={`Stop trusting ${key.label || key.id}`}
                         onClick={() => {
-                            void ipc.pluginUntrustKey(key.id).then(refresh)
+                            void ipc
+                                .pluginUntrustKey(key.id)
+                                .then(refresh)
+                                .catch(() => refresh())
                         }}
                         className="shrink-0 rounded-lg border border-border px-2 py-1 text-[11px] text-muted hover:border-danger hover:text-danger"
                     >
@@ -419,10 +422,13 @@ function PluginRow({
                     <Button
                         btnType="danger"
                         onClick={() => {
-                            void ipc.pluginRemove(plugin.id).then(() => {
-                                setConfirmRemove(false)
-                                onChanged()
-                            })
+                            void ipc
+                                .pluginRemove(plugin.id)
+                                .catch(() => undefined)
+                                .finally(() => {
+                                    setConfirmRemove(false)
+                                    onChanged()
+                                })
                         }}
                     >
                         Remove

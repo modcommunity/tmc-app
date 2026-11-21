@@ -50,6 +50,9 @@ export default function AccountRoute() {
                                     setCopied(true)
                                     window.setTimeout(() => setCopied(false), 2000)
                                 })
+                                // Clipboard access can be refused; the code is
+                                // on screen to type, so this is not an error.
+                                .catch(() => undefined)
                         }}
                         className="selectable flex items-center gap-3 rounded-xl border border-border bg-surface px-5 py-3 font-mono text-2xl tracking-[0.2em]"
                     >

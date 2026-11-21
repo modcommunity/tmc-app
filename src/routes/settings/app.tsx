@@ -5,6 +5,7 @@ import { Button } from '@modcommunity/shared'
 import { ipc } from '~/lib/ipc/commands'
 import { useApiEnv } from '~/lib/api/env'
 import { useSettings } from '~/lib/settings/provider'
+import { useDownloads } from '~/lib/downloads/provider'
 import { useIsDesktop } from '~/lib/hooks/use-platform'
 import { Row, Section, Select, Toggle } from '~/components/form'
 import { GsLogo } from '~/components/gs-logo'
@@ -136,7 +137,8 @@ const DOWNLOAD_LIMITS = [
  * device's paths onto another.
  */
 export default function AppSettingsRoute() {
-    const { app, setApp, resetApp } = useSettings()
+    const { app, setApp, resetApp, reloadApp } = useSettings()
+    const downloads = useDownloads()
     const env = useApiEnv()
     const desktop = useIsDesktop()
 
@@ -274,10 +276,15 @@ export default function AppSettingsRoute() {
                         <Select
                             label="Download speed limit"
                             value={String(app.downloadLimitBps)}
+                            // Refreshed afterwards: the control is driven by the
+                            // loaded settings, so without it the choice snaps back.
                             onChange={(next) =>
-                                void ipc.downloadSetGlobalLimit(
-                                    Number(next) > 0 ? Number(next) : null
-                                )
+                                void downloads
+                                    .setGlobalLimit(
+                                        Number(next) > 0 ? Number(next) : null
+                                    )
+                                    .then(reloadApp)
+                                    .catch(() => reloadApp())
                             }
                             options={DOWNLOAD_LIMITS}
                         />
@@ -295,9 +302,10 @@ export default function AppSettingsRoute() {
                             step={1}
                             value={app.downloadConcurrency}
                             onChange={(e) =>
-                                void ipc.downloadSetConcurrency(
-                                    Number(e.target.value)
-                                )
+                                void ipc
+                                    .downloadSetConcurrency(Number(e.target.value))
+                                    .then(reloadApp)
+                                    .catch(() => reloadApp())
                             }
                         />
                     }
@@ -444,7 +452,9 @@ export default function AppSettingsRoute() {
                                 control={
                                     <Button
                                         onClick={() =>
-                                            void ipc.notificationTest()
+                                            void ipc
+                                                .notificationTest()
+                                                .catch(() => undefined)
                                         }
                                     >
                                         Show a test notification

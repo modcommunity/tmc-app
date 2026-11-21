@@ -234,8 +234,12 @@ export default function AppsRoute() {
     const [target, setTarget] = useState<PlayTargetT | null>(null)
 
     const search = params.get('q') ?? ''
-    const type = (params.get('type') as AppTypeT | null) ?? null
-    const sort = (params.get('sort') as AppSortT | null) ?? 'players'
+    // A hand-edited or stale link can carry a value the API would reject, so
+    // anything outside the known sets falls back to the default.
+    const typeRaw = params.get('type')
+    const type = AppTypeVals.find((v) => v === typeRaw) ?? null
+    const sortRaw = params.get('sort')
+    const sort: AppSortT = AppSortVals.find((v) => v === sortRaw) ?? 'players'
     const playable = params.get('playable') === '1'
     const managed = params.get('managed') === '1'
 
@@ -363,6 +367,7 @@ export default function AppsRoute() {
                         <FiSearch className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted" />
                         <input
                             type="search"
+                            aria-label="Search games and apps"
                             value={search}
                             onChange={(e) => set('q', e.target.value)}
                             placeholder="Search games and apps"

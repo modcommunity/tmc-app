@@ -46,7 +46,12 @@ export default function JoinRoute() {
 
     const host = params.get('host') ?? ''
     const portRaw = params.get('port')
-    const port = portRaw ? Number(portRaw) : undefined
+    const parsedPort = portRaw ? Number(portRaw) : undefined
+    // A malformed port in a link is dropped rather than sent to the lookup as NaN.
+    const port =
+        parsedPort !== undefined && Number.isInteger(parsedPort) && parsedPort > 0 && parsedPort < 65536
+            ? parsedPort
+            : undefined
 
     const lookup = useQuery({
         queryKey: ['serverLookup', host, port ?? null],
