@@ -1,6 +1,6 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
-## Unreleased
+## 0.5.0
 
 - Visual review pass: Play, Apps, game pages and the view page share one load-error banner (danger border, detail line, Try again button) instead of bare text; Installs, when signed out, shows a Sign in card; Settings > Games shows a retry row when the game list fails and a message when it is empty.
 - Monitor, Stores, Workshop and RCON polish: the Monitor chart computes its paths once per data change (hover no longer rebuilds them) and draws single samples as a dot; the Stores page has a skeleton, retry, empty-state icon, focus rings and a scrollable modal that closes on backdrop click; Workshop cards clamp long pack names; RCON buttons and server list show focus rings and the footer wraps in narrow windows.
@@ -18,8 +18,6 @@ The GameSpice App's releases, newest first. A version here is the one in `packag
 - Fixes: left-click Play no longer hangs on "Starting..." when a game has no launch mode (the normal dialog now opens), and waits for the platform answer before picking the default mode; the play dialog is announced as a dialog. Signing out clears the previous account's cached settings and social data. A plugin theme chosen and then replaced no longer paints the stale theme's colours. Favourites no longer crash when local storage is blocked. Nav highlights match on path-segment boundaries. Media-query hooks no longer resubscribe on every render.
 - Security: the play hand-off link now opens only gs://, tmc://, https:// or a known game-client scheme (it was a blocklist that let schemes like ms-msdt: through), and links with control characters are refused.
 - **Workshop browse redesign**: pack cards with banner image (lazy, kind-coloured gradient fallback), kind/game badges, author, subscriber count, version/size/updated chips and a runs-code badge; state-aware Subscribe button with optimistic feedback; debounced search with icon, active-filter chips, skeleton grid, infinite scroll and clear empty/error states. The Subscribed and My packs tabs use the same cards.
-
-## Unreleased
 
 - Library > Stores is now a real page. A store is a named folder for downloads and installs, permanent or temporary. Temporary stores are emptied when the app closes and again at the next launch. Create, rename, set as default and delete stores, with used and free space shown on each card. Deleting a permanent store only forgets it and never touches its files. The default store is the download folder, so existing behaviour is unchanged. Choosing a store per download is not wired yet.
 
