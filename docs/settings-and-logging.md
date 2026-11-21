@@ -45,3 +45,15 @@ On desktop the data directory (`settings.json`, `library.sqlite3`, plugins, stag
 - **The stored sign-in** moves from the `com.moddingcommunity.app` keychain service to `gamespice-app` the first time it is read; the old entry is deleted only after the new one was written (`secure::keyring_get`).
 
 The WebView's own storage stays where Tauri puts it, keyed by the identifier, so nothing in it is lost. Mobile is unaffected: there everything is inside the app's container.
+
+## Advanced: tray and notification cards
+
+Both settings are machine-level, in `settings.json`, and OFF by default.
+
+| Setting | Default | Effect |
+|---|---|---|
+| `minimiseToTray` | `false` | Closing the window hides it; a tray icon (Open / Quit) keeps the app running. No tray available → the close quits. |
+| `trayNotifications` | `false` | Polls `/notifications` while signed in and shows each new item as a corner card. |
+| `notificationPollSecs` | `60` | Poll interval, clamped to 30–3600. |
+
+Code: `src-tauri/src/notifier.rs` (tray, poller, card windows), `src-tauri/core/src/notify.rs` (parsing, per-kind style, first-poll baseline, safe click URLs).

@@ -5,6 +5,7 @@ import { Button } from '@modcommunity/shared'
 import { ipc } from '~/lib/ipc/commands'
 import { useApiEnv } from '~/lib/api/env'
 import { useSettings } from '~/lib/settings/provider'
+import { useIsDesktop } from '~/lib/hooks/use-platform'
 import { Row, Section, Select, Toggle } from '~/components/form'
 import { GsLogo } from '~/components/gs-logo'
 import UpdaterSettings from '~/components/updater-settings'
@@ -137,6 +138,7 @@ const DOWNLOAD_LIMITS = [
 export default function AppSettingsRoute() {
     const { app, setApp, resetApp } = useSettings()
     const env = useApiEnv()
+    const desktop = useIsDesktop()
 
     // Theme plugins extend the theme picker, so the list has to be live.
     const plugins = useQuery({
@@ -383,6 +385,76 @@ export default function AppSettingsRoute() {
                     }
                 />
             </Section>
+
+            {desktop && (
+                <Section
+                    title="Advanced"
+                    hint="Both of these are off until you turn them on."
+                >
+                    <Row
+                        label="When I close the window, keep GameSpice in the system tray"
+                        hint="Off: closing the window quits the app. On: it keeps running in the tray until you choose Quit from the tray menu."
+                        control={
+                            <Toggle
+                                label="Close to the system tray"
+                                checked={app.minimiseToTray}
+                                onChange={(minimiseToTray) =>
+                                    void setApp({ minimiseToTray })
+                                }
+                            />
+                        }
+                    />
+                    <Row
+                        label="Show desktop notifications"
+                        hint="While the app is running — including in the tray — check for new notifications and show each in the bottom-right corner. This contacts GameSpice while you are signed in."
+                        control={
+                            <Toggle
+                                label="Show desktop notifications"
+                                checked={app.trayNotifications}
+                                onChange={(trayNotifications) =>
+                                    void setApp({ trayNotifications })
+                                }
+                            />
+                        }
+                    />
+                    {app.trayNotifications && (
+                        <>
+                            <Row
+                                label="Check every"
+                                control={
+                                    <Select
+                                        label="Notification check interval"
+                                        value={String(app.notificationPollSecs)}
+                                        onChange={(next) =>
+                                            void setApp({
+                                                notificationPollSecs: Number(next),
+                                            })
+                                        }
+                                        options={[
+                                            { value: '30', label: '30 seconds' },
+                                            { value: '60', label: '1 minute' },
+                                            { value: '300', label: '5 minutes' },
+                                            { value: '900', label: '15 minutes' },
+                                        ]}
+                                    />
+                                }
+                            />
+                            <Row
+                                label="Preview"
+                                control={
+                                    <Button
+                                        onClick={() =>
+                                            void ipc.notificationTest()
+                                        }
+                                    >
+                                        Show a test notification
+                                    </Button>
+                                }
+                            />
+                        </>
+                    )}
+                </Section>
+            )}
 
             <Section title="Updates">
                 <Row

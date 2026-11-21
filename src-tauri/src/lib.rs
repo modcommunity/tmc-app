@@ -1,4 +1,6 @@
 mod commands;
+#[cfg(desktop)]
+mod notifier;
 mod paths;
 mod spawn;
 mod state;
@@ -267,9 +269,39 @@ pub fn run() {
                 commands::downloads::restore(&restore_handle.state::<AppState>()).await;
             });
 
+            /*
+             * Close-to-tray and desktop notification cards. Both are OFF by
+             * default and read their setting live; see `notifier.rs`.
+             */
+            #[cfg(desktop)]
+            {
+                app.manage(notifier::Notifier::default());
+
+                notifier::apply(&handle);
+                notifier::spawn_poller(handle.clone());
+
+                if let Some(window) = app.get_webview_window("main") {
+                    let close_handle = handle.clone();
+
+                    window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                            if notifier::close_to_tray(&close_handle) {
+                                api.prevent_close();
+                            }
+                        }
+                    });
+                }
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            #[cfg(desktop)]
+            notifier::toast_activate,
+            #[cfg(desktop)]
+            notifier::toast_dismiss,
+            #[cfg(desktop)]
+            notifier::notification_test,
             commands::auth::session_state,
             commands::auth::auth_begin,
             commands::auth::auth_poll,

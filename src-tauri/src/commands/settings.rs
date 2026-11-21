@@ -46,13 +46,24 @@ pub fn settings_get(state: State<'_, AppState>) -> AppSettings {
 /// not filtered here, so the gate holds for any caller rather than only for
 /// this command. They go through the two setters below.
 #[tauri::command]
-pub fn settings_patch(state: State<'_, AppState>, patch: Value) -> AppResult<AppSettings> {
+pub fn settings_patch(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    patch: Value,
+) -> AppResult<AppSettings> {
     let next = state.settings.patch(patch)?;
 
     // Two settings have an immediate side effect rather than being read where
     // they are used, and both are pushed here so a change takes hold without a
     // restart.
     state.audit.set_verbose(next.verbose_logging);
+
+    // The tray follows `minimiseToTray` immediately; the poller re-reads
+    // `trayNotifications` on its own next tick.
+    #[cfg(desktop)]
+    crate::notifier::apply(&app);
+    #[cfg(not(desktop))]
+    let _ = &app;
 
     /*
      * The plugin gate. A user turning this ON expects the next install run to
@@ -150,9 +161,14 @@ pub fn settings_set_download_dir(
 }
 
 #[tauri::command]
-pub fn settings_reset(state: State<'_, AppState>) -> AppResult<AppSettings> {
+pub fn settings_reset(app: AppHandle, state: State<'_, AppState>) -> AppResult<AppSettings> {
     let fresh = state.settings.reset()?;
     state.audit.set_verbose(fresh.verbose_logging);
+
+    #[cfg(desktop)]
+    crate::notifier::apply(&app);
+    #[cfg(not(desktop))]
+    let _ = &app;
 
     audit!(
         state.audit,

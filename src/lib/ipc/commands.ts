@@ -196,6 +196,9 @@ export const ipc = {
 
     settingsReset: () => call('settings_reset', AppSettingsSchema),
 
+    /** Show a sample notification card (desktop only). */
+    notificationTest: () => call('notification_test', z.null().or(z.undefined())),
+
     // --------------------------------------------------------------- Logging
     logRead: (limit?: number, minLevel?: LogLevelT) =>
         call('log_read', z.array(LogEntrySchema), {

@@ -71,9 +71,23 @@ pub struct AppSettings {
     /// Concurrent latency probes. Bounded — a grid of 50 servers should not
     /// open 50 sockets at once on a phone.
     pub latency_concurrency: u8,
-    /// Keep running in the tray/background when the window is closed. Desktop
-    /// only; ignored on mobile, where the OS owns the decision.
+    /// Closing the window leaves the app running in the system tray instead of
+    /// quitting. Desktop only; ignored on mobile, where the OS owns the
+    /// decision.
+    ///
+    /// OFF by default, and on purpose: an app that stays resident after the
+    /// user closed it is something the user should have chosen. The name is
+    /// historical (`minimise_to_tray`); the behaviour is "close to tray".
     pub minimise_to_tray: bool,
+    /// Poll the account's notifications while the app is running (window open
+    /// or in the tray) and show each new one as a small card in the bottom-right
+    /// corner of the screen. Desktop only. OFF by default: it is a request to
+    /// the site every [`AppSettings::notification_poll_secs`] for as long as the
+    /// app is alive, and it only ever runs when the user asked for it.
+    pub tray_notifications: bool,
+    /// Seconds between notification polls. Clamped to
+    /// [`NOTIFICATION_POLL_SECS_MIN`]..=[`NOTIFICATION_POLL_SECS_MAX`].
+    pub notification_poll_secs: u32,
 
     // ------------------------------------------------------------- Downloads
     /// Ceiling across every download, in bytes per second. `0` is unlimited.
@@ -143,6 +157,8 @@ impl Default for AppSettings {
             latency_interval_ms: 1_000,
             latency_concurrency: 8,
             minimise_to_tray: false,
+            tray_notifications: false,
+            notification_poll_secs: 60,
             download_limit_bps: 0,
             download_concurrency: crate::download::DEFAULT_CONCURRENT as u8,
             download_keep_history: true,
@@ -170,6 +186,12 @@ impl Default for AppSettings {
 pub const LATENCY_INTERVAL_MS_MIN: u32 = 250;
 pub const LATENCY_INTERVAL_MS_MAX: u32 = 300_000;
 
+/// The floor and ceiling on [`AppSettings::notification_poll_secs`]. The floor
+/// keeps a typo from becoming a request storm against the site; the ceiling is
+/// an hour, past which "notifications" would be a misnomer.
+pub const NOTIFICATION_POLL_SECS_MIN: u32 = 30;
+pub const NOTIFICATION_POLL_SECS_MAX: u32 = 3_600;
+
 impl AppSettings {
     /// Clamp anything a hand-edited file could get wrong.
     ///
@@ -185,6 +207,9 @@ impl AppSettings {
         self.latency_interval_ms = self
             .latency_interval_ms
             .clamp(LATENCY_INTERVAL_MS_MIN, LATENCY_INTERVAL_MS_MAX);
+        self.notification_poll_secs = self
+            .notification_poll_secs
+            .clamp(NOTIFICATION_POLL_SECS_MIN, NOTIFICATION_POLL_SECS_MAX);
 
         let theme_ok = matches!(self.theme.as_str(), "system" | "light" | "dark")
             || self

@@ -32,6 +32,7 @@ pub mod library;
 pub mod local;
 pub mod logging;
 pub mod net;
+pub mod notify;
 pub mod plugins;
 pub mod rcon;
 pub mod rename;

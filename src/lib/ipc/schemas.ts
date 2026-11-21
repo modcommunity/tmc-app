@@ -83,7 +83,11 @@ export const AppSettingsSchema = z.object({
     liveLatency: z.boolean(),
     latencyIntervalMs: z.number(),
     latencyConcurrency: z.number(),
+    /** Closing the window keeps the app running in the system tray. Off by default. */
     minimiseToTray: z.boolean(),
+    /** Poll notifications and show each new one as a bottom-right card. Off by default. */
+    trayNotifications: z.boolean().default(false),
+    notificationPollSecs: z.number().default(60),
 
     /** Ceiling across every download, bytes per second. `0` is unlimited. */
     downloadLimitBps: z.number(),

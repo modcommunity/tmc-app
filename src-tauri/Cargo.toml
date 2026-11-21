@@ -39,7 +39,10 @@ tmc-core = { path = "core", features = ["os-keyring"] }
 # the app serves local files to the webview — images come from the CDN over
 # https, and a local-file protocol would be one more thing a rendered mod
 # description could try to reach.
-tauri = { version = "2", features = [] }
+# `tray-icon` is the system-tray support behind "close to tray" and the
+# notification cards (`src/notifier.rs`). Desktop only at runtime; the tray API
+# does not exist on mobile and nothing there calls it.
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-os = "2"
 # No `tauri-plugin-dialog`: its folder picker is the GTK file chooser on Linux.

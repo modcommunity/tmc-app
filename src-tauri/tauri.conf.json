@@ -85,7 +85,7 @@
         ],
         "linux": {
             "deb": {
-                "depends": []
+                "depends": ["libayatana-appindicator3-1"]
             }
         },
         "macOS": {
