@@ -20,6 +20,7 @@ import { InstallSchema, type InstallT } from '~/lib/api/contract'
 import { appLabel } from '~/lib/api/labels'
 import { GameIcon } from '~/components/game-icon'
 import Select from '~/components/select'
+import { SignInPrompt } from '~/components/states'
 import { LaunchDialog } from '~/components/launch-dialog'
 import type { LaunchPreviewT } from '~/lib/ipc/schemas'
 import { useFolderPicker } from '~/components/folder-picker'
@@ -584,10 +585,8 @@ export default function InstallsRoute() {
 
     if (status !== 'signedIn') {
         return (
-            <div className="p-6 text-center">
-                <p className="text-sm text-muted">
-                    Sign in to manage your installs.
-                </p>
+            <div className="p-6">
+                <SignInPrompt>Sign in to manage your installs.</SignInPrompt>
             </div>
         )
     }

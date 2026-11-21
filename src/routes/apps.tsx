@@ -28,6 +28,7 @@ import {
 import { GameIcon } from '~/components/game-icon'
 import Select from '~/components/select'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
+import { LoadError } from '~/components/states'
 
 /**
  * **Apps** — every game, engine and platform TMC tracks, and what can be done
@@ -474,21 +475,12 @@ export default function AppsRoute() {
                      * last of those is what it actually was, and it cost a
                      * round trip through a bug report to find out.
                      */
-                    <div className="space-y-1">
-                        <p className="text-xs text-danger">
-                            The catalogue could not be loaded.
-                        </p>
-                        <p className="text-[11px] text-muted">
-                            {messageOf(listing.error)}
-                        </p>
-                        <button
-                            type="button"
-                            onClick={() => void listing.refetch()}
-                            className="text-[11px] text-accent underline underline-offset-2"
-                        >
-                            Try again
-                        </button>
-                    </div>
+                    <LoadError
+                        title="The catalogue could not be loaded."
+                        detail={messageOf(listing.error)}
+                        onRetry={() => void listing.refetch()}
+                        retrying={listing.isFetching}
+                    />
                 ) : apps.length < 1 ? (
                     <p className="text-xs text-muted">
                         Nothing matched. Try a broader filter.

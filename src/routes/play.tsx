@@ -14,6 +14,7 @@ import {
 
 import { api } from '~/lib/api/client'
 import { messageOf } from '~/lib/ipc'
+import { LoadError } from '~/components/states'
 import { useAuth } from '~/lib/auth/provider'
 import { useAppIcons } from '~/lib/hooks/use-app-icons'
 import type { PlayModeT } from '~/lib/api/contract'
@@ -413,17 +414,12 @@ export default function PlayRoute() {
                     ) : listing.isPending ? (
                         <Skeleton tab={tab} />
                     ) : listing.isError ? (
-                        <div className="space-y-1">
-                            <p className="text-xs text-danger">The play center could not be loaded.</p>
-                            <p className="text-[11px] text-muted">{messageOf(listing.error)}</p>
-                            <button
-                                type="button"
-                                onClick={() => void listing.refetch()}
-                                className="text-[11px] text-accent underline underline-offset-2"
-                            >
-                                Try again
-                            </button>
-                        </div>
+                        <LoadError
+                            title="The play center could not be loaded."
+                            detail={messageOf(listing.error)}
+                            onRetry={() => void listing.refetch()}
+                            retrying={listing.isFetching}
+                        />
                     ) : off ? (
                         <Empty
                             icon={FiPower}

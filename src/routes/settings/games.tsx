@@ -10,6 +10,7 @@ import { isIpcError } from '~/lib/ipc'
 import { useSettings } from '~/lib/settings/provider'
 import { ipc } from '~/lib/ipc/commands'
 import type { DetectedGameT } from '~/lib/ipc/schemas'
+import { messageOf } from '~/lib/ipc'
 import { Section } from '~/components/form'
 import { useFolderPicker } from '~/components/folder-picker'
 
@@ -94,6 +95,25 @@ export default function GamesRoute() {
             >
                 {games.isPending && (
                     <p className="px-3 py-3 text-sm text-muted">Loading games…</p>
+                )}
+
+                {games.isError && (
+                    <div className="flex items-center justify-between gap-3 px-3 py-3">
+                        <p className="min-w-0 text-sm text-danger">
+                            The game list could not be loaded: {messageOf(games.error)}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => void games.refetch()}
+                            className="shrink-0 rounded-md border border-border px-3 py-1 text-xs hover:bg-surface-hover"
+                        >
+                            Try again
+                        </button>
+                    </div>
+                )}
+
+                {games.isSuccess && games.data.apps.length < 1 && (
+                    <p className="px-3 py-3 text-sm text-muted">No games to choose a folder for yet.</p>
                 )}
 
                 {games.data?.apps.map((game) => {

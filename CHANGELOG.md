@@ -2,6 +2,7 @@ The GameSpice App's releases, newest first. A version here is the one in `packag
 
 ## Unreleased
 
+- Visual review pass: Play, Apps, game pages and the view page share one load-error banner (danger border, detail line, Try again button) instead of bare text; Installs, when signed out, shows a Sign in card; Settings > Games shows a retry row when the game list fails and a message when it is empty.
 - Monitor, Stores, Workshop and RCON polish: the Monitor chart computes its paths once per data change (hover no longer rebuilds them) and draws single samples as a dot; the Stores page has a skeleton, retry, empty-state icon, focus rings and a scrollable modal that closes on backdrop click; Workshop cards clamp long pack names; RCON buttons and server list show focus rings and the footer wraps in narrow windows.
 - Polish: Apps catalogue and Settings pages show skeleton placeholders while loading; content cards lift and show a focus ring on hover/keyboard focus; rail links show a focus ring.
 - Server browser, round 2: the Favourites view sorts locally by the column headers and the sort dropdown; a sort without a direction uses its natural one (names and maps A to Z, numbers most-first); the latency chart has axis labels and a hover read-out; the server page has a Favourite button.

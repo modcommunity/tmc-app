@@ -15,6 +15,7 @@ import { useGameBySlug } from '~/lib/gamespice/use-game'
 import GameServers from '~/components/game-servers'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
 import { BTN_GHOST, BTN_PRIMARY } from '~/components/play-center'
+import { LoadError } from '~/components/states'
 
 /**
  * **Game hub** — one GameSpice game: its art and face, play, solo, its live
@@ -48,9 +49,12 @@ export default function GameHubRoute() {
             </Link>
 
             {game.isError && (
-                <p role="alert" className="text-sm text-danger">
-                    {messageOf(game.error)}
-                </p>
+                <LoadError
+                    title="This game could not be loaded."
+                    detail={messageOf(game.error)}
+                    onRetry={() => void game.refetch()}
+                    retrying={game.isFetching}
+                />
             )}
             {game.isPending && <Skeleton className="h-24 w-full" />}
             {game.isSuccess && !row && (

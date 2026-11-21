@@ -44,6 +44,7 @@ import Gallery from '~/components/gallery'
 import ReportButton from '~/components/report-button'
 import AddFriendButton from '~/components/add-friend-button'
 import Reviews from '~/components/reviews'
+import { LoadError } from '~/components/states'
 
 /**
  * A content item's page — assets, mods, servers, maps, articles, communities,
@@ -190,7 +191,17 @@ export default function ViewRoute() {
             </div>
         )
 
-    if (detail.isError) return <Centered>{detail.error.message}</Centered>
+    if (detail.isError)
+        return (
+            <div className="p-6">
+                <LoadError
+                    title="This page could not be loaded."
+                    detail={detail.error.message}
+                    onRetry={() => void detail.refetch()}
+                    retrying={detail.isFetching}
+                />
+            </div>
+        )
 
     const { summary, content, rules, releases, media, links, dependencies } =
         detail.data
