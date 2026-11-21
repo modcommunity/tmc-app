@@ -1,5 +1,9 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
+## 0.4.1
+
+- **Play buttons**: left-click on Quick play / Play / Play solo now starts the installed native build with no dialog, falling back to the web build with a visible warning if native is unavailable. Right-click opens the advanced options (native, install, web, sandbox, connect).
+
 ## 0.4.0
 
 - **Close to the system tray** (Settings → Advanced, desktop, OFF by default): closing the window keeps GameSpice running in a tray icon (Open / Quit; left-click opens). If the OS has no tray, closing quits as before rather than leaving an unreachable app.
