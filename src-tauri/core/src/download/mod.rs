@@ -74,6 +74,20 @@ const MAX_FILE_BYTES: u64 = 32 * 1024 * 1024 * 1024;
 /// Automatic retries before a download is left failed for the user to decide.
 const MAX_ATTEMPTS: u32 = 3;
 
+/// A connected transfer that delivers no bytes for this long is treated as
+/// dead and retried, rather than hanging the slot forever.
+const STALL_TIMEOUT: Duration = Duration::from_secs(60);
+
+/// How long to wait before attempt number `attempts` (0 = first try, no wait):
+/// 1s, 2s, 4s ... capped at 30s, so a flaky mirror is not hammered.
+fn retry_delay(attempts: u32) -> Duration {
+    if attempts == 0 {
+        return Duration::ZERO;
+    }
+
+    Duration::from_secs((1u64 << (attempts - 1).min(5)).min(30))
+}
+
 /// Speed samples kept per download — two minutes at the half-second tick. A
 /// COUNT, not a window, exactly as the latency graph's history is.
 const MAX_SAMPLES: usize = 240;
@@ -820,6 +834,16 @@ impl DownloadManager {
             (entry.state.clone(), Arc::clone(&entry.control))
         };
 
+        let delay = retry_delay(state.attempts);
+
+        if !delay.is_zero() {
+            tokio::time::sleep(delay).await;
+
+            if control.cancel.load(Ordering::SeqCst) {
+                return Ok(Stop::Cancelled);
+            }
+        }
+
         let dest = PathBuf::from(&state.dest);
         let part = part_path(&dest);
 
@@ -928,7 +952,17 @@ impl DownloadManager {
         let mut tick = Instant::now();
         let mut since_tick: u64 = 0;
 
-        while let Some(chunk) = stream.next().await {
+        loop {
+            let chunk = match tokio::time::timeout(STALL_TIMEOUT, stream.next()).await {
+                Ok(Some(chunk)) => chunk,
+                Ok(None) => break,
+                Err(_) => {
+                    return Err(TransferError::retryable(
+                        "The transfer stalled: no data for a minute.",
+                    ));
+                }
+            };
+
             if control.cancel.load(Ordering::SeqCst) {
                 drop(file);
                 let _ = std::fs::remove_file(&part);
@@ -2252,6 +2286,15 @@ mod tests {
         manager.enqueue(request).await.expect("second");
 
         assert_eq!(manager.list().await.len(), 1);
+    }
+
+    #[test]
+    fn retry_delay_backs_off_and_is_capped() {
+        assert_eq!(retry_delay(0), Duration::ZERO);
+        assert_eq!(retry_delay(1), Duration::from_secs(1));
+        assert_eq!(retry_delay(2), Duration::from_secs(2));
+        assert_eq!(retry_delay(3), Duration::from_secs(4));
+        assert_eq!(retry_delay(40), Duration::from_secs(30));
     }
 
     #[test]

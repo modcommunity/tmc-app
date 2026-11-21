@@ -72,6 +72,109 @@ const MAX_BYTES: u64 = 4 * 1024 * 1024;
 /// Cap on how many entries the panel will ever be handed at once.
 const MAX_READ: usize = 5_000;
 
+/// Mask credentials in free text before it is written or mirrored anywhere.
+///
+/// Handles `Bearer <token>`, `Basic <b64>`, and `key=value` / `key: value` /
+/// `"key":"value"` pairs where the key names a secret (token, password, secret,
+/// authorization, api key, cookie, code). The key stays so the log still says a
+/// value was present.
+pub fn redact(text: &str) -> String {
+    const KEYS: [&str; 10] = [
+        "password",
+        "passwd",
+        "token",
+        "secret",
+        "authorization",
+        "api_key",
+        "apikey",
+        "api-key",
+        "cookie",
+        "rcon",
+    ];
+
+    let mut out = String::with_capacity(text.len());
+    let lower = text.to_ascii_lowercase();
+    let bytes = text.as_bytes();
+    let mut i = 0;
+
+    while i < text.len() {
+        if !text.is_char_boundary(i) {
+            i += 1;
+            continue;
+        }
+
+        let rest = &lower[i..];
+
+        // Scheme-prefixed credentials.
+        let scheme = ["bearer ", "basic "].iter().find(|s| rest.starts_with(**s));
+
+        if let Some(s) = scheme {
+            let start = i + s.len();
+            let end = text[start..]
+                .find(|c: char| c.is_whitespace() || c == '"' || c == '\'' || c == ',')
+                .map_or(text.len(), |n| start + n);
+
+            if end > start {
+                out.push_str(&text[i..start]);
+                out.push_str("[redacted]");
+                i = end;
+                continue;
+            }
+        }
+
+        // A secret-named key followed by a separator.
+        if let Some(key) = KEYS.iter().find(|k| rest.starts_with(**k)) {
+            let mut j = i + key.len();
+
+            // Allow a suffix of key characters (`access_token`, `passwordHash`).
+            while j < text.len() && (bytes[j].is_ascii_alphanumeric() || bytes[j] == b'_') {
+                j += 1;
+            }
+
+            let mut k = j;
+
+            if k < text.len() && (bytes[k] == b'"' || bytes[k] == b'\'') {
+                k += 1;
+            }
+
+            while k < text.len() && bytes[k] == b' ' {
+                k += 1;
+            }
+
+            if k < text.len() && matches!(bytes[k], b'=' | b':') {
+                k += 1;
+
+                while k < text.len() && (bytes[k] == b' ' || bytes[k] == b'"' || bytes[k] == b'\'')
+                {
+                    k += 1;
+                }
+
+                let end = text[k..]
+                    .find(|c: char| {
+                        c.is_whitespace() || c == '"' || c == '\'' || c == '&' || c == ','
+                    })
+                    .map_or(text.len(), |n| k + n);
+
+                let schemed = lower[k..].starts_with("bearer ") || lower[k..].starts_with("basic ");
+
+                if end > k && !schemed {
+                    out.push_str(&text[i..k]);
+                    out.push_str("[redacted]");
+                    i = end;
+                    continue;
+                }
+            }
+        }
+
+        let ch = text[i..].chars().next().unwrap();
+
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+
+    out
+}
+
 pub struct Audit {
     path: PathBuf,
     /// Serialises writers. The lock is held only for the duration of one
@@ -101,7 +204,17 @@ impl Audit {
         self.verbose.lock().map(|v| *v).unwrap_or(true)
     }
 
-    pub fn write(&self, entry: LogEntry) {
+    pub fn write(&self, mut entry: LogEntry) {
+        entry.message = redact(&entry.message);
+
+        for (key, value) in entry.data.iter_mut() {
+            if redact(&format!("{key}=x")) != format!("{key}=x") {
+                *value = serde_json::Value::String("[redacted]".into());
+            } else if let serde_json::Value::String(text) = value {
+                *text = redact(text);
+            }
+        }
+
         if !self.verbose() && entry.level < LogLevel::Security {
             return;
         }
@@ -256,4 +369,67 @@ pub fn now_rfc3339() -> String {
     time::OffsetDateTime::now_utc()
         .format(&time::format_description::well_known::Rfc3339)
         .unwrap_or_else(|_| String::from("1970-01-01T00:00:00Z"))
+}
+
+#[cfg(test)]
+mod redact_tests {
+    use super::redact;
+
+    #[test]
+    fn masks_bearer_and_basic() {
+        assert_eq!(
+            redact("Authorization: Bearer abc.def"),
+            "Authorization: Bearer [redacted]"
+        );
+        assert_eq!(
+            redact("sent Basic dXNlcjpwdw== ok"),
+            "sent Basic [redacted] ok"
+        );
+    }
+
+    #[test]
+    fn masks_key_value_pairs_and_json() {
+        assert_eq!(
+            redact("GET /x?token=abc123&a=1"),
+            "GET /x?token=[redacted]&a=1"
+        );
+        assert_eq!(
+            redact("password: hunter2 done"),
+            "password: [redacted] done"
+        );
+        assert_eq!(
+            redact(r#"{"access_token":"zzz","name":"bob"}"#),
+            r#"{"access_token":"[redacted]","name":"bob"}"#
+        );
+        assert_eq!(redact("rcon_password=pw"), "rcon_password=[redacted]");
+    }
+
+    #[test]
+    fn leaves_ordinary_text_and_unicode_alone() {
+        let s = "Installed mod \u{00e9}t\u{00e9} at /home/a/b; token count 3";
+
+        assert_eq!(redact(s), s);
+        assert_eq!(redact(""), "");
+    }
+
+    #[test]
+    fn audit_write_redacts_message_and_data() {
+        use super::*;
+
+        let dir = std::env::temp_dir().join(format!("gs-log-{}", std::process::id()));
+
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let audit = Audit::new(dir.join("a.jsonl"));
+        let mut data = serde_json::Map::new();
+
+        data.insert("password".into(), "pw".into());
+        audit!(audit, Info, App, "t", "login token=abc", data = data);
+
+        let raw = std::fs::read_to_string(dir.join("a.jsonl")).unwrap();
+
+        assert!(!raw.contains("abc") && !raw.contains("\"pw\""), "{raw}");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

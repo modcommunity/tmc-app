@@ -129,6 +129,57 @@ impl LibraryEntry {
     }
 }
 
+/// How many pre-migration copies are kept.
+const BACKUPS_KEPT: usize = 3;
+
+fn backup_prefix(path: &Path) -> String {
+    format!(
+        "{}.bak-",
+        path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("library.db")
+    )
+}
+
+/// `library.db.bak-v<from>-<unix seconds>`; the seconds are zero-padded so names
+/// sort in time order.
+fn backup_name(path: &Path, from_version: i64, stamp: u64) -> PathBuf {
+    path.with_file_name(format!(
+        "{}v{from_version}-{stamp:012}",
+        backup_prefix(path)
+    ))
+}
+
+/// Delete all but the newest `keep` backups of `path`. Best effort.
+fn prune_backups(path: &Path, keep: usize) {
+    let Some(dir) = path.parent() else { return };
+    let prefix = backup_prefix(path);
+
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+
+    let mut found: Vec<(String, PathBuf)> = entries
+        .flatten()
+        .filter_map(|e| {
+            let name = e.file_name().to_string_lossy().into_owned();
+
+            // Sort by the timestamp after the last '-'.
+            let stamp = name.strip_prefix(&prefix)?.rsplit('-').next()?.to_string();
+
+            Some((stamp, e.path()))
+        })
+        .collect();
+
+    found.sort();
+
+    let excess = found.len().saturating_sub(keep);
+
+    for (_, old) in found.into_iter().take(excess) {
+        let _ = std::fs::remove_file(old);
+    }
+}
+
 pub struct LibraryDb {
     conn: Mutex<Connection>,
     path: PathBuf,
@@ -167,9 +218,41 @@ impl LibraryDb {
             path,
         };
 
+        // A failed backup must not stop the app starting: it is a safety net,
+        // not a gate. It is logged and the migration goes ahead.
+        if let Err(e) = db.backup_before_migrate() {
+            tracing::warn!("library db: pre-migration backup failed: {e}");
+        }
+
         db.migrate()?;
 
         Ok(db)
+    }
+
+    /// Copy the database aside before a migration that will change it, and keep
+    /// only the newest [`BACKUPS_KEPT`] copies. A fresh database (version 0) and
+    /// an up-to-date one are left alone. The WAL is checkpointed first so the
+    /// single file is a complete snapshot.
+    fn backup_before_migrate(&self) -> AppResult<()> {
+        let version: i64 = self.with(|c| c.query_row("PRAGMA user_version", [], |r| r.get(0)))?;
+
+        if version == 0 || version >= SCHEMA_VERSION {
+            return Ok(());
+        }
+
+        let _ = self.with(|c| c.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_| Ok(())));
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let name = backup_name(&self.path, version, stamp);
+
+        std::fs::copy(&self.path, &name)?;
+
+        prune_backups(&self.path, BACKUPS_KEPT);
+
+        Ok(())
     }
 
     /// In-memory, for tests.
@@ -1520,6 +1603,71 @@ const SCHEMA_V10: &str = r#"
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn temp_dir(tag: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("gs-db-{tag}-{}", std::process::id()));
+
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+
+        d
+    }
+
+    #[test]
+    fn prune_keeps_only_the_newest_backups() {
+        let dir = temp_dir("prune");
+        let db = dir.join("library.db");
+
+        for stamp in [10u64, 20, 30, 40, 50] {
+            std::fs::write(backup_name(&db, 3, stamp), b"x").unwrap();
+        }
+
+        std::fs::write(dir.join("unrelated.txt"), b"x").unwrap();
+
+        prune_backups(&db, 3);
+
+        let mut left: Vec<String> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+
+        left.sort();
+
+        assert_eq!(left.len(), 4, "{left:?}");
+        assert!(left.iter().any(|n| n == "unrelated.txt"));
+        assert!(!left.iter().any(|n| n.ends_with("0000000010")));
+        assert!(!left.iter().any(|n| n.ends_with("0000000020")));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_outdated_database_is_backed_up_and_a_current_one_is_not() {
+        let dir = temp_dir("backup");
+        let path = dir.join("library.db");
+
+        let db = LibraryDb::open(path.clone()).unwrap();
+        let count = |dir: &Path| {
+            std::fs::read_dir(dir)
+                .unwrap()
+                .flatten()
+                .filter(|e| e.file_name().to_string_lossy().contains(".bak-"))
+                .count()
+        };
+
+        db.backup_before_migrate().unwrap();
+
+        assert_eq!(count(&dir), 0, "current schema needs no backup");
+
+        db.with(|c| c.pragma_update(None, "user_version", SCHEMA_VERSION - 1))
+            .unwrap();
+        db.backup_before_migrate().unwrap();
+
+        assert_eq!(count(&dir), 1);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     fn entry(id: &str) -> LibraryEntry {
         LibraryEntry {
