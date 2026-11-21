@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
@@ -77,6 +77,12 @@ export type PlayTargetT = {
      */
     app?: AppSummaryT
     fallback?: { name: string; icon: string | null; slug: string | null }
+    /**
+     * Left-click launch: no chooser. Start the installed build, else the web
+     * build with a visible warning; only when neither exists does the normal
+     * dialog appear. Right-click leaves this unset.
+     */
+    quickStart?: boolean
     /** Set when launching into a specific server. */
     server?: ContentSummaryT | null
     /** A game pack named by the launch link; the site's own answer wins. */
@@ -647,6 +653,79 @@ export default function PlayDialog({
             setBusy(false)
         }
     }, [server, onClose])
+
+    const [auto, setAuto] = useState(!!target.quickStart)
+    const [autoNote, setAutoNote] = useState<string | null>(null)
+    const autoStarted = useRef(false)
+
+    useEffect(() => {
+        if (!auto || mode === null || autoStarted.current) return
+
+        autoStarted.current = true
+
+        void (async () => {
+            let why = 'The native build is not installed.'
+
+            if (canNative) {
+                try {
+                    await ipc.gameLaunch({
+                        appId: app.id,
+                        serverId: server ? Number(server.id) : undefined,
+                        options: values,
+                        locale,
+                        solo: server ? undefined : target.solo?.contentId,
+                        soloVersion: server ? undefined : target.solo?.version,
+                    })
+                    onClose()
+
+                    return
+                } catch (err) {
+                    why = `The native build could not start (${messageOf(err)}).`
+                }
+            }
+
+            if (!canWeb) {
+                setError(canNative ? why : null)
+                setAuto(false)
+
+                return
+            }
+
+            setAutoNote(`${why} Opening the web version instead; it may run slower.`)
+
+            try {
+                await ipc.playOpenWeb({
+                    appId: app.id,
+                    serverId: server ? Number(server.id) : undefined,
+                    options: values,
+                    title: app.name,
+                    appSlug: app.slug ?? undefined,
+                    fullscreen,
+                })
+                // Long enough to read the warning.
+                setTimeout(onClose, 3500)
+            } catch (err) {
+                setError(messageOf(err))
+                setAutoNote(null)
+                setAuto(false)
+            }
+        })()
+    }, [auto, mode, canNative, canWeb, app, server, values, locale, fullscreen, target.solo, onClose])
+
+    if (auto)
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-4 text-xs">
+                    <p className="font-semibold">Starting {app.name}…</p>
+                    {autoNote && (
+                        <p className="mt-2 flex items-start gap-2 text-warning">
+                            <FiAlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                            {autoNote}
+                        </p>
+                    )}
+                </div>
+            </div>
+        )
 
     if (confirming)
         return (

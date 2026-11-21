@@ -40,7 +40,13 @@ export type PlayPartyT = z.infer<typeof PlayPartySchema>
 export type PlayQuickT = z.infer<typeof PlayQuickResultSchema>
 
 /** What a row hands the screen when somebody presses Join. */
-export type JoinTarget = { serverId: number; appId: number; appName: string }
+export type JoinTarget = {
+    serverId: number
+    appId: number
+    appName: string
+    /** Left-click quick play: start without the chooser. */
+    quick?: boolean
+}
 
 /* ------------------------------------------------------------------------ */
 /*  Small pieces                                                            */
@@ -136,8 +142,8 @@ export function GameCard({
     app: PlayAppRowT
     /** Whether quick play and Join work for this game. Unknown (null) counts as yes. */
     listed: boolean | null
-    onPlay: (app: PlayAppRowT) => void
-    onQuick: (app: PlayAppRowT) => void
+    onPlay: (app: PlayAppRowT, advanced: boolean) => void
+    onQuick: (app: PlayAppRowT, advanced: boolean) => void
     onServers: (app: PlayAppRowT) => void
 }) {
     const art = app.bannerUrl ?? app.iconUrl
@@ -229,7 +235,16 @@ export function GameCard({
 
                 <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
                     {canQuick && (
-                        <button type="button" onClick={() => onQuick(app)} className={BTN_PRIMARY}>
+                        <button
+                            type="button"
+                            title="Right-click for advanced options"
+                            onClick={() => onQuick(app, false)}
+                            onContextMenu={(e) => {
+                                e.preventDefault()
+                                onQuick(app, true)
+                            }}
+                            className={BTN_PRIMARY}
+                        >
                             <FiZap className="size-3.5" />
                             Quick play
                         </button>
@@ -237,7 +252,12 @@ export function GameCard({
                     {app.directPlay && (
                         <button
                             type="button"
-                            onClick={() => onPlay(app)}
+                            title="Right-click for advanced options"
+                            onClick={() => onPlay(app, false)}
+                            onContextMenu={(e) => {
+                                e.preventDefault()
+                                onPlay(app, true)
+                            }}
                             className={canQuick ? BTN_GHOST : BTN_PRIMARY}
                         >
                             <FiPlay className="size-3.5" />

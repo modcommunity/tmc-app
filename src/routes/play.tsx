@@ -172,6 +172,7 @@ export default function PlayRoute() {
         onSuccess: ({ t, summary }) => {
             setQuick(null)
             setTarget({
+                quickStart: t.quick === true,
                 appId: t.appId,
                 server: summary,
                 fallback: { name: t.appName, icon: iconOf(t.appId), slug: null },
@@ -179,8 +180,38 @@ export default function PlayRoute() {
         },
     })
 
-    const openGame = (app: PlayAppRowT) =>
+    /*
+     * Left click: no dialog. Find the best server and start it natively, with
+     * the web build as the warned fallback (PlayDialog's `quickStart`). Right
+     * click: the old chooser. A search that finds nothing falls back to the
+     * chooser too, since that is where "no open server" is explained.
+     */
+    const [finding, setFinding] = useState(false)
+
+    const quickPlay = (app: PlayAppRowT, advanced: boolean) => {
+        const asDialog = () => setQuick({ id: app.id, name: app.name })
+
+        if (advanced) return asDialog()
+
+        setFinding(true)
+        api.playQuickMatch(app.id, false)
+            .then((res) => {
+                if (res?.best)
+                    join.mutate({
+                        serverId: res.best.id,
+                        appId: app.id,
+                        appName: res.appName ?? app.name,
+                        quick: true,
+                    })
+                else asDialog()
+            })
+            .catch(asDialog)
+            .finally(() => setFinding(false))
+    }
+
+    const openGame = (app: PlayAppRowT, advanced = true) =>
         setTarget({
+            quickStart: !advanced,
             appId: app.id,
             fallback: { name: app.name, icon: app.iconUrl, slug: null },
         })
@@ -441,8 +472,8 @@ export default function PlayRoute() {
                                             key={app.id}
                                             app={app}
                                             listed={listed ? listed.has(app.id) : null}
-                                            onPlay={openGame}
-                                            onQuick={(a) => setQuick({ id: a.id, name: a.name })}
+                                            onPlay={(a, advanced) => openGame(a, advanced)}
+                                            onQuick={quickPlay}
                                             onServers={focusGame}
                                         />
                                     ))}
@@ -502,6 +533,12 @@ export default function PlayRoute() {
                     onJoin={(t) => join.mutate(t)}
                     onClose={() => setQuick(null)}
                 />
+            )}
+
+            {finding && (
+                <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-surface px-3 py-2 text-xs shadow-lg">
+                    Finding the best server…
+                </div>
             )}
 
             {target && <PlayDialog target={target} onClose={() => setTarget(null)} />}
