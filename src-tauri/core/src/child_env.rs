@@ -125,7 +125,10 @@ mod tests {
             ),
         ]));
 
-        assert!(c.contains(&Change::Set("LD_LIBRARY_PATH".into(), "/opt/host/lib".into())));
+        assert!(c.contains(&Change::Set(
+            "LD_LIBRARY_PATH".into(),
+            "/opt/host/lib".into()
+        )));
     }
 
     #[test]
@@ -133,7 +136,10 @@ mod tests {
         let c = sanitize(&env(&[
             ("APPDIR", "/tmp/.mount_abc"),
             ("GTK_PATH", "/tmp/.mount_abc/usr/lib/gtk-3.0"),
-            ("GDK_PIXBUF_MODULE_FILE", "/tmp/.mount_abc/usr/lib/loaders.cache"),
+            (
+                "GDK_PIXBUF_MODULE_FILE",
+                "/tmp/.mount_abc/usr/lib/loaders.cache",
+            ),
         ]));
 
         assert!(c.contains(&Change::Remove("GTK_PATH".into())));

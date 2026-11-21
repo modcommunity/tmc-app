@@ -1,5 +1,9 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
+## 0.5.7
+
+- Fixed: 0.5.6 failed the release build's formatting check; same changes as 0.5.6, formatted.
+
 ## 0.5.6
 
 - Changed: pressing Play on a game you have not installed now opens the chooser with "Install and play" ready (with a progress percentage), instead of silently opening the web build. With native installed, left click still launches native; right click always opens the chooser.
