@@ -1,6 +1,6 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
-## Unreleased
+## 0.4.0
 
 - **Close to the system tray** (Settings → Advanced, desktop, OFF by default): closing the window keeps GameSpice running in a tray icon (Open / Quit; left-click opens). If the OS has no tray, closing quits as before rather than leaving an unreachable app.
 - **Desktop notifications** (Settings → Advanced, OFF by default): while the app is running — in the tray or with the window open — it checks your notifications on an interval you choose (30 s to 15 min) and shows each new one as a styled card in the bottom-right corner, themed per kind (friends, parties, messages, releases, credits…). Needs the site's `GET /api/app/v1/notifications`. The first check only records what already exists, so nothing old is announced; bursts collapse into one card; nothing is shown while the app is in front. Click a card to open its link (site links only); text from the server is only ever shown as text. Needs `libayatana-appindicator3-1` on Linux (added to the deb dependencies).
