@@ -7,6 +7,7 @@ import { GameIcon } from '~/components/game-icon'
 import { requestFor, useLiveServer } from '~/lib/hooks/use-live-query'
 import { opensExternally, openExternally } from '~/lib/external'
 import { useSettings } from '~/lib/settings/provider'
+import FavoriteStar from './favorite-star'
 import { LiveLatency, LiveLatencyStrip, LivePlayers } from './server-live'
 
 /**
@@ -120,7 +121,9 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
                 )}
 
                 {item.isOfficial && (
-                    <span className="absolute right-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-medium text-accent-foreground">
+                    <span className={`absolute top-2 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-medium text-accent-foreground ${
+                            item.server ? 'right-11' : 'right-2'
+                        }`}>
                         Official
                     </span>
                 )}
@@ -232,9 +235,24 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
             </button>
         )
 
-    return (
+    const link = (
         <Link ref={attach} to={`/view/${item.kind}/${item.id}`} className={shell}>
             {body}
         </Link>
     )
+
+    // Servers are favouritable. The star is a SIBLING of the link, not a child:
+    // a button inside an anchor is invalid and swallows keyboard activation.
+    if (item.kind === 'server')
+        return (
+            <div className="relative">
+                {link}
+                <FavoriteStar
+                    item={item}
+                    className="absolute right-2 top-1.5 bg-background/80 backdrop-blur"
+                />
+            </div>
+        )
+
+    return link
 }

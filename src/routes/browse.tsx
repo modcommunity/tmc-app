@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { FiFilter, FiGrid, FiList, FiSearch, FiX } from 'react-icons/fi'
+import { FiFilter, FiGrid, FiList, FiSearch, FiStar, FiX } from 'react-icons/fi'
 
 import { api } from '~/lib/api/client'
 import {
@@ -10,6 +10,7 @@ import {
     type BrowseSortT,
     type ContentKindT,
     type ContentSummaryT,
+    type CommunityAgeT,
 } from '~/lib/api/contract'
 import { useAuth } from '~/lib/auth/provider'
 import { useIsWide } from '~/lib/hooks/use-breakpoint'
@@ -20,6 +21,13 @@ import {
     idList as readIdList,
     num as readNum,
 } from '~/lib/api/query-params'
+import {
+    filterFavorites,
+    refreshStoredFavorites,
+    useFavorites,
+} from '~/lib/favorites'
+import { activeChips, removeChip } from '~/lib/api/browse-chips'
+import { appLabel } from '~/lib/api/labels'
 import BrowseFilters from '~/components/browse-filters'
 import Select from '~/components/select'
 import ContentCard from '~/components/content-card'
@@ -204,6 +212,9 @@ export default function BrowseRoute() {
      * survives a reload and can be shared.
      */
     const canTable = kind === 'server'
+    const favOnly = kind === 'server' && search.get('fav') === '1'
+    const favorites = useFavorites()
+    const favCount = Object.keys(favorites).length
     const view: 'grid' | 'table' =
         canTable && search.get('view') !== 'grid' ? 'table' : 'grid'
 
@@ -276,6 +287,13 @@ export default function BrowseRoute() {
                 : undefined,
             mapName: isServer ? (param('map') ?? undefined) : undefined,
             countries: isServer ? idList('countries') : undefined,
+            adultAges: isServer
+                ? (param('ages')
+                      ?.split(',')
+                      .filter((v): v is CommunityAgeT =>
+                          ['NONE', 'ADULT_18', 'ADULT_21', 'ADULT_25'].includes(v)
+                      ) ?? undefined)
+                : undefined,
             hideEmpty: isServer ? flag('empty') : undefined,
             hideFull: isServer ? flag('full') : undefined,
             minUsers: isServer ? num('minUsers') : undefined,
@@ -315,6 +333,7 @@ export default function BrowseRoute() {
             'password',
             'secure',
             'official',
+            'ages',
             'os',
             'map',
             'countries',
@@ -334,6 +353,7 @@ export default function BrowseRoute() {
     }, [search])
 
     const listing = useInfiniteQuery({
+        enabled: !favOnly,
         queryKey: ['browse', filters],
         initialPageParam: null as string | null,
         queryFn: ({ pageParam }) =>
@@ -342,9 +362,34 @@ export default function BrowseRoute() {
         staleTime: 60 * 1000,
     })
 
+    /*
+     * Favourites are a local snapshot (the app API has no favourites endpoint
+     * and `/browse` cannot filter by id), so opening the view re-reads each
+     * favourite from the item endpoint and writes the fresh row back. A failed
+     * read leaves the old snapshot, which is stale rather than missing.
+     */
+    const favIds = Object.keys(favorites).slice(0, 100).join(',')
+
+    useQuery({
+        enabled: favOnly && favIds !== '',
+        queryKey: ['favorites-refresh', favIds],
+        staleTime: 60 * 1000,
+        queryFn: async () => {
+            const settled = await Promise.allSettled(
+                favIds.split(',').map((id) => api.content('server', id))
+            )
+
+            refreshStoredFavorites(
+                settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value.summary] : []))
+            )
+
+            return true
+        },
+    })
+
     // Counts follow the list's own online switch, so a number never promises
     // rows the list hides.
-    const onlineOnly = search.get('online') !== '0'
+    const onlineOnly = search.get('online') !== '0' && !favOnly
 
     const facets = useQuery({
         queryKey: ['facets', kind, onlineOnly],
@@ -374,7 +419,7 @@ export default function BrowseRoute() {
     const clearFilters = useCallback(() => {
         const next = new URLSearchParams()
 
-        for (const key of ['q', 'sort', 'view', 'ping']) {
+        for (const key of ['q', 'sort', 'view', 'ping', 'fav']) {
             const value = search.get(key)
 
             if (value !== null) next.set(key, value)
@@ -409,8 +454,24 @@ export default function BrowseRoute() {
         return () => observer.disconnect()
     }, [listing])
 
-    const fetched = listing.data?.pages.flatMap((page) => page.items) ?? []
-    const total = listing.data?.pages[0]?.total ?? null
+    const favRows = useMemo(
+        () =>
+            favOnly
+                ? filterFavorites(Object.values(favorites).reverse(), {
+                      search: debounced || undefined,
+                      appId: idList('app')?.[0],
+                      onlineOnly: search.get('online') === '1',
+                      hideEmpty: flag('empty'),
+                      hideFull: flag('full'),
+                      isOfficial: flag('official'),
+                  })
+                : [],
+        [favOnly, favorites, debounced, idList, flag, search]
+    )
+    const fetched = favOnly
+        ? favRows
+        : (listing.data?.pages.flatMap((page) => page.items) ?? [])
+    const total = favOnly ? favRows.length : (listing.data?.pages[0]?.total ?? null)
 
     /*
      * "Sort by ping" is CLIENT-side and only it could be.
@@ -438,6 +499,23 @@ export default function BrowseRoute() {
         // and that changes only when a page loads or a measurement lands.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [byPing, fetched.length, listing.dataUpdatedAt, liveVersion, latencyOf])
+
+    const chips = useMemo(
+        () =>
+            activeChips(
+                search,
+                {
+                    apps: new Map(
+                        (facets.data?.apps ?? []).map((a) => [String(a.id), appLabel(a)])
+                    ),
+                    countries: new Map(
+                        (facets.data?.countries ?? []).map((c) => [String(c.id), c.name])
+                    ),
+                },
+                { favorites: favOnly }
+            ),
+        [search, facets.data, favOnly]
+    )
 
     const filterPanel = (
         <div className="flex flex-col gap-3 text-sm">
@@ -484,6 +562,7 @@ export default function BrowseRoute() {
                 set={setParam}
                 facets={facets.data}
                 signedIn={status === 'signedIn'}
+                favorites={favOnly}
                 activeCount={activeCount}
                 onClear={clearFilters}
             />
@@ -577,6 +656,68 @@ export default function BrowseRoute() {
                     </div>
                 )}
 
+                {isServer && (
+                    <div
+                        role="tablist"
+                        aria-label="Server list"
+                        className="flex w-fit overflow-hidden rounded-lg border border-border text-xs"
+                    >
+                        {(
+                            [
+                                ['all', 'All servers'],
+                                ['fav', 'Favourites'],
+                            ] as const
+                        ).map(([value, label]) => {
+                            const selected = (value === 'fav') === favOnly
+
+                            return (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={selected}
+                                    onClick={() =>
+                                        setParam('fav', value === 'fav' ? '1' : null)
+                                    }
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
+                                        selected
+                                            ? 'bg-accent text-accent-foreground'
+                                            : 'text-muted hover:bg-surface-hover'
+                                    }`}
+                                >
+                                    {value === 'fav' && <FiStar className="size-3" />}
+                                    {label}
+                                    {value === 'fav' && favCount > 0 && (
+                                        <span className="tabular-nums opacity-80">
+                                            {favCount}
+                                        </span>
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </div>
+                )}
+
+                {isServer && chips.length > 0 && (
+                    <ul className="flex flex-wrap items-center gap-1.5" aria-label="Active filters">
+                        {chips.map((chip) => (
+                            <li key={chip.keys.join('|')}>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setSearch(removeChip(search, chip), { replace: true })
+                                    }
+                                    aria-label={`Remove filter ${chip.label}`}
+                                    className="flex items-center gap-1 rounded-full bg-surface-secondary px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                                >
+                                    {chip.label}
+                                    <FiX className="size-3 text-muted" />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
                 {!wide && showFilters && filterPanel}
             </header>
 
@@ -603,12 +744,41 @@ export default function BrowseRoute() {
                         </p>
                     )}
 
-                    {listing.isPending ? (
+                    {!favOnly && listing.isPending ? (
                         <SkeletonGrid />
                     ) : items.length === 0 ? (
-                        <p className="py-12 text-center text-sm text-muted">
-                            Nothing matched.
-                        </p>
+                        <div className="flex flex-col items-center gap-3 py-16 text-center text-sm text-muted">
+                            {favOnly && favCount === 0 ? (
+                                <>
+                                    <FiStar className="size-8" aria-hidden />
+                                    <p>
+                                        No favourites yet. Star a server in the list to keep
+                                        it here.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setParam('fav', null)}
+                                        className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:opacity-90"
+                                    >
+                                        Browse servers
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <FiSearch className="size-8" aria-hidden />
+                                    <p>Nothing matched.</p>
+                                    {(activeCount > 0 || query) && (
+                                        <button
+                                            type="button"
+                                            onClick={clearFilters}
+                                            className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground hover:bg-surface-hover"
+                                        >
+                                            Clear filters
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     ) : view === 'table' ? (
                         <ServerTable
                             items={items}

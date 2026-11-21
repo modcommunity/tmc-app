@@ -3,6 +3,7 @@ import { FiChevronDown, FiChevronRight, FiMap, FiTag } from 'react-icons/fi'
 
 import {
     BrowseEnvironmentVals,
+    CommunityAgeVals,
     ServerOsVals,
     type BrowseQueryT,
     type ContentKindT,
@@ -167,6 +168,13 @@ function Range({
     )
 }
 
+const AGE_LABELS: Record<(typeof CommunityAgeVals)[number], string> = {
+    NONE: 'No age limit',
+    ADULT_18: '18+',
+    ADULT_21: '21+',
+    ADULT_25: '25+',
+}
+
 const OS_LABELS: Record<(typeof ServerOsVals)[number], string> = {
     WINDOWS: 'Windows',
     LINUX: 'Linux',
@@ -185,6 +193,7 @@ export default function BrowseFilters({
     set,
     facets,
     signedIn,
+    favorites = false,
     onClear,
     activeCount,
 }: {
@@ -195,6 +204,8 @@ export default function BrowseFilters({
     set: (key: string, value: string | null) => void
     facets: FacetsResponseT | undefined
     signedIn: boolean
+    /** The Favourites tab: a local list, so only some filters apply. */
+    favorites?: boolean
     onClear: () => void
     activeCount: number
 }) {
@@ -241,7 +252,7 @@ export default function BrowseFilters({
                 'maxSlots'
             ),
             type:
-                n('password', 'secure', 'os', 'map', 'wasOnline') +
+                n('password', 'secure', 'os', 'map', 'wasOnline', 'ages') +
                 // Only counts when turned OFF — being on is the default, and a
                 // badge on every fresh browse would mean nothing.
                 (get('online') === '0' ? 1 : 0),
@@ -351,8 +362,10 @@ export default function BrowseFilters({
                         "deliberately showing offline servers". */}
                     <Check
                         label="Online only"
-                        checked={get('online') !== '0'}
-                        onChange={(v) => set('online', v ? null : '0')}
+                        checked={favorites ? get('online') === '1' : get('online') !== '0'}
+                        onChange={(v) =>
+                            set('online', favorites ? (v ? '1' : null) : v ? null : '0')
+                        }
                     />
                     <Check
                         label="Seen recently"
@@ -370,6 +383,30 @@ export default function BrowseFilters({
                         checked={bool('secure')}
                         onChange={(v) => setBool('secure', v)}
                     />
+
+                    <fieldset className="flex flex-col gap-1">
+                        <legend className="text-xs font-medium text-muted">
+                            Community age
+                        </legend>
+                        {CommunityAgeVals.map((age) => (
+                            <Check
+                                key={age}
+                                label={AGE_LABELS[age]}
+                                checked={(get('ages') ?? '').split(',').includes(age)}
+                                onChange={(v) => {
+                                    const cur = (get('ages') ?? '').split(',').filter(Boolean)
+                                    const next = v
+                                        ? [...cur, age]
+                                        : cur.filter((a) => a !== age)
+
+                                    set('ages', next.length > 0 ? next.join(',') : null)
+                                }}
+                            />
+                        ))}
+                        <span className="text-[0.7rem] text-muted">
+                            What the community says; nothing verifies it.
+                        </span>
+                    </fieldset>
 
                     <Field label="Operating system">
                         <Select

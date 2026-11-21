@@ -14,6 +14,7 @@ import type { BrowseSortT, ContentSummaryT } from '~/lib/api/contract'
 import { appLabel } from '~/lib/api/labels'
 import { GameIcon } from '~/components/game-icon'
 import { requestFor, useLiveQuery, useLiveServer } from '~/lib/hooks/use-live-query'
+import FavoriteStar from './favorite-star'
 import { CountryFlag } from './country-flag'
 import { LatencyChart, LatencyValue } from './latency-graph'
 import { latencyState } from './server-live'
@@ -185,6 +186,9 @@ export default function ServerTable({
                 <thead>
                     <tr className="border-b border-border bg-surface-secondary text-left text-xs uppercase tracking-wide text-muted">
                         <th className="w-6 py-2 pl-2" />
+                        <th className="w-8 px-0 py-2">
+                            <span className="sr-only">Favourite</span>
+                        </th>
 
                         {/*
                             Ping leads, exactly as it does on the website.
@@ -341,6 +345,10 @@ function ServerRow({
                     )}
                 </td>
 
+                <td className="px-0 py-2 align-middle">
+                    <FavoriteStar item={item} />
+                </td>
+
                 <td className="whitespace-nowrap px-2 py-2 pr-5 text-right align-middle">
                     <LatencyValue
                         rttMs={result?.rttMs}
@@ -473,7 +481,7 @@ function ServerRow({
                  * and would drift out of alignment the moment a column is added.
                  */
                 <tr className="border-b border-border bg-surface">
-                    <td colSpan={9} className="p-0">
+                    <td colSpan={10} className="p-0">
                         {/*
                             `sticky left-0` pins the panel to the visible edge
                             of the horizontally-scrolling table. Without it the
