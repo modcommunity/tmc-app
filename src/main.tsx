@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 
 import App from './App'
 import NotificationToast from './components/notification-toast'
+import TrayMenu from './components/tray-menu'
 import './styles/app.css'
 
 /*
@@ -32,9 +33,16 @@ if (!root) throw new Error('#root is missing from index.html')
 // A notification card is this same bundle in a small window of its own; the
 // Rust side marks it with `__GS_TOAST__`. It gets none of the app around it.
 const toast = window.__GS_TOAST__
+const tray = window.__GS_TRAY__
 
 ReactDOM.createRoot(root).render(
     <React.StrictMode>
-        {toast ? <NotificationToast data={toast} /> : <App />}
+        {tray ? (
+            <TrayMenu data={tray} />
+        ) : toast ? (
+            <NotificationToast data={toast} />
+        ) : (
+            <App />
+        )}
     </React.StrictMode>
 )

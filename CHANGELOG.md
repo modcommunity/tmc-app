@@ -1,5 +1,11 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
+## 0.5.4
+
+- New: right-clicking the tray icon opens a small GameSpice-styled menu (Open, Play, Downloads, Settings, Quit) instead of the plain system menu.
+- Fixed: "Show test notification" did nothing on Windows.
+- Fixed: closing the window to the tray left the app unresponsive.
+
 ## 0.5.3
 
 - Fixed the 0.5.2 build, which shipped a malformed `Cargo.lock`. Same fixes as 0.5.2.

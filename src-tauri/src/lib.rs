@@ -364,6 +364,8 @@ pub fn run() {
             notifier::toast_dismiss,
             #[cfg(desktop)]
             notifier::notification_test,
+            #[cfg(desktop)]
+            notifier::tray_action,
             commands::auth::session_state,
             commands::auth::auth_begin,
             commands::auth::auth_poll,

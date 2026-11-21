@@ -22,10 +22,9 @@
 use std::sync::Mutex;
 use std::time::Duration;
 
-use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{
-    AppHandle, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
+    AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
 };
 
 use tmc_core::api::Method;
@@ -36,6 +35,7 @@ use crate::state::AppState;
 
 const TRAY_ID: &str = "gamespice-tray";
 const TOAST_PREFIX: &str = "toast-";
+const MENU_LABEL: &str = "traymenu";
 
 /// Logical size of a card, and the gap to the screen edge and between cards.
 const CARD_W: f64 = 380.0;
@@ -95,27 +95,32 @@ pub fn apply(app: &AppHandle) -> bool {
 }
 
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
-    let open = MenuItemBuilder::with_id("open", "Open GameSpice").build(app)?;
-    let quit = MenuItemBuilder::with_id("quit", "Quit GameSpice").build(app)?;
-    let menu = MenuBuilder::new(app).items(&[&open, &quit]).build()?;
-
+    // No native menu: a right-click opens our own small window instead (see
+    // `open_tray_menu`), which is the only way to get the GameSpice look.
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .tooltip("GameSpice App")
-        .menu(&menu)
         .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| match event.id().as_ref() {
-            "open" => show_main(app),
-            "quit" => app.exit(0),
-            _ => {}
-        })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
-                button: MouseButton::Left,
+                button,
                 button_state: MouseButtonState::Up,
+                position,
                 ..
             } = event
             {
-                show_main(tray.app_handle());
+                let app = tray.app_handle().clone();
+
+                match button {
+                    MouseButton::Left => show_main(&app),
+                    MouseButton::Right => {
+                        // Tray events arrive on the event-loop thread, and
+                        // building a window there deadlocks on Windows.
+                        tauri::async_runtime::spawn(async move {
+                            open_tray_menu(&app, position);
+                        });
+                    }
+                    _ => {}
+                }
             }
         });
 
@@ -126,6 +131,117 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     builder.build(app)?;
 
     Ok(())
+}
+
+/// Logical size of the tray menu window.
+const MENU_W: f64 = 232.0;
+const MENU_H: f64 = 262.0;
+
+/// Open (or toggle off) the tray menu next to the cursor, kept inside the
+/// work area of whichever monitor the click was on.
+fn open_tray_menu(app: &AppHandle, at: tauri::PhysicalPosition<f64>) {
+    if let Some(existing) = app.get_webview_window(MENU_LABEL) {
+        let _ = existing.close();
+
+        return;
+    }
+
+    let script = format!(
+        "window.__GS_TRAY__ = {{ version: {:?} }};",
+        env!("CARGO_PKG_VERSION")
+    );
+
+    let built = WebviewWindowBuilder::new(app, MENU_LABEL, WebviewUrl::App("index.html".into()))
+        .title("GameSpice menu")
+        .inner_size(MENU_W, MENU_H)
+        .decorations(false)
+        .resizable(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .shadow(true)
+        .visible(false)
+        .focused(true)
+        .initialization_script(script.as_str())
+        .build();
+
+    let window = match built {
+        Ok(w) => w,
+        Err(e) => {
+            tracing::warn!("could not open the tray menu: {e}");
+
+            return;
+        }
+    };
+
+    let monitor = app
+        .monitor_from_point(at.x, at.y)
+        .ok()
+        .flatten()
+        .or_else(|| app.primary_monitor().ok().flatten());
+
+    let scale = monitor.as_ref().map_or(1.0, |m| m.scale_factor());
+    let w = MENU_W * scale;
+    let h = MENU_H * scale;
+
+    // The menu grows up and to the left of the click, as the taskbar is
+    // usually at the bottom right.
+    let mut x = at.x - w;
+    let mut y = at.y - h;
+
+    if let Some(m) = &monitor {
+        let area = m.work_area();
+        let left = f64::from(area.position.x);
+        let top = f64::from(area.position.y);
+        let right = left + f64::from(area.size.width);
+        let bottom = top + f64::from(area.size.height);
+
+        x = x.clamp(left, (right - w).max(left));
+        y = y.clamp(top, (bottom - h).max(top));
+    }
+
+    let _ = window.set_position(PhysicalPosition::new(x as i32, y as i32));
+
+    // Like any menu, it goes away when focus leaves it.
+    let closing = window.clone();
+
+    window.on_window_event(move |event| {
+        if matches!(event, WindowEvent::Focused(false)) {
+            let _ = closing.close();
+        }
+    });
+
+    let _ = window.show();
+    let _ = window.set_focus();
+}
+
+/// A row of the tray menu was chosen. Only the menu window may ask, and the
+/// action is a fixed word, never a path the page chose.
+#[tauri::command]
+pub async fn tray_action(app: AppHandle, window: Window, action: String) {
+    if window.label() != MENU_LABEL {
+        return;
+    }
+
+    let _ = window.close();
+
+    let route = match action.as_str() {
+        "open" => None,
+        "play" => Some("/play"),
+        "downloads" => Some("/downloads"),
+        "settings" => Some("/settings"),
+        "quit" => {
+            app.exit(0);
+
+            return;
+        }
+        _ => return,
+    };
+
+    show_main(&app);
+
+    if let Some(route) = route {
+        let _ = app.emit_to("main", "tray://navigate", route);
+    }
 }
 
 /// The window's close button. Returns `true` when the close was turned into a

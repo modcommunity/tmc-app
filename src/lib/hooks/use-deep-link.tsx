@@ -60,8 +60,28 @@ const OpenSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('auth') }),
 ])
 
+const TrayRoute = z.string().regex(/^\/[a-z/]*$/)
+
 export function useDeepLink() {
     const navigate = useNavigate()
+
+    // The tray menu asks for a screen by sending its path.
+    useEffect(() => {
+        let stop: (() => void) | null = null
+        let live = true
+
+        void subscribe('tray://navigate', TrayRoute, (route) => void navigate(route))
+            .then((unlisten) => {
+                if (live) stop = unlisten
+                else unlisten()
+            })
+            .catch((err) => console.error('[tray] could not subscribe', err))
+
+        return () => {
+            live = false
+            stop?.()
+        }
+    }, [navigate])
 
     useEffect(() => {
         let stop: (() => void) | null = null
