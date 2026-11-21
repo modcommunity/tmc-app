@@ -234,6 +234,10 @@ export default function AppsRoute() {
     const [target, setTarget] = useState<PlayTargetT | null>(null)
 
     const search = params.get('q') ?? ''
+    // The box shows what is being typed at once (`typed`, null when idle); the URL
+    // (and so the query) follows 250ms after typing stops.
+    const [typed, setTyped] = useState<string | null>(null)
+    const draft = typed ?? search
     // A hand-edited or stale link can carry a value the API would reject, so
     // anything outside the known sets falls back to the default.
     const typeRaw = params.get('type')
@@ -323,6 +327,23 @@ export default function AppsRoute() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [startLookup.data])
 
+    useEffect(() => {
+        if (typed === null) return
+        const t = setTimeout(() => {
+            setParams(
+                (prev) => {
+                    const next = new URLSearchParams(prev)
+                    if (typed) next.set('q', typed)
+                    else next.delete('q')
+                    return next
+                },
+                { replace: true }
+            )
+            setTyped(null)
+        }, 250)
+        return () => clearTimeout(t)
+    }, [typed, setParams])
+
     const filters = useMemo(
         () => ({
             search: search || undefined,
@@ -368,15 +389,18 @@ export default function AppsRoute() {
                         <input
                             type="search"
                             aria-label="Search games and apps"
-                            value={search}
-                            onChange={(e) => set('q', e.target.value)}
+                            value={draft}
+                            onChange={(e) => setTyped(e.target.value)}
                             placeholder="Search games and apps"
                             className="w-full rounded-lg border border-border bg-surface-2 py-1.5 pl-8 pr-8 text-xs"
                         />
-                        {search && (
+                        {draft && (
                             <button
                                 type="button"
-                                onClick={() => set('q', null)}
+                                onClick={() => {
+                                    setTyped(null)
+                                    set('q', null)
+                                }}
                                 aria-label="Clear the search"
                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted"
                             >

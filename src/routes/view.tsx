@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import {
     FiArrowLeft,
@@ -144,6 +144,7 @@ function ReleaseRow({
 export default function ViewRoute() {
     const params = useParams<{ kind: string; id: string }>()
     const navigate = useNavigate()
+    const location = useLocation()
     const [search] = useSearchParams()
 
     // Above the early returns below, because a hook cannot be conditional.
@@ -208,7 +209,8 @@ export default function ViewRoute() {
 
                 <button
                     type="button"
-                    onClick={() => navigate(-1)}
+                    // 'default' is the key of the first entry: a deep link or fresh open has nothing to go back to.
+                    onClick={() => (location.key === 'default' ? navigate('/play') : navigate(-1))}
                     aria-label="Back"
                     className="absolute left-3 top-3 rounded-full bg-background/80 p-2 backdrop-blur"
                     style={{ top: 'calc(0.75rem + var(--safe-top))' }}

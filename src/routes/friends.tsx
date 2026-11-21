@@ -229,15 +229,16 @@ function useAction<T>(run: () => Promise<T>) {
 }
 
 function Avatar({ name, url }: { name: string; url: string | null }) {
-    const [broken, setBroken] = useState(false)
+    // Keyed by URL, so a new URL gets a fresh try.
+    const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
 
-    if (url && !broken)
+    if (url && brokenUrl !== url)
         return (
             <img
                 src={url}
                 alt=""
                 aria-hidden
-                onError={() => setBroken(true)}
+                onError={() => setBrokenUrl(url)}
                 className="size-8 shrink-0 rounded-full object-cover"
             />
         )
