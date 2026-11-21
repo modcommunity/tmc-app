@@ -1,5 +1,10 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
+## 0.5.6
+
+- Changed: pressing Play on a game you have not installed now opens the chooser with "Install and play" ready (with a progress percentage), instead of silently opening the web build. With native installed, left click still launches native; right click always opens the chooser.
+- Fixed: on Linux AppImage, native games inherited the AppImage's library paths, which could leave the game window gray. Games now start with a clean environment.
+
 ## 0.5.5
 
 - Fixed: the server table cut off its right-hand columns in a narrow window; it now scrolls sideways.
