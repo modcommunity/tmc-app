@@ -52,8 +52,25 @@ function InstallCard({
 }) {
     const [busy, setBusy] = useState(false)
     const [launchable, setLaunchable] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     const { pick, element: picker } = useFolderPicker()
+
+    // Every action runs through here so a failed call shows its reason on the
+    // card instead of vanishing as an unhandled rejection.
+    const attempt = async (work: () => Promise<void>) => {
+        setBusy(true)
+        setError(null)
+
+        try {
+            await work()
+            onChanged()
+        } catch (e) {
+            setError(messageOf(e))
+        } finally {
+            setBusy(false)
+        }
+    }
 
     useEffect(() => {
         let live = true
@@ -83,37 +100,14 @@ function InstallCard({
 
         if (dir === null) return
 
-        setBusy(true)
-
-        try {
-            await ipc.librarySetInstallDir(install.id, dir)
-            onChanged()
-        } finally {
-            setBusy(false)
-        }
+        await attempt(() => ipc.librarySetInstallDir(install.id, dir).then(() => undefined))
     }
 
-    const clearDir = async () => {
-        setBusy(true)
+    const clearDir = () =>
+        attempt(() => ipc.librarySetInstallDir(install.id, null).then(() => undefined))
 
-        try {
-            await ipc.librarySetInstallDir(install.id, null)
-            onChanged()
-        } finally {
-            setBusy(false)
-        }
-    }
-
-    const makeDefault = async () => {
-        setBusy(true)
-
-        try {
-            await api.installUpdate({ id: install.id, isDefault: true })
-            onChanged()
-        } finally {
-            setBusy(false)
-        }
-    }
+    const makeDefault = () =>
+        attempt(() => api.installUpdate({ id: install.id, isDefault: true }).then(() => undefined))
 
     const remove = async () => {
         if (
@@ -123,14 +117,7 @@ function InstallCard({
         )
             return
 
-        setBusy(true)
-
-        try {
-            await api.installDelete(install.id)
-            onChanged()
-        } finally {
-            setBusy(false)
-        }
+        await attempt(() => api.installDelete(install.id).then(() => undefined))
     }
 
     const missing = install.items.filter((i) => !i.subscribed).length
@@ -169,7 +156,7 @@ function InstallCard({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1">
-                    {launchable ? (
+                    {launchable && install.app.slug ? (
                         <button
                             type="button"
                             disabled={busy}
@@ -273,6 +260,12 @@ function InstallCard({
                     subscribed, so nothing will be installed for them.
                 </p>
             ) : null}
+
+            {error && (
+                <p role="alert" className="mt-2 text-[11px] text-danger">
+                    {error}
+                </p>
+            )}
 
             {picker}
         </div>
@@ -531,6 +524,21 @@ export default function InstallsRoute() {
         await load()
     }, [sync, load])
 
+    /*
+     * After a change made on the account (create, delete, make default) the
+     * LOCAL mirror is stale until it is synced, and `load` reads only the
+     * mirror — so without the sync a deleted install stays on screen.
+     */
+    const changed = useCallback(async () => {
+        try {
+            await sync(true)
+        } catch {
+            // Offline: show what the mirror has.
+        }
+
+        await load()
+    }, [sync, load])
+
     const onLaunch = useCallback(async (install: InstallT) => {
         setPreview({ install, plan: null, error: null })
 
@@ -626,7 +634,7 @@ export default function InstallsRoute() {
                     <p className="text-sm">No installs yet.</p>
                     <p className="mx-auto mt-1 max-w-sm text-xs text-muted">
                         An install is a named set of mods for one game, with its own
-                        launch settings. Create one on the website and it will
+                        launch settings. Make one with New install and it will
                         appear here on every device you are signed in on.
                     </p>
                 </div>
@@ -643,7 +651,7 @@ export default function InstallsRoute() {
                             key={install.id}
                             install={install}
                             localDir={dirs[install.id] ?? null}
-                            onChanged={() => void load()}
+                            onChanged={() => void changed()}
                             onLaunch={(i) => void onLaunch(i)}
                         />
                     ))}
@@ -655,7 +663,7 @@ export default function InstallsRoute() {
                     onClose={() => setCreating(false)}
                     onCreated={() => {
                         setCreating(false)
-                        void load()
+                        void changed()
                     }}
                 />
             ) : null}
