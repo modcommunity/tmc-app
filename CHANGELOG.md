@@ -4,6 +4,10 @@ The GameSpice App's releases, newest first. A version here is the one in `packag
 
 - **Workshop browse redesign**: pack cards with banner image (lazy, kind-coloured gradient fallback), kind/game badges, author, subscriber count, version/size/updated chips and a runs-code badge; state-aware Subscribe button with optimistic feedback; debounced search with icon, active-filter chips, skeleton grid, infinite scroll and clear empty/error states. The Subscribed and My packs tabs use the same cards.
 
+## Unreleased
+
+- Library > Stores is now a real page. A store is a named folder for downloads and installs, permanent or temporary. Temporary stores are emptied when the app closes and again at the next launch. Create, rename, set as default and delete stores, with used and free space shown on each card. Deleting a permanent store only forgets it and never touches its files. The default store is the download folder, so existing behaviour is unchanged. Choosing a store per download is not wired yet.
+
 ## 0.4.1
 
 - **Play buttons**: left-click on Quick play / Play / Play solo now starts the installed native build with no dialog, falling back to the web build with a visible warning if native is unavailable. Right-click opens the advanced options (native, install, web, sandbox, connect).

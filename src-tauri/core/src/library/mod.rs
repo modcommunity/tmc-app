@@ -20,6 +20,7 @@ pub mod deploy;
 pub mod install;
 pub mod sandbox;
 pub mod share;
+pub mod stores;
 pub mod sync;
 
 pub use db::{LibraryDb, LibraryEntry, PlayTotals, SessionRow};

@@ -94,6 +94,7 @@ pub fn run() {
                 .map_err(|e| format!("could not start: {}", e.detail()))?;
 
             clear_cache(&state.paths);
+            commands::stores::startup_sync(&state);
 
             audit!(
                 state.audit,
@@ -464,7 +465,21 @@ pub fn run() {
             commands::rcon::rcon_history,
             commands::rcon::rcon_clear_history,
             commands::rcon::rcon_suggest_protocol,
+            commands::stores::storage_list,
+            commands::stores::storage_create,
+            commands::stores::storage_rename,
+            commands::stores::storage_delete,
+            commands::stores::storage_set_default,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|handle, event| {
+            // Temporary stores are emptied on a clean exit; the startup sweep
+            // covers a crash.
+            if let tauri::RunEvent::Exit = event {
+                if let Some(state) = handle.try_state::<AppState>() {
+                    commands::stores::sweep(&state, "exit");
+                }
+            }
+        });
 }

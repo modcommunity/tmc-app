@@ -41,7 +41,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, AppResult};
 
 /// Schema version. Bumped whenever `migrate` gains a step.
-const SCHEMA_VERSION: i64 = 9;
+const SCHEMA_VERSION: i64 = 10;
 
 /// One subscribed item as this device knows it.
 ///
@@ -232,6 +232,7 @@ impl LibraryDb {
                     7 => conn.execute_batch(SCHEMA_V7)?,
                     8 => conn.execute_batch(SCHEMA_V8)?,
                     9 => conn.execute_batch(SCHEMA_V9)?,
+                    10 => conn.execute_batch(SCHEMA_V10)?,
                     _ => break,
                 }
 
@@ -1492,6 +1493,29 @@ impl LibraryDb {
         })
     }
 }
+
+/// Storage locations ("stores") downloads and installs can be placed in.
+///
+/// Device-local, like everything else in this database: a directory on this
+/// machine means nothing on another one. See `crate::library::stores` for the
+/// rules about what a row may point at and what deleting one does.
+const SCHEMA_V10: &str = r#"
+                CREATE TABLE IF NOT EXISTS storage_store (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name       TEXT NOT NULL,
+                    /* Canonical absolute path. */
+                    path       TEXT NOT NULL,
+                    /* permanent | temporary */
+                    kind       TEXT NOT NULL DEFAULT 'permanent',
+                    is_default INTEGER NOT NULL DEFAULT 0,
+                    /* The app's own download cache: not renamable or deletable. */
+                    builtin    INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS storage_store_path_idx
+                    ON storage_store (path);
+"#;
 
 #[cfg(test)]
 mod tests {

@@ -20,7 +20,7 @@ use crate::state::AppState;
 /// directory already sits under it, so the containment rule would refuse home
 /// anyway; naming it means the refusal does not quietly depend on that staying
 /// true if a platform moves its app-data location.
-fn protected_dirs(app: &AppHandle, state: &AppState) -> Vec<PathBuf> {
+pub(crate) fn protected_dirs(app: &AppHandle, state: &AppState) -> Vec<PathBuf> {
     let mut dirs = vec![
         state.paths.data.clone(),
         state.paths.logs.clone(),

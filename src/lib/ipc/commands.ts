@@ -28,6 +28,7 @@ import {
     RconProtocolSchema,
     RconReplySchema,
     RconServerSchema,
+    StoreSchema,
     LocalModSchema,
     DropBatchSchema,
     ImportPreviewSchema,
@@ -865,6 +866,20 @@ export const ipc = {
     // No command here returns a password, and there is no shape one could take
     // that would: a password goes in on create or change, and after that the
     // webview can only name a server id.
+
+    storageList: () => call('storage_list', z.array(StoreSchema)),
+
+    storageCreate: (name: string, path: string, kind: 'permanent' | 'temporary') =>
+        call('storage_create', z.number(), { name, path, kind }),
+
+    storageRename: (id: number, name: string) =>
+        call('storage_rename', z.void(), { id, name }),
+
+    /** `confirmWipe` is required to delete a non-empty temporary store. */
+    storageDelete: (id: number, confirmWipe: boolean) =>
+        call('storage_delete', z.void(), { id, confirmWipe }),
+
+    storageSetDefault: (id: number) => call('storage_set_default', z.void(), { id }),
 
     rconList: () => call('rcon_list', z.array(RconServerSchema)),
 

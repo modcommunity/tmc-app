@@ -1516,3 +1516,27 @@ export const ConsoleEventSchema = z.discriminatedUnion('type', [
 ])
 
 export type ConsoleEventT = z.infer<typeof ConsoleEventSchema>
+
+export const StoreKindSchema = z.enum(['permanent', 'temporary'])
+
+export type StoreKindT = z.infer<typeof StoreKindSchema>
+
+/** A storage location for downloads and installs. See `library::stores`. */
+export const StoreSchema = z.object({
+    id: z.number(),
+    name: z.string(),
+    path: z.string(),
+    kind: StoreKindSchema,
+    isDefault: z.boolean(),
+    /** The app's own download cache: cannot be renamed or deleted. */
+    builtin: z.boolean(),
+    createdAt: z.string(),
+    /** False when the folder is missing (a drive unplugged). */
+    exists: z.boolean(),
+    usedBytes: z.number(),
+    /** The size scan hit its limit, so `usedBytes` is a lower bound. */
+    usedTruncated: z.boolean(),
+    freeBytes: z.number().nullable(),
+})
+
+export type StoreT = z.infer<typeof StoreSchema>
