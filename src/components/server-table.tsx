@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
 import { useNavigate } from 'react-router-dom'
 import {
     FiChevronDown,
     FiChevronRight,
     FiChevronUp,
     FiLock,
+    FiPlay,
     FiShield,
 } from 'react-icons/fi'
 
@@ -160,6 +162,22 @@ export default function ServerTable({
         })
 
     const sortable = { sort, dir: sortDir, onSort }
+    const [playTarget, setPlayTarget] = useState<PlayTargetT | null>(null)
+
+    const join = (item: ContentSummaryT, advanced: boolean) => {
+        if (!item.app) return
+
+        setPlayTarget({
+            appId: item.app.id,
+            fallback: {
+                name: item.app.name,
+                icon: item.app.icon,
+                slug: item.app.url,
+            },
+            server: item,
+            quickStart: !advanced,
+        })
+    }
 
     return (
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -224,6 +242,7 @@ export default function ServerTable({
                         >
                             Host
                         </th>
+                        <th className="w-px px-2 py-2 pr-3" />
                     </tr>
                 </thead>
 
@@ -234,10 +253,17 @@ export default function ServerTable({
                             item={item}
                             expanded={expanded.has(item.id)}
                             onToggle={() => toggle(item.id)}
+                            onJoin={join}
                         />
                     ))}
                 </tbody>
             </table>
+            {playTarget && (
+                <PlayDialog
+                    target={playTarget}
+                    onClose={() => setPlayTarget(null)}
+                />
+            )}
         </div>
     )
 }
@@ -246,10 +272,12 @@ function ServerRow({
     item,
     expanded,
     onToggle,
+    onJoin,
 }: {
     item: ContentSummaryT
     expanded: boolean
     onToggle: () => void
+    onJoin: (item: ContentSummaryT, advanced: boolean) => void
 }) {
     const navigate = useNavigate()
 
@@ -415,6 +443,27 @@ function ServerRow({
                           }`
                         : '—'}
                 </td>
+
+                <td className="whitespace-nowrap px-2 py-2 pr-3 text-right align-middle">
+                    {item.app && (
+                        <button
+                            type="button"
+                            title="Join — right-click for advanced options"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onJoin(item, false)
+                            }}
+                            onContextMenu={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                onJoin(item, true)
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+                        >
+                            <FiPlay className="size-3" /> Join
+                        </button>
+                    )}
+                </td>
             </tr>
 
             {expanded && (
@@ -424,7 +473,7 @@ function ServerRow({
                  * and would drift out of alignment the moment a column is added.
                  */
                 <tr className="border-b border-border bg-surface">
-                    <td colSpan={8} className="p-0">
+                    <td colSpan={9} className="p-0">
                         {/*
                             `sticky left-0` pins the panel to the visible edge
                             of the horizontally-scrolling table. Without it the
