@@ -9,7 +9,8 @@ Shot from the running app in its dark theme, with a demo account on the dev site
 | --- | --- |
 | ![The Play screen with the game cards](docs/screenshots/home.webp)<br>Play: your games, with quick play and solo | ![The avatar editor with a 3D preview](docs/screenshots/avatar-editor.webp)<br>Avatar editor: pick parts, wearables and emotes |
 | ![The Workshop pack browser](docs/screenshots/workshop.webp)<br>Workshop: subscribe to content packs | ![The Store](docs/screenshots/store.webp)<br>Store: outfits and packs for each game |
-| ![The server browser](docs/screenshots/server-browser.webp)<br>Server browser: players and latency from your machine | ![The Stats page](docs/screenshots/stats.webp)<br>Stats: playtime and progress across games |
+| ![The server browser](docs/screenshots/server-browser.webp)<br>Server browser: players and latency from your machine | ![The server monitor window for a Left 4 Dead 2 server](docs/screenshots/server-monitor.webp)<br>Server monitor: live latency, players and RCON in one window |
+| ![The sandboxes screen with mod sets](docs/screenshots/sandboxes.webp)<br>Sandboxes: keep mod sets apart | ![The Stats page](docs/screenshots/stats.webp)<br>Stats: playtime and progress across games |
 
 ## What It Does
 ### Mod Management

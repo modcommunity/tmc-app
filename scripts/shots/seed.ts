@@ -53,7 +53,36 @@ const server = (i: number, host?: string) => {
     return SERVERS[k >= 0 ? k : i % SERVERS.length]
 }
 
+/** The real L4D2 server the monitor shot shows (prod item 1552); everything below is a fixed, plausible snapshot. */
+const MONITOR_HOST = '74.91.124.246'
+const MONITOR_PLAYERS = ['Nick', 'Coach', 'Ellis', 'Rochelle', 'Zoey', 'Francis', 'Louis', 'Bill', 'Sgt_Hale', 'Moth', 'Kestrel', 'Dr. Pepper', 'Tank Bait', 'Rook', 'witchfinder', 'Biscuit', 'Juno', 'Old Zed', 'Marlow', 'Pip']
+const MONITOR_RULES: Record<string, string> = {
+    mp_gamemode: 'coop', sv_maxplayers: '32', sv_tags: 'coop,friendly-fire,alltalk,increased-maxplayers', sv_alltalk: '1',
+    sv_voiceenable: '1', sv_pausable: '0', sv_cheats: '0', sv_region: '0', sv_steamgroup_exclusive: '0', sv_consistency: '0',
+    z_difficulty: 'Normal', mp_friendlyfire: '1', sb_all_bot_game: '0', os: 'Linux', tickrate: '30', coop: '1',
+    metamod_version: '1.11.0', sourcemod_version: '1.12.0.7210',
+}
+/**
+ * Deterministic noisy trace with a few spikes: 6 minutes, a sample every 2 s. It runs past NOW on purpose: the capture
+ * takes ~30 s of the pinned clock to load, and the window drops seeded samples newer than its first live one.
+ */
+function monitorTrace(n = 180) {
+    return Array.from({ length: n }, (_, i) => {
+        const spike = i % 37 === 29 ? 26 : i % 53 === 41 ? 14 : 0
+        const rttMs = Math.round(46 + 5 * Math.sin(i / 9) + 3 * Math.sin(i / 2.3) + ((i * 7919) % 7) / 2 + spike)
+        return { at: NOW + 60_000 - (n - i) * 2_000, rttMs }
+    })
+}
+
 function queryResult(schema: unknown, i: number, host?: string) {
+    if (host === MONITOR_HOST) {
+        return one(schema, {
+            online: true, rttMs: 47, protocol: 'A2S', name: 'CORE-SS :: US Coop', map: 'c8m3_sewers', game: 'left4dead2', version: '2.2.4.3',
+            players: 20, maxPlayers: 32, bots: 0, password: false, secure: true,
+            playerList: MONITOR_PLAYERS.map((name, k) => ({ name, score: 0, duration: 3300 - k * 150, ping: 30 + ((k * 37) % 70) })),
+            rules: MONITOR_RULES,
+        })
+    }
     const s = server(i, host)
     return one(schema, {
         online: true, rttMs: s.ping, name: null, map: s.map,
@@ -81,6 +110,7 @@ const seeds: Record<string, (schema: unknown, a: Record<string, unknown>) => unk
         return { id: r.id ?? '0', key: r.key ?? '0', result: { ...res, queriedPort: r.port ?? 27015 } }
     },
     latency_series: (schema, a) => ((a.keys as string[]) ?? []).map((key, i) => {
+        if (key.includes(MONITOR_HOST)) return { ...(fake(element(schema)) as object), key, samples: monitorTrace(), last: 47, min: 41, max: 78, avg: 49, jitter: 3.4, reliability: 99.3 }
         const p = server(i, SERVERS.map((_, j) => hostOf(j)).find((h) => key.includes(h))).ping
         return { ...(fake(element(schema)) as object), key, samples: trace(p), last: p, min: p - 3, max: p + 6, avg: p + 1, jitter: 2.1, reliability: 100 }
     }),

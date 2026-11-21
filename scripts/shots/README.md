@@ -23,7 +23,7 @@ npm run shots:marketing -- --site ~/wt/website-gs-shots
 - **Seeded where dev is too thin to show the feature:**
   - The mod catalogue: the packs, their names and counts, and the demo owners (NovaRift, KiteRunner and others).
   - The server browse: six invented servers on `*.example.net`.
-  - The latency trace: a deterministic series, not a measured ping.
+  - The latency trace: a deterministic series, not a measured ping. The `monitor` shot shows the real CORE-SS :: US Coop (L4D2, 74.91.124.246:27015, prod item 1552) with a seeded graph, roster and rules; it is shot at 1440x900 (`size` in screens.mjs, keep 16:10).
 - **Avatar model:** the real one, fetched from the host its manifest names (`/__shots-asset` in `vite.config.ts`, dev hosts only). The review harness would send it to the API host, where it is a 404.
 - **Clock:** pinned to 2026-11-20 18:00 UTC.
 - **Hidden:** the title bar's dev-API badge. It exists so that dev screenshots are not mistaken for bug reports about live data, and these shots are product shots.

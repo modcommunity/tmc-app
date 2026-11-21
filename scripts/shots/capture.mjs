@@ -61,6 +61,7 @@ for (const theme of wantThemes) {
                 static now() { return RealDate.now() + offset }
             }
         }, theme)
+        await page.setViewportSize(s.size ?? SIZE)
         const route = s.route.replace(/\{(\w+)\}/g, (_, k) => vars[k])
         await page.goto(base + route)
         await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {})

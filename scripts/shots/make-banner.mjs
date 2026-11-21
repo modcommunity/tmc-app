@@ -44,6 +44,8 @@ export const SHOTS = [
     ['workshop', 'workshop', 'The Workshop pack browser', 'Workshop'],
     ['store', 'store', 'The Store', 'Store'],
     ['servers', 'server-browser', 'The server browser', 'Server browser'],
+    ['monitor', 'server-monitor', 'The server monitor window for a Left 4 Dead 2 server', 'Server monitor: live latency, players and RCON'],
+    ['sandboxes', 'sandboxes', 'The sandboxes screen with mod sets', 'Sandboxes: keep mod sets apart'],
     ['stats', 'stats', 'The Stats page', 'Stats'],
 ]
 

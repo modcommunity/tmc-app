@@ -8,6 +8,7 @@
  *          public/app/shots/<slot>-<scheme>-<800|1600>.webp
  * route    hash route in the app
  * wait     a selector that is visible once the screen has its data
+ * size     optional { width, height } viewport instead of SIZE (keep 16:10)
  * gpu      needs real WebGL (the 3D avatar): capture on a GPU box
  * act      optional: async (page) => {} run after load, before the shot
  * callouts optional: [{ at: locator, label }]; capture records where `at` is, compose draws the label there
@@ -48,6 +49,13 @@ export const screens = [
         callouts: [{ at: '[role="img"][aria-label^="Latency over"]', label: 'Ping measured from your machine' }],
     },
     {
+        // The real CORE-SS :: US Coop (Left 4 Dead 2, prod item 1552); the graph and roster are seeded (seed.ts).
+        // 1440x900 keeps the 16:10 shape compose.mjs assumes.
+        slot: 'monitor', route: '/monitor/addr?host=74.91.124.246&port=27015&app=1&name=CORE-SS%20%3A%3A%20US%20Coop',
+        wait: 'text=Players (20)', size: { width: 1440, height: 900 },
+        title: 'Server monitor', caption: 'A live latency graph, the player list and RCON in one window.',
+    },
+    {
         slot: 'downloads', route: '/downloads', wait: 'main',
         title: 'Downloads', caption: 'A queue you control: priorities, pauses and speed limits.',
     },
@@ -72,7 +80,7 @@ export const screens = [
 ]
 
 /** The narrative order of the presentation (slots; missing or disabled are skipped). */
-export const tour = ['play', 'mods', 'modpage', 'workshop', 'sandboxes', 'servers', 'downloads', 'library', 'avatar', 'friends', 'store', 'stats', 'settings']
+export const tour = ['play', 'mods', 'modpage', 'workshop', 'sandboxes', 'servers', 'monitor', 'downloads', 'library', 'avatar', 'friends', 'store', 'stats', 'settings']
 
 export const themes = ['light', 'dark']
 export const SIZE = { width: 1600, height: 1000 }
