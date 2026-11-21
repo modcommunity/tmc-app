@@ -230,13 +230,16 @@ export default function ServerTable({
 
     return (
         /*
-         * `overflow-clip`, not `overflow-x-auto`: clip rounds the corners
-         * without becoming a scroll container, so the sticky header below pins
-         * to the page's own scroller. Narrow windows are handled by dropping
-         * columns (see MEDIUM_ONLY / WIDE_ONLY), never by scrolling sideways.
+         * `overflow-x-auto` so a window too narrow for every column scrolls the
+         * table sideways instead of cutting the right-hand columns off. The
+         * table keeps a minimum width for that to kick in; the viewport
+         * breakpoints (MEDIUM_ONLY / WIDE_ONLY) can't see how much room the
+         * sidebar and filter panel have already taken. The header is no longer
+         * pinned to the page scroller, because a horizontal scroll container
+         * is also a vertical one.
          */
-        <div className="overflow-clip rounded-xl border border-border">
-            <table className="w-full border-collapse text-sm">
+        <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full min-w-[56rem] border-collapse text-sm">
                 <thead className="sticky top-0 z-10">
                     <tr className="border-b border-border bg-surface-secondary text-left text-xs uppercase tracking-wide text-muted">
                         <th className="w-6 py-2 pl-2" />

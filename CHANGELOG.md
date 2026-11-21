@@ -1,5 +1,9 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
+## 0.5.5
+
+- Fixed: the server table cut off its right-hand columns in a narrow window; it now scrolls sideways.
+
 ## 0.5.4
 
 - New: right-clicking the tray icon opens a small GameSpice-styled menu (Open, Play, Downloads, Settings, Quit) instead of the plain system menu.
