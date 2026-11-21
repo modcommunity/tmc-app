@@ -525,7 +525,7 @@ function ServerRow({
                             visible only by scrolling away from the row that
                             opened it.
                         */}
-                        <div className="sticky left-0 max-w-3xl px-3 pb-3 pt-1">
+                        <div className="sticky left-0 w-full px-3 pb-3 pt-1">
                             <ExpandedServer
                                 item={item}
                                 live={live}
@@ -558,47 +558,57 @@ function ExpandedServer({
      */
     useProbeOnOpen(item)
 
+    const players = result?.playerList ?? []
+
     return (
-        <div className="flex flex-col gap-2">
-            {/*
-                Deliberately short. This chart sits INSIDE a table, where its
+        <div
+            className={`grid gap-4 ${
+                players.length > 0
+                    ? 'lg:grid-cols-[minmax(0,3fr)_minmax(14rem,2fr)]'
+                    : ''
+            }`}
+        >
+            <div className="flex min-w-0 flex-col gap-2">
+                {/*
+                Short but fluid: the chart fills whatever width the panel has. This chart sits INSIDE a table, where its
                 job is the shape of the line — steady, spiky, dropping — not the
                 exact millisecond, which the Ping column already gives. At the
                 server page's height it dwarfed the rows around it and made two
                 open rows more scrolling than the table saved.
             */}
-            <LatencyChart series={live.series} height={56} />
+                <LatencyChart series={live.series} height={96} />
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-                {result?.game && <span>Mode: {result.game}</span>}
-                {result?.queriedPort != null && (
-                    <span>Query port: {result.queriedPort}</span>
-                )}
-                {result?.protocol && <span>Protocol: {result.protocol}</span>}
-                {item.server?.country && (
-                    <span className="flex items-center gap-1.5">
-                        <CountryFlag code={item.server.countryCode} />
-                        {item.server.country}
-                    </span>
-                )}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+                    {result?.game && <span>Mode: {result.game}</span>}
+                    {result?.queriedPort != null && (
+                        <span>Query port: {result.queriedPort}</span>
+                    )}
+                    {result?.protocol && <span>Protocol: {result.protocol}</span>}
+                    {item.server?.country && (
+                        <span className="flex items-center gap-1.5">
+                            <CountryFlag code={item.server.countryCode} />
+                            {item.server.country}
+                        </span>
+                    )}
 
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        onOpen()
-                    }}
-                    className="ml-auto text-accent hover:underline"
-                >
-                    Open server page
-                </button>
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onOpen()
+                        }}
+                        className="ml-auto text-accent hover:underline"
+                    >
+                        Open server page
+                    </button>
+                </div>
             </div>
 
-            {result && result.playerList.length > 0 && (
-                <div className="max-h-40 overflow-y-auto rounded-lg border border-border">
+            {players.length > 0 && (
+                <div className="max-h-52 min-w-0 self-start overflow-y-auto rounded-lg border border-border lg:max-h-60 lg:w-full">
                     <table className="w-full text-xs">
                         <tbody>
-                            {result.playerList.map((player, i) => (
+                            {players.map((player, i) => (
                                 <tr
                                     key={`${player.name}-${i}`}
                                     className="border-b border-border/60 last:border-0"
