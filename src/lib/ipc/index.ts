@@ -69,7 +69,18 @@ export async function call<S extends z.ZodType>(
         throw toIpcError(err)
     }
 
-    const parsed = schema.safeParse(raw)
+    let parsed = schema.safeParse(raw)
+
+    // Rust's `()` crosses the bridge as `null`, and zod 4's `z.void()` accepts
+    // only `undefined`, so every command that returns nothing would otherwise
+    // be reported as a backend mismatch after succeeding.
+    if (!parsed.success && raw === null) {
+        const retry = schema.safeParse(undefined)
+
+        if (retry.success) {
+            parsed = retry
+        }
+    }
 
     if (!parsed.success) {
         console.error(
