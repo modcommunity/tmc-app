@@ -1,5 +1,9 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
+## 0.5.3
+
+- Fixed the 0.5.2 build, which shipped a malformed `Cargo.lock`. Same fixes as 0.5.2.
+
 ## 0.5.2
 
 - Fixed: saving an edited RCON server (and every other command that returns nothing) wrongly reported "the app and its backend disagree" even though it succeeded.
