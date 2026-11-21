@@ -23,6 +23,8 @@ import { LaunchDialog } from '~/components/launch-dialog'
 import { LiveLatency } from '~/components/server-live'
 import { requestFor, useLiveServer } from '~/lib/hooks/use-live-query'
 import { useDialog } from '~/components/use-dialog'
+import { quickAction } from '~/lib/quick-start'
+import { installPercent } from '~/lib/install-progress'
 import type {
     AppSummaryT,
     ContentSummaryT,
@@ -79,9 +81,10 @@ export type PlayTargetT = {
     app?: AppSummaryT
     fallback?: { name: string; icon: string | null; slug: string | null }
     /**
-     * Left-click launch: no chooser. Start the installed build, else the web
-     * build with a visible warning; only when neither exists does the normal
-     * dialog appear. Right-click leaves this unset.
+     * Left-click launch: no chooser. Start the installed build; with none, the
+     * chooser offers install-then-run, and only where native cannot exist the web
+     * build with a visible warning. Right-click leaves this unset (always the
+     * chooser).
      */
     quickStart?: boolean
     /** Set when launching into a specific server. */
@@ -300,6 +303,23 @@ export default function PlayDialog({
     // before "Install" has had the chance to exist.
     const [platformKnown, setPlatformKnown] = useState(false)
     const [installing, setInstalling] = useState(false)
+    const [percent, setPercent] = useState<number | null>(null)
+
+    // The build goes through the download queue; mirror its progress here.
+    useEffect(() => {
+        if (!installing) return
+
+        const tick = () =>
+            void ipc
+                .downloadList()
+                .then((q) => setPercent(installPercent(q.downloads)))
+                .catch(() => undefined)
+        const id = setInterval(tick, 1000)
+
+        tick()
+
+        return () => clearInterval(id)
+    }, [installing])
     const [fullscreen, setFullscreen] = useState(false)
     /*
      * The ACCOUNT's language, for a build whose launch arguments name
@@ -670,6 +690,19 @@ export default function PlayDialog({
     const [autoNote, setAutoNote] = useState<string | null>(null)
     const autoStarted = useRef(false)
 
+    /*
+     * Nothing installed but this machine can install the native build:
+     * that is the best result, so show the chooser (Install preselected,
+     * progress in the dialog, launch on completion) instead of silently
+     * opening the web build. The web build stays one click away there.
+     */
+    if (
+        auto &&
+        factsIn &&
+        quickAction({ canNative, canInstall, canWeb }) === 'chooser'
+    )
+        setAuto(false)
+
     useEffect(() => {
         if (!auto || !factsIn || autoStarted.current) return
 
@@ -885,9 +918,13 @@ export default function PlayDialog({
                                 >
                                     {installing && (
                                         <p className="mb-3 text-[11px] text-muted">
-                                            Downloading and installing. The game
-                                            starts when this finishes; progress is
-                                            also on the Downloads screen.
+                                            Downloading and installing
+                                            {percent !== null
+                                                ? ` (${percent}%)`
+                                                : ''}
+                                            . The game starts when this finishes;
+                                            progress is also on the Downloads
+                                            screen.
                                         </p>
                                     )}
 

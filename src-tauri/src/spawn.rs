@@ -98,6 +98,10 @@ pub fn run(
     // backticks and `$( )` are inert bytes to the child.
     command.args(&plan.args);
 
+    // Not the AppImage's library paths: they make a game's GL/Vulkan load the
+    // bundle's drivers and open a gray window. The plan's own env goes on top.
+    tmc_core::child_env::apply(&mut command);
+
     if let Some(cwd) = &plan.cwd {
         command.current_dir(cwd);
     }

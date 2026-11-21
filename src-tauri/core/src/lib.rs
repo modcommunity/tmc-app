@@ -20,6 +20,7 @@ pub mod avatar;
 pub mod canon;
 pub mod console;
 pub mod crash;
+pub mod child_env;
 pub mod crypto;
 pub mod deeplink;
 pub mod deploy;

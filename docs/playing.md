@@ -146,3 +146,9 @@ A `steam://` launch is a `Handoff`: the OS opener started a launcher which start
 **A finished session is WRITTEN, not reported.** It lands in `game_session` marked unreported, and `sessions_flush` sends it when the device next has an API to talk to. A game is very often played offline — a laptop on a train is the case the feature is for — and play time that only counts when the network happened to be up is play time that silently goes missing. The flush runs on the library's sync pass, which is the device's own "am I online now?" heartbeat.
 
 **A sandbox that is already running cannot be started twice.** The second copy opens files the first has mapped, and the play clock for that sandbox would otherwise be able to exceed wall-clock time.
+
+## Left click, right click, and the child's environment
+
+Left click on Play starts the installed native build. With none installed but installable on this platform, it opens the chooser with "Install and play" preselected (progress in the dialog, launch on completion) and the web build one click away; the web build opens straight away, with a warning, only where native cannot exist (`src/lib/quick-start.ts`). Right click always opens the chooser.
+
+A game started from an AppImage must not inherit the bundle's loader paths, or its GL/Vulkan loads the bundle's drivers and the window stays gray. `tmc_core::child_env::sanitize` strips `APPDIR`-rooted entries (restoring `*_ORIG` values) and the `APPDIR`/`APPIMAGE` markers; `spawn.rs` applies it to every ordinary spawn. Unverified on hardware: see the nightly item for the CachyOS check.
