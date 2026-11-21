@@ -133,21 +133,30 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 pub fn close_to_tray(app: &AppHandle) -> bool {
     let state = app.state::<AppState>();
 
-    if !state.settings.get().minimise_to_tray || !apply(app) {
+    // Only a cheap, non-blocking check here: this runs on the event-loop thread
+    // inside the close request, so anything slow or that waits on that same
+    // thread (building a tray icon, hiding the window, a database write for the
+    // audit line) freezes the whole window. The tray is built at start-up and
+    // whenever the setting changes, so "no tray yet" means close normally.
+    if !state.settings.get().minimise_to_tray || app.tray_by_id(TRAY_ID).is_none() {
         return false;
     }
 
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.hide();
-    }
+    let handle = app.clone();
 
-    audit!(
-        state.audit,
-        Info,
-        App,
-        "app.tray",
-        "Window closed to the system tray"
-    );
+    tauri::async_runtime::spawn(async move {
+        if let Some(w) = handle.get_webview_window("main") {
+            let _ = w.hide();
+        }
+
+        audit!(
+            handle.state::<AppState>().audit,
+            Info,
+            App,
+            "app.tray",
+            "Window closed to the system tray"
+        );
+    });
 
     true
 }
