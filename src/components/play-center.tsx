@@ -30,6 +30,7 @@ import type {
     PlayServerRowSchema,
 } from '~/lib/api/contract'
 import { MODE_LABELS, compact, fill, players } from '~/lib/api/play'
+import { canonicalSlug, gameHeadingStyle, gameLook } from '~/lib/gamespice/games'
 import { GameIcon } from '~/components/game-icon'
 import type { z } from 'zod'
 
@@ -148,8 +149,6 @@ export function GameCard({
 }) {
     const art = app.bannerUrl ?? app.iconUrl
     const canQuick = listed !== false && app.serverCnt > 0
-    const nothingToDo = !canQuick && !app.directPlay
-
     return (
         <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition duration-200 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg hover:shadow-black/20">
             <div className="relative aspect-[16/8] w-full overflow-hidden bg-surface-2">
@@ -233,7 +232,28 @@ export function GameCard({
                     <ModePills modes={app.modes} />
                 </div>
 
-                <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+                <GameActions app={app} canQuick={canQuick} onPlay={onPlay} onQuick={onQuick} />
+            </div>
+        </article>
+    )
+}
+
+/** Quick play (left click: best server, right click: chooser) and Play / Play solo. */
+function GameActions({
+    app,
+    canQuick,
+    onPlay,
+    onQuick,
+}: {
+    app: PlayAppRowT
+    canQuick: boolean
+    onPlay: (app: PlayAppRowT, advanced: boolean) => void
+    onQuick: (app: PlayAppRowT, advanced: boolean) => void
+}) {
+    const nothingToDo = !canQuick && !app.directPlay
+
+    return (
+        <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
                     {canQuick && (
                         <button
                             type="button"
@@ -270,6 +290,115 @@ export function GameCard({
                         </span>
                     )}
                 </div>
+    )
+}
+
+/**
+ * A GameSpice platform game: the game's own accent, display face and badge,
+ * with the same Quick play and Play / Solo buttons as every other card.
+ */
+export function PlatformGameCard({
+    app,
+    listed,
+    onPlay,
+    onQuick,
+    onServers,
+}: {
+    app: PlayAppRowT
+    listed: boolean | null
+    onPlay: (app: PlayAppRowT, advanced: boolean) => void
+    onQuick: (app: PlayAppRowT, advanced: boolean) => void
+    onServers: (app: PlayAppRowT) => void
+}) {
+    const look = gameLook(app.url ?? app.name)
+    const art = app.bannerUrl ?? app.iconUrl
+    const slug = app.url ? canonicalSlug(app.url) : null
+    const canQuick = listed !== false && app.serverCnt > 0
+
+    return (
+        <article
+            className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-md transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30"
+            style={{ borderTopColor: look.accent, borderTopWidth: 3 }}
+        >
+            <div className="relative aspect-[16/9] w-full overflow-hidden bg-surface-2">
+                {art ? (
+                    <img
+                        src={art}
+                        alt=""
+                        aria-hidden
+                        loading="lazy"
+                        className="size-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+                ) : (
+                    <div
+                        className="size-full"
+                        style={{
+                            background: `linear-gradient(135deg, hsl(${look.hue} 60% 35%), hsl(${(look.hue + 40) % 360} 50% 18%))`,
+                        }}
+                    />
+                )}
+                <div
+                    className="absolute inset-0"
+                    style={{
+                        background: `linear-gradient(to top, var(--color-surface, #111), transparent 70%), linear-gradient(135deg, hsl(${look.hue} 70% 50% / 0.18), transparent 60%)`,
+                    }}
+                />
+                <span
+                    className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-black"
+                    style={{ background: look.accent }}
+                >
+                    <FiStar className="size-2.5" />
+                    GameSpice
+                </span>
+                {app.playerCnt > 0 && (
+                    <span className="absolute right-2.5 top-2.5 flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">
+                        <span className="size-1.5 rounded-full bg-success" />
+                        {compact(app.playerCnt)} playing
+                    </span>
+                )}
+            </div>
+
+            <div className="flex flex-1 flex-col gap-3 p-4">
+                <div>
+                    <h3 className="text-xl font-extrabold leading-tight" style={gameHeadingStyle(look)}>
+                        {app.name}
+                    </h3>
+                    <p className="mt-1 line-clamp-2 min-h-[2rem] text-xs text-muted">
+                        {app.description ?? 'A GameSpice game.'}
+                    </p>
+                </div>
+
+                <p className="flex flex-wrap items-center gap-3 text-[11px] text-muted">
+                    <button
+                        type="button"
+                        disabled={app.serverCnt === 0}
+                        onClick={() => onServers(app)}
+                        className="flex items-center gap-1 transition hover:text-accent disabled:hover:text-muted"
+                    >
+                        <FiServer className="size-3" />
+                        {app.serverCnt} {app.serverCnt === 1 ? 'server' : 'servers'}
+                    </button>
+                    {app.lobbyCnt > 0 && (
+                        <span className="flex items-center gap-1">
+                            <FiUsers className="size-3" />
+                            {app.lobbyCnt} {app.lobbyCnt === 1 ? 'lobby' : 'lobbies'}
+                        </span>
+                    )}
+                    {app.solo && (
+                        <span className="flex items-center gap-1">
+                            <FiUser className="size-3" />
+                            Solo
+                        </span>
+                    )}
+                </p>
+
+                <GameActions app={app} canQuick={canQuick} onPlay={onPlay} onQuick={onQuick} />
+
+                {slug && (
+                    <Link to={`/games/${slug}`} className="text-[11px] text-muted transition hover:text-accent">
+                        Game page
+                    </Link>
+                )}
             </div>
         </article>
     )

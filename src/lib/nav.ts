@@ -73,15 +73,8 @@ export const PLAY: NavNode = {
     to: '/play',
     label: 'Play',
     icon: FiPlay,
-    description: 'Jump into a game.',
-}
-
-export const GAMES: NavNode = {
-    id: 'games',
-    to: '/games',
-    label: 'Games',
-    icon: FiGrid,
-    description: 'GameSpice games: play, join servers, set up your avatar.',
+    description: 'GameSpice games, every game you can play, servers and lobbies.',
+    match: ['/games'],
 }
 
 /** Slot for the avatar studio (gs-app-avatar-1 replaces the route's element). */
@@ -288,7 +281,6 @@ export const SETTINGS: NavNode = {
 /** Top to bottom, as the rail draws them. */
 export const RAIL: NavNode[] = [
     PLAY,
-    GAMES,
     DISCOVER,
     LIBRARY,
     AVATAR,

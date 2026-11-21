@@ -26,7 +26,6 @@ import SandboxesRoute from '~/routes/sandboxes'
 import DownloadsRoute from '~/routes/downloads'
 import RconRoute from '~/routes/rcon'
 import ViewRoute from '~/routes/view'
-import GameCatalogueRoute from '~/routes/games'
 import GameHubRoute from '~/routes/game-hub'
 import WorkshopRoute from '~/routes/workshop'
 import GameSpiceAccountRoute from '~/routes/gamespice-account'
@@ -53,7 +52,7 @@ const router = createHashRouter([
         children: [
             { index: true, element: <Navigate to="/play" replace /> },
             { path: 'play', element: <PlayRoute /> },
-            { path: 'games', element: <GameCatalogueRoute /> },
+            { path: 'games', element: <Navigate to="/play" replace /> },
             { path: 'games/:slug', element: <GameHubRoute /> },
             { path: 'games/:slug/avatar', lazy: () => import('~/routes/avatar-games').then((m) => ({ Component: m.default })) },
             { path: 'avatar', lazy: () => import('~/routes/avatar-member').then((m) => ({ Component: m.default })) },

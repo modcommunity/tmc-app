@@ -25,7 +25,7 @@ export default function GameHubRoute() {
         return (
             <div className="flex flex-col gap-3 p-4">
                 <p className="text-sm text-muted">That is not a GameSpice game.</p>
-                <Link to="/games" className={BTN_GHOST}>
+                <Link to="/play" className={BTN_GHOST}>
                     All games
                 </Link>
             </div>
@@ -37,7 +37,7 @@ export default function GameHubRoute() {
 
     return (
         <div className="flex flex-col gap-4 p-4">
-            <Link to="/games" className="flex items-center gap-1 text-xs text-muted">
+            <Link to="/play" className="flex items-center gap-1 text-xs text-muted">
                 <FiArrowLeft className="size-3" /> GameSpice games
             </Link>
 

@@ -75,6 +75,6 @@ describe('nav', () => {
     it('has the GameSpice routes and the avatar slot in the rail', () => {
         const to = RAIL.map((n) => n.to)
 
-        expect(to).toEqual(expect.arrayContaining(['/games', '/avatar', '/me']))
+        expect(to).toEqual(expect.arrayContaining(['/play', '/avatar', '/me']))
     })
 })

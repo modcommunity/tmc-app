@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
@@ -31,6 +31,14 @@ import {
     type PlayFilters,
     type PlayTab,
 } from '~/lib/api/play'
+import {
+    CHIPS,
+    CHIP_LABELS,
+    filterGames,
+    mergeGames,
+    splitSections,
+    type CatalogueChip,
+} from '~/lib/gamespice/catalogue'
 import Select from '~/components/select'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
 import { InviteRow } from '~/routes/friends'
@@ -38,6 +46,7 @@ import {
     BTN_GHOST,
     BTN_PRIMARY,
     GameCard,
+    PlatformGameCard,
     LobbyRow,
     PartyBar,
     QuickMatchDialog,
@@ -131,13 +140,34 @@ export default function PlayRoute() {
     const off = pages !== undefined && first === null
     // GameSpice's own games lead; the sort is stable, so the server's order
     // (and the user's chosen sort) still decides within each half.
-    const apps = useMemo(() => {
-        const all = pages?.flatMap((p) => p?.apps ?? []) ?? []
+    // One row per game, engines (Godot) left out; GameSpice's own are split
+    // into their own section below.
+    const [chip, setChip] = useState<CatalogueChip>('all')
+    const apps = useMemo(() => mergeGames(pages?.flatMap((p) => p?.apps ?? []) ?? []), [pages])
+    const sections = useMemo(
+        () => splitSections(filterGames(apps, chip, '')),
+        [apps, chip]
+    )
+    const shownGames = sections.platform.length + sections.others.length
+    const servers = useMemo(
+        () =>
+            (pages?.flatMap((p) => p?.servers ?? []) ?? []).filter(
+                (s) => !/godot/i.test(s.appName)
+            ),
+        [pages]
+    )
+    const lobbies = useMemo(
+        () => (pages?.flatMap((p) => p?.lobbies ?? []) ?? []).filter((l) => !/godot/i.test(l.appName)),
+        [pages]
+    )
 
-        return [...all].sort((a, b) => Number(b.isOfficial) - Number(a.isOfficial))
-    }, [pages])
-    const servers = useMemo(() => pages?.flatMap((p) => p?.servers ?? []) ?? [], [pages])
-    const lobbies = useMemo(() => pages?.flatMap((p) => p?.lobbies ?? []) ?? [], [pages])
+    // The games tab is a catalogue: read every page so the GameSpice section
+    // and the chips see the whole list, not the first 24.
+    const { hasNextPage, isFetchingNextPage, fetchNextPage } = listing
+
+    useEffect(() => {
+        if (tab === 'games' && hasNextPage && !isFetchingNextPage) void fetchNextPage()
+    }, [tab, hasNextPage, isFetchingNextPage, fetchNextPage])
 
     const listed = useMemo(
         () => (playable.data?.enabled ? new Set(playable.data.appIds) : null),
@@ -233,7 +263,8 @@ export default function PlayRoute() {
             ? (servers[0]?.appName ?? lobbies[0]?.appName ?? `Game ${filters.appId}`)
             : null
 
-    const rows = tab === 'games' ? apps.length : tab === 'servers' ? servers.length : lobbies.length
+    const chipEmpty = tab === 'games' && chip !== 'all' && shownGames === 0
+    const rows = tab === 'games' ? (chipEmpty ? 1 : shownGames) : tab === 'servers' ? servers.length : lobbies.length
 
     return (
         <div className="flex h-full flex-col">
@@ -466,17 +497,73 @@ export default function PlayRoute() {
                     ) : (
                         <>
                             {tab === 'games' && (
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                                    {apps.map((app) => (
-                                        <GameCard
-                                            key={app.id}
-                                            app={app}
-                                            listed={listed ? listed.has(app.id) : null}
-                                            onPlay={(a, advanced) => openGame(a, advanced)}
-                                            onQuick={quickPlay}
-                                            onServers={focusGame}
-                                        />
-                                    ))}
+                                <div className="flex flex-col gap-6">
+                                    <div role="group" aria-label="Game type" className="flex flex-wrap gap-1.5">
+                                        {CHIPS.map((c) => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                aria-pressed={chip === c}
+                                                onClick={() => setChip(c)}
+                                                className={`rounded-full border px-3 py-1 text-xs transition ${
+                                                    chip === c
+                                                        ? 'border-accent bg-accent/10 font-semibold text-accent'
+                                                        : 'border-border text-muted hover:border-accent'
+                                                }`}
+                                            >
+                                                {CHIP_LABELS[c]}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {chipEmpty && (
+                                        <p className="text-xs text-muted">
+                                            No {CHIP_LABELS[chip].toLowerCase()} games match.
+                                        </p>
+                                    )}
+
+                                    {sections.platform.length > 0 && (
+                                        <section aria-label="GameSpice games" className="flex flex-col gap-3">
+                                            <div>
+                                                <h2 className="text-sm font-bold">GameSpice games</h2>
+                                                <p className="text-[11px] text-muted">
+                                                    Free games built on the GameSpice platform.
+                                                </p>
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                                {sections.platform.map((app) => (
+                                                    <PlatformGameCard
+                                                        key={app.id}
+                                                        app={app}
+                                                        listed={listed ? listed.has(app.id) : null}
+                                                        onPlay={(a, advanced) => openGame(a, advanced)}
+                                                        onQuick={quickPlay}
+                                                        onServers={focusGame}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    {sections.others.length > 0 && (
+                                        <section aria-label="All games" className="flex flex-col gap-3">
+                                            {sections.platform.length > 0 && (
+                                                <h2 className="text-sm font-bold">All games</h2>
+                                            )}
+                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                                                {sections.others.map((app) => (
+                                                    <GameCard
+                                                        key={app.id}
+                                                        app={app}
+                                                        listed={listed ? listed.has(app.id) : null}
+                                                        onPlay={(a, advanced) => openGame(a, advanced)}
+                                                        onQuick={quickPlay}
+                                                        onServers={focusGame}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
                                 </div>
                             )}
 
@@ -509,7 +596,7 @@ export default function PlayRoute() {
                                 </ul>
                             )}
 
-                            {listing.hasNextPage && (
+                            {listing.hasNextPage && tab !== 'games' && (
                                 <div className="flex justify-center">
                                     <button
                                         type="button"

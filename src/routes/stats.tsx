@@ -65,7 +65,7 @@ export function StatsRoute() {
                 <Empty icon={<FiActivity />} title="No games played yet">
                     Play any GameSpice game and your days, streaks and achievements show up here.
                     <div className="mt-3">
-                        <Link to="/games" className={BTN_PRIMARY}>
+                        <Link to="/play" className={BTN_PRIMARY}>
                             Find a game
                         </Link>
                     </div>
