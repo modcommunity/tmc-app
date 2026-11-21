@@ -19,7 +19,6 @@
 //! the webview never supplies a URL — and only for a link on the site's own
 //! host (`tmc_core::notify::safe_open_url`).
 
-use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
 
