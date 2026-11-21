@@ -3,7 +3,9 @@ import { z } from 'zod'
 
 const invoke = vi.fn()
 
-vi.mock('@tauri-apps/api/core', () => ({ invoke: (...a: unknown[]) => invoke(...a) }))
+vi.mock('@tauri-apps/api/core', () => ({
+    invoke: (...a: unknown[]): unknown => invoke(...a),
+}))
 
 import { call } from './index'
 
