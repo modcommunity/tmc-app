@@ -63,7 +63,11 @@ pub fn style_for(kind: &str) -> Style {
         _ => ("#e4572e", "🔔", "GameSpice"),
     };
 
-    Style { accent, glyph, label }
+    Style {
+        accent,
+        glyph,
+        label,
+    }
 }
 
 /// Strip control characters, collapse whitespace and bound the length. The
@@ -174,12 +178,16 @@ impl Cursor {
         let mut fresh: Vec<Notice> = items
             .iter()
             .filter(|n| !self.seen_ids.contains(&n.id))
-            .filter(|n| self.seen_through.as_deref().map_or(true, |t| n.created_at.as_str() >= t))
+            .filter(|n| {
+                self.seen_through
+                    .as_deref()
+                    .is_none_or(|t| n.created_at.as_str() >= t)
+            })
             .cloned()
             .collect();
 
         if let Some(newest) = newest {
-            if self.seen_through.as_deref().map_or(true, |t| newest > t) {
+            if self.seen_through.as_deref().is_none_or(|t| newest > t) {
                 self.seen_through = Some(newest.to_string());
             }
         } else if first {
@@ -267,7 +275,10 @@ mod tests {
         assert_eq!(c.since(), Some("2026-01-01T00:00:01Z"));
 
         // The overlapping item is not repeated; the new one is.
-        let out = c.advance(vec![n("2", "2026-01-01T00:00:05Z"), n("1", "2026-01-01T00:00:01Z")]);
+        let out = c.advance(vec![
+            n("2", "2026-01-01T00:00:05Z"),
+            n("1", "2026-01-01T00:00:01Z"),
+        ]);
 
         assert_eq!(out.iter().map(|x| x.id.as_str()).collect::<Vec<_>>(), ["2"]);
     }
@@ -287,7 +298,10 @@ mod tests {
 
         c.advance(vec![]);
 
-        let out = c.advance(vec![n("b", "2026-01-01T00:00:09Z"), n("a", "2026-01-01T00:00:03Z")]);
+        let out = c.advance(vec![
+            n("b", "2026-01-01T00:00:09Z"),
+            n("a", "2026-01-01T00:00:03Z"),
+        ]);
 
         assert_eq!(out[0].id, "a");
     }

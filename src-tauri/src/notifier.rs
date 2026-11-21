@@ -482,4 +482,3 @@ pub fn notification_test(app: AppHandle) {
         },
     );
 }
-
