@@ -74,16 +74,12 @@ export function StatsRoute() {
     const appOf = (id: number) => apps.data?.apps.find((a) => a.id === id)
 
     return (
-        <div className="flex flex-col gap-6 p-4 md:p-6">
-            <header className="flex flex-col gap-1.5">
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
-                    <FiBarChart2 aria-hidden /> Stats
-                </p>
-                <h1 className="text-2xl font-extrabold md:text-3xl">
-                    Your play, game by game
-                </h1>
-                <p className="max-w-xl text-sm text-muted">
-                    Days played, streaks, achievements and where you rank.
+        <div className="flex flex-col gap-6 p-4">
+            <header>
+                <h1 className="text-lg font-bold">Stats</h1>
+                <p className="text-xs text-muted">
+                    Your play, game by game: days played, streaks, achievements
+                    and where you rank.
                 </p>
             </header>
 

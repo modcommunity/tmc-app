@@ -35,6 +35,7 @@ import type {
     SandboxSpecT,
     StrategyReportT,
 } from '~/lib/ipc/schemas'
+import { SignInPrompt } from '~/components/states'
 import { LaunchDialog } from '~/components/launch-dialog'
 import Select from '~/components/select'
 import FolderPicker from '~/components/folder-picker'
@@ -124,10 +125,13 @@ export default function SandboxesRoute() {
 
     if (status !== 'signedIn')
         return (
-            <Empty
-                title="Sign in to use sandboxes"
-                body="A sandbox holds mods from your subscriptions, so the app needs to know whose subscriptions they are."
-            />
+            <div className="p-4">
+                <SignInPrompt>
+                    Sign in to use sandboxes. A sandbox holds mods from your
+                    subscriptions, so the app needs to know whose subscriptions
+                    they are.
+                </SignInPrompt>
+            </div>
         )
 
     if (loading)
