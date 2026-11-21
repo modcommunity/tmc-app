@@ -458,12 +458,22 @@ async fn handoff(
      * lives only on the other side of a network hop is a check this process is
      * trusting somebody else to have run.
      */
-    let lowered = uri.trim().to_ascii_lowercase();
+    let uri = uri.trim().to_string();
+    let lowered = uri.to_ascii_lowercase();
 
-    if ["javascript:", "data:", "vbscript:", "blob:", "file:"]
+    /*
+     * An allowlist, not a blocklist: `ms-msdt:`, `search-ms:` and friends are
+     * exactly what a blocklist forgets. Our own schemes, https, and the closed
+     * list of game-client schemes are the only things this opens, and nothing
+     * with a control character in it.
+     */
+    let ours = ["gs://", "tmc://", "https://"]
         .iter()
-        .any(|bad| lowered.starts_with(bad))
-    {
+        .any(|ok| lowered.starts_with(ok));
+
+    let clean = uri.len() <= 2048 && !uri.chars().any(char::is_control);
+
+    if !clean || !(ours || tmc_core::plugins::apps::is_allowed_launch_uri(&uri)) {
         return Err(AppError::invalid(
             "That game's launch link uses a scheme the app will not open.",
         ));

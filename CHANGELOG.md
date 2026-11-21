@@ -2,6 +2,7 @@ The GameSpice App's releases, newest first. A version here is the one in `packag
 
 ## Unreleased
 
+- Security: the play hand-off link now opens only gs://, tmc://, https:// or a known game-client scheme (it was a blocklist that let schemes like ms-msdt: through), and links with control characters are refused.
 - **Workshop browse redesign**: pack cards with banner image (lazy, kind-coloured gradient fallback), kind/game badges, author, subscriber count, version/size/updated chips and a runs-code badge; state-aware Subscribe button with optimistic feedback; debounced search with icon, active-filter chips, skeleton grid, infinite scroll and clear empty/error states. The Subscribed and My packs tabs use the same cards.
 
 ## Unreleased
