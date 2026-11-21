@@ -1,10 +1,16 @@
 import { useState } from 'react'
+import { Skeleton } from '~/components/skeleton'
 import { Link, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiServer, FiUser, FiUsers } from 'react-icons/fi'
 
 import { messageOf } from '~/lib/ipc'
 import { compact } from '~/lib/api/play'
-import { canonicalSlug, gameHeadingStyle, gameLook, isPlatformSlug } from '~/lib/gamespice/games'
+import {
+    canonicalSlug,
+    gameHeadingStyle,
+    gameLook,
+    isPlatformSlug,
+} from '~/lib/gamespice/games'
 import { useGameBySlug } from '~/lib/gamespice/use-game'
 import GameServers from '~/components/game-servers'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
@@ -46,9 +52,11 @@ export default function GameHubRoute() {
                     {messageOf(game.error)}
                 </p>
             )}
-            {game.isPending && <p className="text-sm text-muted">Loading…</p>}
+            {game.isPending && <Skeleton className="h-24 w-full" />}
             {game.isSuccess && !row && (
-                <p className="text-sm text-muted">This game is not listed on this site right now.</p>
+                <p className="text-sm text-muted">
+                    This game is not listed on this site right now.
+                </p>
             )}
 
             {row && (
@@ -58,19 +66,33 @@ export default function GameHubRoute() {
                         style={{ borderTopColor: look.accent, borderTopWidth: 3 }}
                     >
                         {art && (
-                            <img src={art} alt="" aria-hidden className="h-48 w-full object-cover" />
+                            <img
+                                src={art}
+                                alt=""
+                                aria-hidden
+                                className="h-48 w-full object-cover"
+                            />
                         )}
                         <div className="flex flex-col gap-3 p-5">
-                            <h1 className="text-3xl font-extrabold" style={gameHeadingStyle(look)}>
+                            <h1
+                                className="text-3xl font-extrabold"
+                                style={gameHeadingStyle(look)}
+                            >
                                 {row.name}
                             </h1>
-                            {row.description && <p className="text-sm text-muted">{row.description}</p>}
+                            {row.description && (
+                                <p className="text-sm text-muted">
+                                    {row.description}
+                                </p>
+                            )}
                             <p className="flex flex-wrap gap-4 text-xs text-muted">
                                 <span className="flex items-center gap-1">
-                                    <FiUsers className="size-3.5" /> {compact(row.playerCnt)} playing
+                                    <FiUsers className="size-3.5" />{' '}
+                                    {compact(row.playerCnt)} playing
                                 </span>
                                 <span className="flex items-center gap-1">
-                                    <FiServer className="size-3.5" /> {compact(row.serverCnt)} servers
+                                    <FiServer className="size-3.5" />{' '}
+                                    {compact(row.serverCnt)} servers
                                 </span>
                                 {row.solo && (
                                     <span className="flex items-center gap-1">
@@ -85,16 +107,26 @@ export default function GameHubRoute() {
                                     onClick={() =>
                                         setTarget({
                                             appId: row.id,
-                                            fallback: { name: row.name, icon: row.iconUrl, slug },
+                                            fallback: {
+                                                name: row.name,
+                                                icon: row.iconUrl,
+                                                slug,
+                                            },
                                         })
                                     }
                                 >
                                     Play
                                 </button>
-                                <Link to={`/play?app=${row.id}&tab=servers`} className={BTN_GHOST}>
+                                <Link
+                                    to={`/play?app=${row.id}&tab=servers`}
+                                    className={BTN_GHOST}
+                                >
                                     Servers and lobbies
                                 </Link>
-                                <Link to={`/games/${slug}/avatar`} className={BTN_GHOST}>
+                                <Link
+                                    to={`/games/${slug}/avatar`}
+                                    className={BTN_GHOST}
+                                >
                                     Avatar
                                 </Link>
                                 <Link to={`/apps/${row.id}`} className={BTN_GHOST}>
@@ -108,7 +140,9 @@ export default function GameHubRoute() {
                 </>
             )}
 
-            {target && <PlayDialog target={target} onClose={() => setTarget(null)} />}
+            {target && (
+                <PlayDialog target={target} onClose={() => setTarget(null)} />
+            )}
         </div>
     )
 }
