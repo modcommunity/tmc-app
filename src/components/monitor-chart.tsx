@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import {
     nearestIndex,
@@ -108,36 +108,59 @@ export default function TimeChart({
     const y = (v: number) => scaleLinear(v, 0, top, MARGIN.top + ih, MARGIN.top)
     const base = MARGIN.top + ih
 
-    // Break the line wherever a probe went unanswered.
-    const segments: Pt[][] = []
-    let run: Pt[] = []
+    // Paths are the expensive part (a long session is thousands of points), and
+    // a pointer move re-renders the chart for the crosshair alone, so they are
+    // built once per change of data or size rather than once per move.
+    const paths = useMemo(() => {
+        const xs = (at: number) => scaleLinear(at, t0, t1, MARGIN.left, MARGIN.left + iw)
+        const ys = (v: number) => scaleLinear(v, 0, top, MARGIN.top + ih, MARGIN.top)
+        const floorY = MARGIN.top + ih
 
-    for (const s of samples) {
-        const v = value(s)
+        // Break the line wherever a probe went unanswered.
+        const segments: Pt[][] = []
+        let run: Pt[] = []
 
-        if (v === null) {
-            if (run.length) segments.push(run)
-            run = []
-            continue
+        for (const s of samples) {
+            const v = value(s)
+
+            if (v === null) {
+                if (run.length) segments.push(run)
+                run = []
+                continue
+            }
+
+            run.push({ x: xs(s.at), y: ys(v) })
         }
 
-        run.push({ x: x(s.at), y: y(v) })
-    }
+        if (run.length) segments.push(run)
 
-    if (run.length) segments.push(run)
+        const stepped = (pts: Pt[]) =>
+            pts
+                .map((p, i) => {
+                    const prev = pts[i - 1]
 
-    const stepped = (pts: Pt[]) =>
-        pts
-            .map((p, i) => {
-                const prev = pts[i - 1]
+                    return i === 0
+                        ? `M ${p.x.toFixed(2)} ${p.y.toFixed(2)}`
+                        : `L ${p.x.toFixed(2)} ${prev!.y.toFixed(2)} L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`
+                })
+                .join(' ')
 
-                return i === 0
-                    ? `M ${p.x.toFixed(2)} ${p.y.toFixed(2)}`
-                    : `L ${p.x.toFixed(2)} ${prev!.y.toFixed(2)} L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`
-            })
-            .join(' ')
+        return segments.map((pts) => {
+            const d = step ? stepped(pts) : smoothPath(pts)
+            const first = pts[0]!
+            const last = pts[pts.length - 1]!
 
-    const line = (pts: Pt[]) => (step ? stepped(pts) : smoothPath(pts))
+            return {
+                key: first.x,
+                single: pts.length === 1,
+                first,
+                line: d,
+                area: `${d} L ${last.x.toFixed(2)} ${floorY} L ${first.x.toFixed(2)} ${floorY} Z`,
+            }
+        })
+        // `value` is a fresh closure each render but always the same accessor.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [samples, t0, t1, iw, ih, top, step])
 
     const hoverIdx =
         hoverAt === null
@@ -155,7 +178,7 @@ export default function TimeChart({
     const tipH = 12 + tipLines.length * 15
     const tipLeft = hx + 12 + tipW > w - 4 ? hx - 12 - tipW : hx + 12
 
-    const hasData = segments.length > 0 || samples.some((s) => value(s) === null)
+    const hasData = paths.length > 0 || samples.some((s) => value(s) === null)
 
     const description = (() => {
         const vals = samples.map(value).filter((v): v is number => v !== null)
@@ -252,33 +275,25 @@ export default function TimeChart({
                             ))}
 
                     {/* Series */}
-                    {segments.map((pts, i) => {
-                        const first = pts[0]!
-                        const last = pts[pts.length - 1]!
-
-                        return (
-                            <g key={i}>
-                                {pts.length > 1 && (
+                    {paths.map((p) => (
+                        <g key={p.key}>
+                            {p.single ? (
+                                <circle cx={p.first.x} cy={p.first.y} r={2.5} fill={color} />
+                            ) : (
+                                <>
+                                    <path d={p.area} fill={`url(#fill-${gid})`} />
                                     <path
-                                        d={`${line(pts)} L ${last.x.toFixed(2)} ${base} L ${first.x.toFixed(2)} ${base} Z`}
-                                        fill={`url(#fill-${gid})`}
-                                    />
-                                )}
-                                {pts.length > 1 ? (
-                                    <path
-                                        d={line(pts)}
+                                        d={p.line}
                                         fill="none"
                                         stroke={color}
                                         strokeWidth={1.75}
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
                                     />
-                                ) : (
-                                    <circle cx={first.x} cy={first.y} r={2.5} fill={color} />
-                                )}
-                            </g>
-                        )
-                    })}
+                                </>
+                            )}
+                        </g>
+                    ))}
 
                     {!hasData && (
                         <text

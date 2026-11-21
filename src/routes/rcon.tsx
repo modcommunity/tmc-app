@@ -451,7 +451,7 @@ export function Console({
                         type="button"
                         disabled={busy || !server.hasPassword}
                         onClick={() => void connect()}
-                        className="rounded-lg border border-border px-2 py-1 text-xs hover:border-accent disabled:opacity-50"
+                        className="rounded-lg border border-border px-2 py-1 text-xs hover:border-accent disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                     >
                         {busy ? 'Connecting…' : 'Connect'}
                     </button>
@@ -460,7 +460,7 @@ export function Console({
                 <button
                     type="button"
                     onClick={() => setSettingPassword(true)}
-                    className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs hover:border-accent"
+                    className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                 >
                     <FiKey className="size-3" />
                     {server.hasPassword ? 'Change password' : 'Set password'}
@@ -469,7 +469,7 @@ export function Console({
                 <button
                     type="button"
                     onClick={onEdit}
-                    className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs hover:border-accent"
+                    className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                 >
                     <FiEdit2 className="size-3" />
                     Edit
@@ -479,7 +479,7 @@ export function Console({
                     type="button"
                     aria-label="Delete this server"
                     onClick={() => void ipc.rconDelete(server.id).then(onDeleted)}
-                    className="rounded-lg border border-border p-1.5 text-muted hover:border-danger hover:text-danger"
+                    className="rounded-lg border border-border p-1.5 text-muted hover:border-danger hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                 >
                     <FiTrash2 className="size-3" />
                 </button>
@@ -574,14 +574,14 @@ export function Console({
                         type="submit"
                         aria-label="Run"
                         disabled={busy || !command.trim()}
-                        className="rounded-lg border border-border p-1.5 text-muted hover:border-accent hover:text-foreground disabled:opacity-40"
+                        className="rounded-lg border border-border p-1.5 text-muted hover:border-accent hover:text-foreground disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                     >
                         <FiSend className="size-3.5" />
                     </button>
                 </form>
             </div>
 
-            <div className="flex items-center justify-between text-[0.7rem] text-muted">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 text-[0.7rem] text-muted">
                 <span>Up and down arrows walk your command history.</span>
                 <button
                     type="button"

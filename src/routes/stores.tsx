@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { FiAlertTriangle, FiEdit2, FiFolder, FiPlus, FiStar, FiTrash2 } from 'react-icons/fi'
+import {
+    FiAlertTriangle,
+    FiEdit2,
+    FiFolder,
+    FiHardDrive,
+    FiPlus,
+    FiRefreshCw,
+    FiStar,
+    FiTrash2,
+} from 'react-icons/fi'
 
 import { useFolderPicker } from '~/components/folder-picker'
 import { formatBytes } from '~/lib/downloads/provider'
@@ -49,9 +58,9 @@ export default function StoresRoute() {
     }
 
     return (
-        <div className="flex flex-col gap-4 p-4">
-            <header className="flex items-start justify-between gap-3">
-                <div>
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4">
+            <header className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 basis-64">
                     <h1 className="text-lg font-bold">Stores</h1>
                     <p className="mt-1 text-sm text-muted">
                         Named folders for downloads and installs. Permanent
@@ -63,7 +72,7 @@ export default function StoresRoute() {
                 <button
                     type="button"
                     onClick={() => setCreating(true)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                     <FiPlus aria-hidden className="h-4 w-4" />
                     Create store
@@ -76,15 +85,35 @@ export default function StoresRoute() {
                     className="flex items-start gap-2 rounded-lg border border-danger/40 bg-danger/10 p-2 text-xs text-danger"
                 >
                     <FiAlertTriangle aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    {error}
+                    <span className="min-w-0 flex-1">{error}</span>
+                    {stores === null ? (
+                        <button
+                            type="button"
+                            onClick={() => void load()}
+                            className="flex shrink-0 items-center gap-1 rounded-md border border-danger/40 px-2 py-0.5 font-medium hover:bg-danger/10"
+                        >
+                            <FiRefreshCw aria-hidden className="h-3 w-3" />
+                            Retry
+                        </button>
+                    ) : null}
                 </p>
             ) : null}
 
             {stores === null ? (
-                error ? null : <p className="text-sm text-muted">Loading stores...</p>
+                error ? null : (
+                    <div role="status" aria-label="Loading stores" className="flex flex-col gap-3">
+                        {[0, 1].map((i) => (
+                            <div
+                                key={i}
+                                className="h-24 rounded-xl border border-border bg-surface motion-safe:animate-pulse"
+                            />
+                        ))}
+                    </div>
+                )
             ) : stores.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-8 text-center">
-                    <p className="text-sm text-muted">
+                <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border p-8 text-center">
+                    <FiHardDrive aria-hidden className="h-6 w-6 text-muted" />
+                    <p className="max-w-sm text-sm text-muted">
                         No stores yet. Create one to choose where downloads go.
                     </p>
                 </div>
@@ -178,8 +207,8 @@ function StoreCard({
             }`}
         >
             <div className="flex flex-wrap items-center gap-2">
-                <FiFolder aria-hidden className="h-4 w-4 text-muted" />
-                <h2 className="text-sm font-semibold">{store.name}</h2>
+                <FiFolder aria-hidden className="h-4 w-4 shrink-0 text-muted" />
+                <h2 className="min-w-0 break-words text-sm font-semibold">{store.name}</h2>
                 <Badge tone="muted">{store.kind === 'temporary' ? 'Temporary' : 'Permanent'}</Badge>
                 {store.isDefault ? <Badge tone="accent">Default</Badge> : null}
                 {store.builtin ? <Badge tone="muted">Built in</Badge> : null}
@@ -254,7 +283,7 @@ function CardButton({
         <button
             type="button"
             onClick={onClick}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1 text-xs hover:border-accent"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1 text-xs transition-colors hover:border-accent hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         >
             {icon}
             {children}
@@ -285,7 +314,10 @@ function Modal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4"
+            onMouseDown={(e) => {
+                if (e.target === e.currentTarget) onClose()
+            }}
             onKeyDown={(e) => {
                 if (e.key === 'Escape') onClose()
             }}
@@ -295,7 +327,7 @@ function Modal({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="w-full max-w-md rounded-xl border border-border bg-surface p-4"
+                className="max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-border bg-surface p-4 shadow-xl"
             >
                 <h2 id={titleId} className="text-sm font-semibold">
                     {title}

@@ -56,9 +56,10 @@ export default function WorkshopRoute() {
     const { status, signIn } = useAuth()
     const [tab, setTab] = useState<Tab>('browse')
     const signedIn = status === 'signedIn'
+    const resolving = status === 'loading'
 
     return (
-        <div className="flex flex-col gap-4 p-4">
+        <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-4 p-4">
             <header className="flex flex-wrap items-center gap-3">
                 <h1 className="text-lg font-bold">Workshop</h1>
                 <nav role="tablist" className="flex gap-1">
@@ -76,7 +77,12 @@ export default function WorkshopRoute() {
                 </nav>
             </header>
             {tab === 'browse' && <BrowseTab signedIn={signedIn} />}
-            {tab !== 'browse' && !signedIn && (
+            {tab !== 'browse' && resolving && (
+                <p role="status" className="text-sm text-muted">
+                    Checking your account…
+                </p>
+            )}
+            {tab !== 'browse' && !signedIn && !resolving && (
                 <div className="flex flex-col items-start gap-3">
                     <p className="text-sm text-muted">
                         Sign in to manage your Workshop packs.
@@ -234,9 +240,9 @@ function BrowseTab({ signedIn }: { signedIn: boolean }) {
                     className="flex flex-wrap items-center gap-1.5"
                     aria-label="Active filters"
                 >
-                    {chips.map((c) => (
+                    {chips.map((c, i) => (
                         <button
-                            key={c.label}
+                            key={`${i}-${c.label}`}
                             type="button"
                             onClick={c.clear}
                             aria-label={`Remove filter ${c.label}`}
@@ -416,6 +422,11 @@ function SubscribedTab() {
             {failed.map((e, i) => (
                 <Alert key={i} error={e} />
             ))}
+            {mine.isError && (
+                <Button btnType="secondary" className="self-start" onClick={() => void mine.refetch()}>
+                    Try again
+                </Button>
+            )}
             {mine.data?.items.length === 0 && (
                 <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
                     You have no Workshop subscriptions yet. Browse the Workshop and
@@ -441,7 +452,7 @@ function SubscribedTab() {
                             games={
                                 it.scope === 'all'
                                     ? 'Every game'
-                                    : `${it.games.length} game(s)`
+                                    : `${it.games.length} ${it.games.length === 1 ? 'game' : 'games'}`
                             }
                             status={it.paused ? 'Paused' : null}
                             summary={
@@ -554,7 +565,14 @@ function MineTab() {
                 Uploading a new pack or version is on the website for now; edit and
                 list your packs here.
             </p>
-            {owned.isError && <Alert error={owned.error} />}
+            {owned.isError && (
+                <>
+                    <Alert error={owned.error} />
+                    <Button btnType="secondary" className="self-start" onClick={() => void owned.refetch()}>
+                        Try again
+                    </Button>
+                </>
+            )}
             {owned.data?.items.length === 0 && (
                 <p className="text-sm text-muted">
                     You have no packs that provide Workshop content.
@@ -680,8 +698,13 @@ function OwnedRow({
                             disabled={save.isPending || !name.trim()}
                             onClick={() => save.mutate()}
                         >
-                            Save
+                            {save.isPending ? 'Saving…' : 'Save'}
                         </Button>
+                        {save.isSuccess && !save.isPending && (
+                            <span role="status" className="self-center text-xs text-success">
+                                Saved
+                            </span>
+                        )}
                         {confirm ? (
                             <>
                                 <Button

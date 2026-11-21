@@ -126,7 +126,8 @@ export function PackCard(p: PackCardProps) {
                 <div className="flex items-start justify-between gap-2">
                     <Link
                         to={p.href}
-                        className="line-clamp-1 text-sm font-semibold hover:underline"
+                        title={p.name}
+                        className="line-clamp-1 min-w-0 break-words text-sm font-semibold hover:underline"
                     >
                         {p.name}
                     </Link>
