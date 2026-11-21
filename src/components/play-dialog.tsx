@@ -22,6 +22,7 @@ import Select from '~/components/select'
 import { LaunchDialog } from '~/components/launch-dialog'
 import { LiveLatency } from '~/components/server-live'
 import { requestFor, useLiveServer } from '~/lib/hooks/use-live-query'
+import { useDialog } from '~/components/use-dialog'
 import type {
     AppSummaryT,
     ContentSummaryT,
@@ -228,6 +229,7 @@ export default function PlayDialog({
     target: PlayTargetT
     onClose: () => void
 }) {
+    const dialogRef = useDialog<HTMLDivElement>(onClose)
     const { server } = target
     const { user } = useSettings()
 
@@ -754,7 +756,7 @@ export default function PlayDialog({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div role="dialog" aria-modal="true" aria-label={`Play ${app.name}`} className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-surface">
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Play ${app.name}`} className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-surface focus:outline-none">
                 <header className="flex items-start gap-3 border-b border-border p-4">
                     <GameIcon
                         app={{ id: app.id, name: app.name, icon: app.images.icon }}

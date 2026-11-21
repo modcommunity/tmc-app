@@ -17,6 +17,7 @@
 
 import { FiAlertTriangle, FiLayers, FiPlay } from 'react-icons/fi'
 
+import { useDialog } from '~/components/use-dialog'
 import type { LaunchPreviewT } from '~/lib/ipc/schemas'
 
 export function LaunchDialog({
@@ -34,9 +35,18 @@ export function LaunchDialog({
     onCancel: () => void
     onConfirm: () => void
 }) {
+    const ref = useDialog<HTMLDivElement>(onCancel)
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-lg rounded-xl border border-border bg-surface p-4">
+            <div
+                ref={ref}
+                role="dialog"
+                aria-modal="true"
+                aria-label={title}
+                tabIndex={-1}
+                className="w-full max-w-lg rounded-xl border border-border bg-surface p-4 focus:outline-none"
+            >
                 <h2 className="text-sm font-semibold">{title}</h2>
 
                 {error ? (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { openUrl } from '@tauri-apps/plugin-opener'
@@ -52,6 +52,7 @@ import {
 import Select from '~/components/select'
 import Gallery from '~/components/gallery'
 import { BTN_GHOST, BTN_PRIMARY } from '~/components/play-center'
+import { useDialog } from '~/components/use-dialog'
 
 /**
  * **Store** — every game's store in one place, bought from with points.
@@ -695,22 +696,8 @@ function ItemDialog({
         },
     })
 
-    // Escape closes from anywhere, and focus starts inside the dialog.
-    const closeRef = useRef<HTMLButtonElement>(null)
-    const close = useRef(onClose)
-    useEffect(() => {
-        close.current = onClose
-    })
-    useEffect(() => {
-        closeRef.current?.focus()
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') close.current()
-        }
-
-        window.addEventListener('keydown', onKey)
-
-        return () => window.removeEventListener('keydown', onKey)
-    }, [])
+    // Escape closes, Tab stays inside, focus returns to the opener.
+    const dialogRef = useDialog<HTMLDivElement>(onClose)
 
     const gallery = [...new Set([item.imageUrl, ...item.images].filter((u): u is string => !!u))].slice(1)
     const mine = state === 'owned' || state === 'subscribed'
@@ -721,10 +708,12 @@ function ItemDialog({
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
             <div
+                ref={dialogRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-label={item.name}
-                className="gs-rise flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl md:flex-row"
+                className="gs-rise flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl focus:outline-none md:flex-row"
             >
                 <ItemArt item={item} look={look} className="aspect-square max-h-44 w-full shrink-0 md:max-h-none md:w-72" />
                 <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
@@ -736,7 +725,7 @@ function ItemDialog({
                             </p>
                             <h2 className="text-xl font-extrabold">{item.name}</h2>
                         </div>
-                        <button ref={closeRef} type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-muted hover:bg-surface-hover">
+                        <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-muted hover:bg-surface-hover">
                             <FiX />
                         </button>
                     </div>

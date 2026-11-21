@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { FiFilter, FiGrid, FiList, FiSearch, FiStar, FiX } from 'react-icons/fi'
+import {
+    FiFilter,
+    FiGrid,
+    FiList,
+    FiRefreshCw,
+    FiSearch,
+    FiStar,
+    FiX,
+} from 'react-icons/fi'
 
 import { api } from '~/lib/api/client'
 import {
@@ -158,6 +166,22 @@ export default function BrowseRoute() {
     const [showFilters, setShowFilters] = useState(false)
 
     /*
+     * The search box follows the URL when something OTHER than typing changes
+     * it: switching tab (a plain link that drops `?q=`), the back button, a
+     * deep link. Typing writes the box and the URL together, so this effect is
+     * a no-op for it; without it the box kept showing text that no longer
+     * filtered anything.
+     */
+    const urlQuery = search.get('q') ?? ''
+
+    const [seenUrlQuery, setSeenUrlQuery] = useState(urlQuery)
+
+    if (seenUrlQuery !== urlQuery) {
+        setSeenUrlQuery(urlQuery)
+        setQuery(urlQuery)
+    }
+
+    /*
      * Per-kind defaults, copied from the website's own
      * (`lib/user/settings/default.ts`).
      *
@@ -182,7 +206,14 @@ export default function BrowseRoute() {
      */
     const defaultSort: BrowseSortT = kind === 'server' ? 'players' : 'createdAt'
 
-    const sort = (search.get('sort') as BrowseSortT | null) ?? defaultSort
+    // A hand-edited or stale `?sort=` the API would 400 on falls back to the
+    // default rather than blanking the browser.
+    const rawSort = search.get('sort')
+    const sort: BrowseSortT = (BrowseSortVals as readonly string[]).includes(
+        rawSort ?? ''
+    )
+        ? (rawSort as BrowseSortT)
+        : defaultSort
     const sortDir: 'asc' | 'desc' = search.get('dir') === 'asc' ? 'asc' : 'desc'
     const byPing = kind === 'server' && search.get('ping') === '1'
 
@@ -380,7 +411,9 @@ export default function BrowseRoute() {
             )
 
             refreshStoredFavorites(
-                settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value.summary] : []))
+                settled.flatMap((r) =>
+                    r.status === 'fulfilled' ? [r.value.summary] : []
+                )
             )
 
             return true
@@ -545,10 +578,16 @@ export default function BrowseRoute() {
                 search,
                 {
                     apps: new Map(
-                        (facets.data?.apps ?? []).map((a) => [String(a.id), appLabel(a)])
+                        (facets.data?.apps ?? []).map((a) => [
+                            String(a.id),
+                            appLabel(a),
+                        ])
                     ),
                     countries: new Map(
-                        (facets.data?.countries ?? []).map((c) => [String(c.id), c.name])
+                        (facets.data?.countries ?? []).map((c) => [
+                            String(c.id),
+                            c.name,
+                        ])
                     ),
                 },
                 { favorites: favOnly }
@@ -620,8 +659,10 @@ export default function BrowseRoute() {
                                 setQuery(e.target.value)
                                 setParam('q', e.target.value || null)
                             }}
+                            type="search"
+                            aria-label={`Search ${KIND_LABELS[kind].toLowerCase()}`}
                             placeholder={`Search ${KIND_LABELS[kind].toLowerCase()}…`}
-                            className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-8 text-sm outline-none focus:border-accent"
+                            className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-8 text-sm outline-none transition-colors focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 [&::-webkit-search-cancel-button]:hidden"
                         />
                         {query && (
                             <button
@@ -631,7 +672,7 @@ export default function BrowseRoute() {
                                     setParam('q', null)
                                 }}
                                 aria-label="Clear search"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded text-muted transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                             >
                                 <FiX className="size-4" />
                             </button>
@@ -670,7 +711,12 @@ export default function BrowseRoute() {
                             type="button"
                             onClick={() => setShowFilters((open) => !open)}
                             aria-label="Filters"
-                            className="rounded-lg border border-border p-2 text-muted"
+                            aria-expanded={showFilters}
+                            className={`relative rounded-lg border border-border p-2 transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
+                                showFilters
+                                    ? 'bg-surface-hover text-foreground'
+                                    : 'text-muted'
+                            }`}
                         >
                             <FiFilter className="size-4" />
                         </button>
@@ -716,7 +762,10 @@ export default function BrowseRoute() {
                                     role="tab"
                                     aria-selected={selected}
                                     onClick={() =>
-                                        setParam('fav', value === 'fav' ? '1' : null)
+                                        setParam(
+                                            'fav',
+                                            value === 'fav' ? '1' : null
+                                        )
                                     }
                                     className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
                                         selected
@@ -724,7 +773,9 @@ export default function BrowseRoute() {
                                             : 'text-muted hover:bg-surface-hover'
                                     }`}
                                 >
-                                    {value === 'fav' && <FiStar className="size-3" />}
+                                    {value === 'fav' && (
+                                        <FiStar className="size-3" />
+                                    )}
                                     {label}
                                     {value === 'fav' && favCount > 0 && (
                                         <span className="tabular-nums opacity-80">
@@ -738,13 +789,18 @@ export default function BrowseRoute() {
                 )}
 
                 {isServer && chips.length > 0 && (
-                    <ul className="flex flex-wrap items-center gap-1.5" aria-label="Active filters">
+                    <ul
+                        className="flex flex-wrap items-center gap-1.5"
+                        aria-label="Active filters"
+                    >
                         {chips.map((chip) => (
                             <li key={chip.keys.join('|')}>
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        setSearch(removeChip(search, chip), { replace: true })
+                                        setSearch(removeChip(search, chip), {
+                                            replace: true,
+                                        })
                                     }
                                     aria-label={`Remove filter ${chip.label}`}
                                     className="flex items-center gap-1 rounded-full bg-surface-secondary px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
@@ -777,22 +833,44 @@ export default function BrowseRoute() {
                         </p>
                     )}
 
-                    {listing.isError && (
-                        <p className="rounded-lg border border-danger p-4 text-sm text-danger">
-                            {listing.error.message}
-                        </p>
+                    {listing.isError && !favOnly && (
+                        <div
+                            role="alert"
+                            className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/60 bg-danger/5 p-4 text-sm text-danger"
+                        >
+                            <span className="min-w-0 break-words">
+                                Couldn&apos;t load the list: {listing.error.message}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => void listing.refetch()}
+                                disabled={listing.isFetching}
+                                className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1 text-xs text-foreground transition-colors hover:bg-surface-hover disabled:opacity-60"
+                            >
+                                <FiRefreshCw
+                                    className={`size-3 ${listing.isFetching ? 'animate-spin' : ''}`}
+                                />
+                                Retry
+                            </button>
+                        </div>
                     )}
 
                     {!favOnly && listing.isPending ? (
-                        <SkeletonGrid />
-                    ) : items.length === 0 ? (
+                        view === 'table' ? (
+                            <SkeletonTable />
+                        ) : (
+                            <SkeletonGrid />
+                        )
+                    ) : items.length === 0 &&
+                      listing.isError &&
+                      !favOnly ? null : items.length === 0 ? (
                         <div className="flex flex-col items-center gap-3 py-16 text-center text-sm text-muted">
                             {favOnly && favCount === 0 ? (
                                 <>
                                     <FiStar className="size-8" aria-hidden />
                                     <p>
-                                        No favourites yet. Star a server in the list to keep
-                                        it here.
+                                        No favourites yet. Star a server in the list
+                                        to keep it here.
                                     </p>
                                     <button
                                         type="button"
@@ -867,6 +945,38 @@ export default function BrowseRoute() {
                     )}
                 </div>
             </div>
+        </div>
+    )
+}
+
+/** Placeholder rows with the real table's rhythm, so nothing jumps on load. */
+function SkeletonTable() {
+    return (
+        <div
+            className="overflow-clip rounded-xl border border-border"
+            aria-busy="true"
+            aria-label="Loading servers"
+        >
+            <div className="h-9 border-b border-border bg-surface-secondary" />
+            {Array.from({ length: 12 }, (_, i) => (
+                <div
+                    key={i}
+                    className="flex h-14 animate-pulse items-center gap-3 border-b border-border px-3 last:border-0"
+                >
+                    <div className="size-4 rounded bg-surface-secondary" />
+                    <div className="h-3 w-10 rounded bg-surface-secondary" />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <div
+                            className="h-3 rounded bg-surface-secondary"
+                            style={{ width: `${45 + ((i * 17) % 35)}%` }}
+                        />
+                        <div className="h-2.5 w-24 rounded bg-surface-secondary" />
+                    </div>
+                    <div className="hidden h-3 w-16 rounded bg-surface-secondary md:block" />
+                    <div className="h-3 w-12 rounded bg-surface-secondary" />
+                    <div className="h-7 w-16 rounded-md bg-surface-secondary" />
+                </div>
+            ))}
         </div>
     )
 }

@@ -32,6 +32,7 @@ import type {
 import { MODE_LABELS, compact, fill, players } from '~/lib/api/play'
 import { canonicalSlug, gameHeadingStyle, gameLook } from '~/lib/gamespice/games'
 import { GameIcon } from '~/components/game-icon'
+import { useDialog } from '~/components/use-dialog'
 import type { z } from 'zod'
 
 export type PlayAppRowT = z.infer<typeof PlayAppRowSchema>
@@ -675,6 +676,7 @@ export function QuickMatchDialog({
     onJoin: (target: JoinTarget) => void
     onClose: () => void
 }) {
+    const dialogRef = useDialog<HTMLDivElement>(onClose)
     const [rotation, setRotation] = useState(false)
 
     const search = useQuery({
@@ -695,12 +697,16 @@ export function QuickMatchDialog({
 
     return (
         <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Quick play ${app.name}`}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
         >
-            <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+            <div
+                ref={dialogRef}
+                tabIndex={-1}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Quick play ${app.name}`}
+                className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl focus:outline-none"
+            >
                 <header className="flex items-center gap-3 border-b border-border px-4 py-3">
                     <span className="flex size-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
                         <FiZap className="size-4" />

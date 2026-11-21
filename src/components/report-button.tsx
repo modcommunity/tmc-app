@@ -6,6 +6,7 @@ import type { ContentKindT } from '~/lib/api/contract'
 import { isIpcError } from '~/lib/ipc'
 import { useAuth } from '~/lib/auth/provider'
 import Select from '~/components/select'
+import { useDialog } from '~/components/use-dialog'
 
 /**
  * Report an item.
@@ -86,6 +87,7 @@ function ReportDialog({
     name: string
     onClose: () => void
 }) {
+    const dialogRef = useDialog<HTMLDivElement>(onClose)
     const [type, setType] = useState<'SPAM' | 'OTHER'>('OTHER')
     const [title, setTitle] = useState('')
     const [content, setContent] = useState('')
@@ -122,12 +124,16 @@ function ReportDialog({
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Report ${name}`}
             onClick={(e) => e.target === e.currentTarget && onClose()}
         >
-            <div className="w-full max-w-md rounded-xl border border-border bg-surface p-4">
+            <div
+                ref={dialogRef}
+                tabIndex={-1}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Report ${name}`}
+                className="w-full max-w-md rounded-xl border border-border bg-surface p-4 focus:outline-none"
+            >
                 {sent ? (
                     <>
                         <h2 className="text-sm font-semibold">Report sent</h2>

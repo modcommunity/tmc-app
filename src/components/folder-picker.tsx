@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+
+import { useDialog } from '~/components/use-dialog'
 import {
     FiAlertTriangle,
     FiArrowUp,
@@ -105,17 +107,8 @@ export default function FolderPicker({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hidden])
 
-    // Escape closes, which is what every native picker does and the one
-    // keyboard affordance a modal cannot do without.
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onCancel()
-        }
-
-        window.addEventListener('keydown', onKey)
-
-        return () => window.removeEventListener('keydown', onKey)
-    }, [onCancel])
+    // Escape closes, Tab stays inside, focus returns to the opener.
+    const dialogRef = useDialog<HTMLDivElement>(onCancel)
 
     return (
         <div
@@ -123,6 +116,8 @@ export default function FolderPicker({
             onClick={onCancel}
         >
             <div
+                ref={dialogRef}
+                tabIndex={-1}
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"

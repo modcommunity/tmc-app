@@ -66,6 +66,18 @@ function fillTone(players: number, max: number): string {
     return 'text-lat-good'
 }
 
+/** The fill bar's colour: the same thresholds as `fillTone`. */
+function fillBar(players: number, max: number): string {
+    if (players < 1 || max < 1) return 'bg-muted'
+
+    const share = players / max
+
+    if (share >= 0.95) return 'bg-lat-bad'
+    if (share >= 0.75) return 'bg-lat-fair'
+
+    return 'bg-lat-good'
+}
+
 /**
  * A column header that sorts.
  *
@@ -102,7 +114,13 @@ function SortableTh({
     const active = sort === sortKey
 
     return (
-        <th className={`p-0 font-medium ${className}`}>
+        <th
+            scope="col"
+            aria-sort={
+                active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'
+            }
+            className={`p-0 font-medium ${className}`}
+        >
             <button
                 type="button"
                 onClick={() =>
@@ -110,9 +128,6 @@ function SortableTh({
                         sortKey,
                         active ? (dir === 'asc' ? 'desc' : 'asc') : naturalDir
                     )
-                }
-                aria-sort={
-                    active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'
                 }
                 className={`flex w-full items-center gap-1 px-2 py-2 uppercase tracking-wide transition-colors hover:text-foreground ${
                     align === 'right' ? 'justify-end' : ''
@@ -214,9 +229,15 @@ export default function ServerTable({
     }
 
     return (
-        <div className="overflow-x-auto rounded-xl border border-border">
-            <table className="w-full min-w-[56rem] border-collapse text-sm">
-                <thead>
+        /*
+         * `overflow-clip`, not `overflow-x-auto`: clip rounds the corners
+         * without becoming a scroll container, so the sticky header below pins
+         * to the page's own scroller. Narrow windows are handled by dropping
+         * columns (see MEDIUM_ONLY / WIDE_ONLY), never by scrolling sideways.
+         */
+        <div className="overflow-clip rounded-xl border border-border">
+            <table className="w-full border-collapse text-sm">
+                <thead className="sticky top-0 z-10">
                     <tr className="border-b border-border bg-surface-secondary text-left text-xs uppercase tracking-wide text-muted">
                         <th className="w-6 py-2 pl-2" />
                         <th className="w-8 px-0 py-2">
@@ -232,7 +253,10 @@ export default function ServerTable({
                             what happened when it sat on the right of eight
                             columns in a pane narrower than the table.
                         */}
-                        <th className="px-2 py-2 pr-5 text-right font-medium">
+                        <th
+                            scope="col"
+                            className="px-2 py-2 pr-5 text-right font-medium"
+                        >
                             Ping
                         </th>
 
@@ -244,7 +268,7 @@ export default function ServerTable({
                             label="Server"
                             sortKey="name"
                             naturalDir="asc"
-                            className="w-full min-w-64"
+                            className="w-full min-w-40"
                         />
                         <th className={`${MEDIUM_ONLY} px-2 py-2 font-medium`}>
                             Country
@@ -369,7 +393,18 @@ function ServerRow({
             <tr
                 ref={attach}
                 onClick={onToggle}
-                className={`cursor-pointer border-b border-border transition-colors hover:bg-surface-hover ${
+                onKeyDown={(e) => {
+                    // Only when the row itself has focus: Enter on the Join or
+                    // Monitor button inside it must keep meaning "press".
+                    if (e.target !== e.currentTarget) return
+                    if (e.key !== 'Enter' && e.key !== ' ') return
+
+                    e.preventDefault()
+                    onToggle()
+                }}
+                tabIndex={0}
+                aria-expanded={expanded}
+                className={`cursor-pointer border-b border-border transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${
                     expanded ? 'bg-surface-hover' : ''
                 }`}
             >
@@ -460,6 +495,19 @@ function ServerRow({
                             className="ml-1 inline-block size-1.5 rounded-full bg-success align-middle"
                         />
                     )}
+                    {max > 0 && (
+                        <span
+                            aria-hidden
+                            className="mt-1 block h-1 min-w-12 overflow-hidden rounded-full bg-surface-secondary"
+                        >
+                            <span
+                                className={`block h-full rounded-full ${fillBar(players, max)}`}
+                                style={{
+                                    width: `${Math.min(100, (players / max) * 100)}%`,
+                                }}
+                            />
+                        </span>
+                    )}
                 </td>
 
                 <td
@@ -489,31 +537,35 @@ function ServerRow({
                 </td>
 
                 <td className="whitespace-nowrap px-2 py-2 pr-3 text-right align-middle">
-                  <div className="inline-flex items-center justify-end gap-1.5">
-                    {item.server?.host && item.server.port ? (
-                        <MonitorButton
-                            target={{ kind: 'server', id: item.id, name: item.name }}
-                        />
-                    ) : null}
-                    {joinable && (
-                        <button
-                            type="button"
-                            title="Join — right-click for advanced options"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onJoin(item, false)
-                            }}
-                            onContextMenu={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                onJoin(item, true)
-                            }}
-                            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                        >
-                            <FiPlay className="size-3.5" /> Join
-                        </button>
-                    )}
-                  </div>
+                    <div className="inline-flex items-center justify-end gap-1.5">
+                        {item.server?.host && item.server.port ? (
+                            <MonitorButton
+                                target={{
+                                    kind: 'server',
+                                    id: item.id,
+                                    name: item.name,
+                                }}
+                            />
+                        ) : null}
+                        {joinable && (
+                            <button
+                                type="button"
+                                title="Join — right-click for advanced options"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onJoin(item, false)
+                                }}
+                                onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    onJoin(item, true)
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                            >
+                                <FiPlay className="size-3.5" /> Join
+                            </button>
+                        )}
+                    </div>
                 </td>
             </tr>
 
