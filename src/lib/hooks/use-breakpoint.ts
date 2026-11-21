@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 /**
  * Layout decisions keyed on the WINDOW, not the platform.
@@ -12,19 +12,23 @@ import { useSyncExternalStore } from 'react'
  * the correct value on the very first render, so the shell does not paint the
  * desktop rail for a frame before switching to tabs.
  */
-function subscribe(query: string) {
-    return (onChange: () => void) => {
-        const media = window.matchMedia(query)
-
-        media.addEventListener('change', onChange)
-
-        return () => media.removeEventListener('change', onChange)
-    }
-}
 
 export function useMediaQuery(query: string): boolean {
+    // Stable per query: a fresh function each render would make React
+    // unsubscribe and resubscribe on every render.
+    const subscribe = useCallback(
+        (onChange: () => void) => {
+            const media = window.matchMedia(query)
+
+            media.addEventListener('change', onChange)
+
+            return () => media.removeEventListener('change', onChange)
+        },
+        [query]
+    )
+
     return useSyncExternalStore(
-        subscribe(query),
+        subscribe,
         () => window.matchMedia(query).matches,
         // Server snapshot. Never hit in a Tauri build, but React demands it and
         // "not compact" is the safer default for a static render.

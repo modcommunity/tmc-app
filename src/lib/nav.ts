@@ -299,12 +299,19 @@ export const RAIL: NavNode[] = [
  */
 export const COMPACT: NavNode[] = [PLAY, DISCOVER, LIBRARY, FRIENDS, SETTINGS]
 
+/** `path` is `base` or below it, on a segment boundary ('/view/user2' is not under '/view/user'). */
+function underPath(path: string, base: string): boolean {
+    const trimmed = base.length > 1 ? base.replace(/\/+$/, '') : base
+
+    return path === trimmed || path.startsWith(`${trimmed}/`)
+}
+
 /** Whether the path is this node's own screen (not a child's). */
 export function isOwn(node: NavNode, pathname: string): boolean {
     if (node.virtual) return false
-    if (pathname === node.to || pathname.startsWith(`${node.to}/`)) return true
+    if (underPath(pathname, node.to)) return true
 
-    return (node.match ?? []).some((prefix) => pathname.startsWith(prefix))
+    return (node.match ?? []).some((prefix) => underPath(pathname, prefix))
 }
 
 /** Whether the path is inside any descendant of the node. */

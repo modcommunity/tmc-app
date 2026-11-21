@@ -95,6 +95,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         staleTime: 5 * 60 * 1000,
     })
 
+    // Signing out must not leave the account's data cached for the next
+    // sign-in (a different user within the stale window would see it).
+    useEffect(() => {
+        if (status === 'signedOut') {
+            queryClient.removeQueries({ queryKey: ['me'] })
+            queryClient.removeQueries({ queryKey: ['social'] })
+        }
+    }, [status, queryClient])
+
     const setApp = useCallback(
         async (
             patch: Partial<
@@ -193,9 +202,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         // stored, so they can be written straight onto the root.
         const id = app.theme.slice('plugin:'.length)
 
+        let stale = false
+
         void ipc
             .pluginTheme(id)
             .then((theme) => {
+                // A newer theme choice has already taken over.
+                if (stale) return
+
                 if (!theme) {
                     applyBase('dark')
                     return
@@ -208,15 +222,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
                     appliedTokens.add(token)
                 }
             })
-            .catch(() => applyBase('dark'))
+            .catch(() => {
+                if (!stale) applyBase('dark')
+            })
 
-        return
+        return () => {
+            stale = true
+        }
     }, [app])
 
     const value = useMemo<SettingsContextT>(
         () => ({
             app,
-            user: me.data?.settings ?? null,
+            // Never show a previous account's settings once signed out.
+            user: status === 'signedIn' ? (me.data?.settings ?? null) : null,
             userPending: status === 'signedIn' && !me.data,
             setApp,
             setUser,

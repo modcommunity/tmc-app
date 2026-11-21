@@ -294,6 +294,9 @@ export default function PlayDialog({
     const [engineId, setEngineId] = useState<number | null>(null)
     /** Whether this OS can run an installed build at all (false on mobile). */
     const [canInstallHere, setCanInstallHere] = useState(false)
+    // False until the platform answers, so the default mode is not picked
+    // before "Install" has had the chance to exist.
+    const [platformKnown, setPlatformKnown] = useState(false)
     const [installing, setInstalling] = useState(false)
     const [fullscreen, setFullscreen] = useState(false)
     /*
@@ -375,10 +378,16 @@ export default function PlayDialog({
         void ipc
             .gamesPlatform()
             .then((info) => {
-                if (live) setCanInstallHere(info.installable)
+                if (!live) return
+
+                setCanInstallHere(info.installable)
+                setPlatformKnown(true)
             })
             .catch(() => {
-                if (live) setCanInstallHere(false)
+                if (!live) return
+
+                setCanInstallHere(false)
+                setPlatformKnown(true)
             })
 
         return () => {
@@ -481,12 +490,13 @@ export default function PlayDialog({
      * just computed is React's supported way to derive it, and an effect for it
      * costs a frame on the wrong mode.
      */
-    if (
-        mode === null &&
+    const factsIn =
         sandboxes !== null &&
         native !== undefined &&
-        (target.app || !looked.isPending)
-    ) {
+        platformKnown &&
+        (!!target.app || !looked.isPending)
+
+    if (mode === null && factsIn) {
         const best = canNative
             ? 'native'
             : canInstall
@@ -659,7 +669,7 @@ export default function PlayDialog({
     const autoStarted = useRef(false)
 
     useEffect(() => {
-        if (!auto || mode === null || autoStarted.current) return
+        if (!auto || !factsIn || autoStarted.current) return
 
         autoStarted.current = true
 
@@ -710,7 +720,7 @@ export default function PlayDialog({
                 setAuto(false)
             }
         })()
-    }, [auto, mode, canNative, canWeb, app, server, values, locale, fullscreen, target.solo, onClose])
+    }, [auto, factsIn, canNative, canWeb, app, server, values, locale, fullscreen, target.solo, onClose])
 
     if (auto)
         return (
@@ -744,7 +754,7 @@ export default function PlayDialog({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-surface">
+            <div role="dialog" aria-modal="true" aria-label={`Play ${app.name}`} className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-surface">
                 <header className="flex items-start gap-3 border-b border-border p-4">
                     <GameIcon
                         app={{ id: app.id, name: app.name, icon: app.images.icon }}

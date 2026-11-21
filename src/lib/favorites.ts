@@ -111,9 +111,17 @@ let current: FavoriteMap | null = null
 const listeners = new Set<() => void>()
 
 function read(): FavoriteMap {
-    current ??= parseFavorites(
-        typeof localStorage === 'undefined' ? null : localStorage.getItem(FAVORITES_KEY)
-    )
+    if (current === null) {
+        let raw: string | null = null
+
+        try {
+            raw = typeof localStorage === 'undefined' ? null : localStorage.getItem(FAVORITES_KEY)
+        } catch {
+            // Blocked storage: start empty rather than crash every render.
+        }
+
+        current = parseFavorites(raw)
+    }
 
     return current
 }
