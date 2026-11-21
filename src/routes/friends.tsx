@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SkeletonGrid } from '~/components/skeleton'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
@@ -159,7 +160,7 @@ function SignedIn() {
             )}
 
             <Section title="Friends">
-                {friends.isPending && <Muted>Loading…</Muted>}
+                {friends.isPending && <SkeletonGrid count={3} />}
                 {friends.error && <Muted>{messageOf(friends.error)}</Muted>}
                 {friends.data && list.length === 0 && (
                     <Muted>

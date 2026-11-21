@@ -11,6 +11,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { GsLogo } from './gs-logo'
 import Titlebar, { WindowResizeEdges } from './titlebar'
 import UpdateBanner from './update-banner'
+import OfflineBanner from './offline-banner'
 import { COMPACT, RAIL, isActive, isWithin, isOwn, type NavNode } from '~/lib/nav'
 
 /**
@@ -334,6 +335,7 @@ export default function Shell() {
                      * dismissed that one.
                      */}
                     <UpdateBanner />
+                    <OfflineBanner />
 
                     <div
                         className="min-h-0 flex-1 overflow-y-auto"
@@ -341,7 +343,9 @@ export default function Shell() {
                             paddingTop: compact ? 'var(--safe-top)' : undefined,
                         }}
                     >
-                        <Outlet />
+                        <div key={pathname.split('/')[1]} className="gs-fade min-h-full">
+                            <Outlet />
+                        </div>
                     </div>
 
                     {/*

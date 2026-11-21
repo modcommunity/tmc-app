@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { Skeleton } from '~/components/skeleton'
 import { useQuery } from '@tanstack/react-query'
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+    useLocation,
+    useNavigate,
+    useParams,
+    useSearchParams,
+} from 'react-router-dom'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import {
     FiArrowLeft,
@@ -174,7 +180,14 @@ export default function ViewRoute() {
     if (!kind)
         return <Centered>That is not a content type this app knows about.</Centered>
 
-    if (detail.isPending) return <Centered>Loading…</Centered>
+    if (detail.isPending)
+        return (
+            <div className="flex flex-col gap-3 p-6">
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-56 w-full" />
+                <Skeleton className="h-24 w-full" />
+            </div>
+        )
 
     if (detail.isError) return <Centered>{detail.error.message}</Centered>
 
@@ -210,7 +223,11 @@ export default function ViewRoute() {
                 <button
                     type="button"
                     // 'default' is the key of the first entry: a deep link or fresh open has nothing to go back to.
-                    onClick={() => (location.key === 'default' ? navigate('/play') : navigate(-1))}
+                    onClick={() =>
+                        location.key === 'default'
+                            ? navigate('/play')
+                            : navigate(-1)
+                    }
                     aria-label="Back"
                     className="absolute left-3 top-3 rounded-full bg-background/80 p-2 backdrop-blur"
                     style={{ top: 'calc(0.75rem + var(--safe-top))' }}

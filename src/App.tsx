@@ -1,4 +1,3 @@
-import { Component, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { attachOfflineCache } from '~/lib/api/offline-cache'
@@ -11,6 +10,8 @@ import { LibraryProvider } from '~/lib/library/provider'
 import { DownloadsProvider } from '~/lib/downloads/provider'
 import Shell from '~/components/shell'
 import DropImport from '~/components/drop-import'
+import ErrorBoundary from '~/components/error-boundary'
+import NotFound from '~/components/not-found'
 import PlayRoute from '~/routes/play'
 import DiscoverRoute from '~/routes/discover'
 import StoresRoute from '~/routes/stores'
@@ -90,7 +91,7 @@ const router = createHashRouter([
                     { path: 'logging', element: <LoggingRoute /> },
                 ],
             },
-            { path: '*', element: <Navigate to="/play" replace /> },
+            { path: '*', element: <NotFound /> },
         ],
     },
 ])
@@ -121,48 +122,6 @@ const queryClient = new QueryClient({
  * there is no teardown to run — the returned function exists for tests.
  */
 attachOfflineCache(queryClient)
-
-/**
- * The last line of defence against a white screen.
- *
- * A crashed React tree in a browser is a broken tab the user can reload. In an
- * app it is a window with nothing in it and no address bar, so there has to be
- * something on screen that offers a way out.
- */
-class ErrorBoundary extends Component<
-    { children: ReactNode },
-    { error: Error | null }
-> {
-    state = { error: null as Error | null }
-
-    static getDerivedStateFromError(error: Error) {
-        return { error }
-    }
-
-    componentDidCatch(error: Error) {
-        console.error('[app] render crashed', error)
-    }
-
-    render() {
-        if (!this.state.error) return this.props.children
-
-        return (
-            <div className="flex h-screen flex-col items-center justify-center gap-3 p-6 text-center">
-                <h1 className="text-lg font-bold">Something broke</h1>
-                <p className="selectable max-w-md text-sm text-muted">
-                    {this.state.error.message}
-                </p>
-                <button
-                    type="button"
-                    onClick={() => window.location.reload()}
-                    className="rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground"
-                >
-                    Reload the app
-                </button>
-            </div>
-        )
-    }
-}
 
 /**
  * A monitor window is a second document with its own JS context. It gets a

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Skeleton } from '~/components/skeleton'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -55,7 +56,12 @@ export default function GameRoute() {
     const app = looked.data?.apps[0] ?? null
 
     if (!valid) return <Centered>That is not a game.</Centered>
-    if (looked.isPending) return <Centered>Loading…</Centered>
+    if (looked.isPending)
+        return (
+            <div className="p-6">
+                <Skeleton className="h-40 w-full" />
+            </div>
+        )
     if (looked.error) return <Centered>{messageOf(looked.error)}</Centered>
     if (!app) return <Centered>No such game.</Centered>
 
@@ -133,7 +139,6 @@ export default function GameRoute() {
             {app.hasServers && <TopServers appId={app.id} />}
 
             <Leaderboards appId={app.id} />
-
 
             {target && (
                 <PlayDialog target={target} onClose={() => setTarget(null)} />
