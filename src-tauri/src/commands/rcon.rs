@@ -15,7 +15,7 @@ use std::time::Duration;
 use tauri::State;
 
 use tmc_core::error::{AppError, AppResult};
-use tmc_core::rcon::store::{NewRconServer, RconHistoryRow, RconServer};
+use tmc_core::rcon::store::{EditRconServer, NewRconServer, RconHistoryRow, RconServer};
 use tmc_core::rcon::{RconProtocol, RconReply, RconTarget, DEFAULT_TIMEOUT_MS};
 
 use crate::state::AppState;
@@ -48,14 +48,20 @@ pub fn rcon_create(state: State<'_, AppState>, server: NewRconServer) -> AppResu
 }
 
 #[tauri::command]
-pub fn rcon_update(
+pub async fn rcon_update(
     state: State<'_, AppState>,
     id: i64,
-    name: String,
-    host: String,
-    port: u16,
+    edit: EditRconServer,
 ) -> AppResult<()> {
-    state.library.rcon_rename(id, &name, &host, port)
+    // A changed address or protocol makes any open session the wrong one.
+    if let Some(old) = state.library.rcon_get(id)? {
+        state
+            .rcon
+            .disconnect(&target_for(&old, DEFAULT_TIMEOUT_MS))
+            .await;
+    }
+
+    state.library.rcon_edit(id, &edit)
 }
 
 /// Change or clear the stored password.

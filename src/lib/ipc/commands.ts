@@ -878,8 +878,18 @@ export const ipc = {
         appId?: number | null
     }) => call('rcon_create', z.number(), { server }),
 
-    rconUpdate: (id: number, name: string, host: string, port: number) =>
-        call('rcon_update', z.void(), { id, name, host, port }),
+    /** Everything but the password. `appId` files it under a game; `serverId` links a TMC server. */
+    rconUpdate: (
+        id: number,
+        edit: {
+            name: string
+            host: string
+            port: number
+            protocol: 'source' | 'frostbite'
+            appId: number | null
+            serverId: number | null
+        }
+    ) => call('rcon_update', z.void(), { id, edit }),
 
     rconSetPassword: (id: number, password: string | null) =>
         call('rcon_set_password', z.void(), { id, password }),

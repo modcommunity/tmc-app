@@ -54,6 +54,23 @@ pub struct RconServer {
     pub created_at: String,
 }
 
+/// Everything about a saved server that can be edited except its password
+/// (which has its own command so an edit never carries one through the webview).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditRconServer {
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub protocol: RconProtocol,
+    /// The game this server is filed under. `None` clears it.
+    #[serde(default)]
+    pub app_id: Option<i64>,
+    /// The TMC server it is linked to. `None` unlinks it.
+    #[serde(default)]
+    pub server_id: Option<i64>,
+}
+
 /// What creating one needs.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -214,6 +231,40 @@ impl LibraryDb {
             conn.execute(
                 "UPDATE rcon_server SET name = ?2, host = ?3, port = ?4 WHERE id = ?1",
                 params![id, name.trim(), host.trim(), port],
+            )?;
+
+            Ok(())
+        })
+    }
+
+    /// Edit every non-secret field, including the game and the TMC link.
+    pub fn rcon_edit(&self, id: i64, edit: &EditRconServer) -> AppResult<()> {
+        let name = edit.name.trim();
+
+        if name.is_empty() || name.len() > 96 {
+            return Err(AppError::invalid("Give this server a name."));
+        }
+
+        if edit.host.trim().is_empty() || edit.host.len() > 253 || edit.port == 0 {
+            return Err(AppError::invalid(
+                "A saved server needs a name, an address and a port.",
+            ));
+        }
+
+        self.with(|conn| {
+            conn.execute(
+                "UPDATE rcon_server
+                 SET name = ?2, host = ?3, port = ?4, protocol = ?5, app_id = ?6, server_id = ?7
+                 WHERE id = ?1",
+                params![
+                    id,
+                    name,
+                    edit.host.trim(),
+                    edit.port,
+                    edit.protocol.as_str(),
+                    edit.app_id,
+                    edit.server_id,
+                ],
             )?;
 
             Ok(())
@@ -435,6 +486,38 @@ mod tests {
         db.rcon_set_password(&cipher, id, None).expect("clear");
 
         assert!(!db.rcon_get(id).expect("get").expect("present").has_password);
+    }
+
+    #[test]
+    fn an_edit_can_file_a_server_under_a_game_and_unfile_it() {
+        let (db, cipher) = setup();
+
+        let id = db
+            .rcon_create(&cipher, &new_server("My box", "hunter2"))
+            .expect("create");
+
+        db.rcon_edit(
+            id,
+            &EditRconServer {
+                name: "Renamed".into(),
+                host: "10.0.0.5".into(),
+                port: 28015,
+                protocol: RconProtocol::Frostbite,
+                app_id: Some(77),
+                server_id: None,
+            },
+        )
+        .expect("edit");
+
+        let got = db.rcon_get(id).expect("get").expect("present");
+
+        assert_eq!(got.name, "Renamed");
+        assert_eq!(got.port, 28015);
+        assert_eq!(got.protocol, RconProtocol::Frostbite);
+        assert_eq!(got.app_id, Some(77));
+        assert_eq!(got.server_id, None);
+        // The password survives an edit untouched.
+        assert_eq!(db.rcon_secret(&cipher, id).expect("secret"), "hunter2");
     }
 
     #[test]

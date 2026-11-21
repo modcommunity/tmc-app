@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
+    FiEdit2,
+    FiLink,
     FiKey,
     FiPlus,
     FiSend,
@@ -14,6 +17,8 @@ import { ipc } from '~/lib/ipc/commands'
 import { isIpcError, messageOf } from '~/lib/ipc'
 import type { RconHistoryT, RconServerT } from '~/lib/ipc/schemas'
 import Select from '~/components/select'
+import { GameIcon } from '~/components/game-icon'
+import { api } from '~/lib/api/client'
 
 /**
  * **RCON** — a console for a server you administer.
@@ -47,13 +52,26 @@ const PROTOCOLS = [
     },
 ] as const
 
+/** Every game in the catalogue, for filing a server under one. Shares the facets cache. */
+function useGames() {
+    const facets = useQuery({
+        queryKey: ['facets', 'mod'],
+        queryFn: () => api.facets('mod'),
+        staleTime: 60 * 60 * 1000,
+    })
+
+    return facets.data?.apps ?? []
+}
+
 export default function RconRoute() {
     const { id } = useParams<{ id?: string }>()
     const navigate = useNavigate()
 
     const [servers, setServers] = useState<RconServerT[]>([])
     const [adding, setAdding] = useState(false)
+    const [editing, setEditing] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const games = useGames()
 
     const selectedId = id ? Number(id) : null
 
@@ -114,9 +132,9 @@ export default function RconRoute() {
             )}
 
             {adding && (
-                <AddServer
+                <ServerForm
                     onCancel={() => setAdding(false)}
-                    onAdded={async (newId) => {
+                    onSaved={async (newId) => {
                         setAdding(false)
                         await load()
                         void navigate(`/rcon/${newId}`)
@@ -139,39 +157,69 @@ export default function RconRoute() {
 
             <div className="grid gap-3 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
                 {servers.length > 0 && (
-                    <nav className="flex flex-col gap-1.5">
-                        {servers.map((server) => (
-                            <button
-                                key={server.id}
-                                type="button"
-                                onClick={() => navigate(`/rcon/${server.id}`)}
-                                className={`rounded-xl border p-3 text-left transition-colors ${
-                                    server.id === selectedId
-                                        ? 'border-accent bg-surface'
-                                        : 'border-border bg-surface hover:border-accent'
-                                }`}
-                            >
-                                <p className="truncate text-sm font-medium">
-                                    {server.name}
+                    <nav className="flex flex-col gap-3">
+                        {groupByGame(servers, games).map((group) => (
+                            <div key={group.key} className="flex flex-col gap-1.5">
+                                <p className="flex items-center gap-1.5 px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
+                                    {group.game && (
+                                        <GameIcon app={group.game} size="sm" />
+                                    )}
+                                    {group.game?.name ?? 'Unassigned'}
                                 </p>
-                                <p className="selectable truncate text-[0.7rem] text-muted">
-                                    {server.host}:{server.port}
-                                </p>
-                                {!server.hasPassword && (
-                                    <p className="mt-1 flex items-center gap-1 text-[0.7rem] text-warning">
-                                        <FiKey className="size-3" />
-                                        No password saved
-                                    </p>
-                                )}
-                            </button>
+                                {group.servers.map((server) => (
+                                    <button
+                                        key={server.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setEditing(false)
+                                            void navigate(`/rcon/${server.id}`)
+                                        }}
+                                        className={`rounded-xl border p-3 text-left transition-colors ${
+                                            server.id === selectedId
+                                                ? 'border-accent bg-surface'
+                                                : 'border-border bg-surface hover:border-accent'
+                                        }`}
+                                    >
+                                        <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                                            {server.name}
+                                            {server.serverId !== null && (
+                                                <FiLink
+                                                    aria-label="Linked to a TMC server"
+                                                    className="size-3 shrink-0 text-accent"
+                                                />
+                                            )}
+                                        </p>
+                                        <p className="selectable truncate text-[0.7rem] text-muted">
+                                            {server.host}:{server.port}
+                                        </p>
+                                        {!server.hasPassword && (
+                                            <p className="mt-1 flex items-center gap-1 text-[0.7rem] text-warning">
+                                                <FiKey className="size-3" />
+                                                No password saved
+                                            </p>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
                         ))}
                     </nav>
                 )}
 
-                {selected ? (
+                {selected && editing ? (
+                    <ServerForm
+                        key={`edit-${selected.id}`}
+                        server={selected}
+                        onCancel={() => setEditing(false)}
+                        onSaved={async () => {
+                            setEditing(false)
+                            await load()
+                        }}
+                    />
+                ) : selected ? (
                     <Console
                         key={selected.id}
                         server={selected}
+                        onEdit={() => setEditing(true)}
                         onChanged={load}
                         onDeleted={async () => {
                             await load()
@@ -204,10 +252,12 @@ type Line = {
 
 function Console({
     server,
+    onEdit,
     onChanged,
     onDeleted,
 }: {
     server: RconServerT
+    onEdit: () => void
     onChanged: () => Promise<void>
     onDeleted: () => Promise<void>
 }) {
@@ -217,6 +267,7 @@ function Console({
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [settingPassword, setSettingPassword] = useState(false)
+    const game = useGames().find((g) => g.id === server.appId) ?? null
 
     /*
      * Command history, as a shell has it. Up and down walk it; the draft is
@@ -367,6 +418,18 @@ function Console({
                         {server.protocol === 'frostbite'
                             ? 'Frostbite'
                             : 'Source RCON'}
+                        {game && <> · {game.name}</>}
+                        {server.serverId !== null && (
+                            <>
+                                {' · '}
+                                <Link
+                                    to={`/view/server/${server.serverId}`}
+                                    className="text-accent hover:underline"
+                                >
+                                    TMC server page
+                                </Link>
+                            </>
+                        )}
                     </p>
                 </div>
 
@@ -401,6 +464,15 @@ function Console({
                 >
                     <FiKey className="size-3" />
                     {server.hasPassword ? 'Change password' : 'Set password'}
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onEdit}
+                    className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs hover:border-accent"
+                >
+                    <FiEdit2 className="size-3" />
+                    Edit
                 </button>
 
                 <button
@@ -615,41 +687,115 @@ function PasswordForm({
     )
 }
 
-function AddServer({
+/** Servers bucketed by game, named games A–Z first and the unassigned ones last. */
+function groupByGame(
+    servers: RconServerT[],
+    games: { id: number; name: string; icon: string | null }[]
+) {
+    const buckets = new Map<number | null, RconServerT[]>()
+
+    for (const server of servers) {
+        const list = buckets.get(server.appId) ?? []
+
+        list.push(server)
+        buckets.set(server.appId, list)
+    }
+
+    return [...buckets.entries()]
+        .map(([appId, list]) => ({
+            key: String(appId),
+            game:
+                appId === null
+                    ? null
+                    : (games.find((g) => g.id === appId) ?? {
+                          id: appId,
+                          name: `Game ${appId}`,
+                          icon: null,
+                      }),
+            servers: list,
+        }))
+        .sort((x, y) => {
+            if (!x.game) return 1
+            if (!y.game) return -1
+
+            return x.game.name.localeCompare(y.game.name)
+        })
+}
+
+/**
+ * Add a saved server, or edit one. Everything here is stored on this device; the
+ * game and the TMC link are filing aids and never leave it. The password is only
+ * asked for when adding — changing it is its own action, so an edit never carries
+ * one through the webview.
+ */
+export function ServerForm({
+    server,
+    preset,
     onCancel,
-    onAdded,
+    onSaved,
 }: {
+    /** Present when editing. */
+    server?: RconServerT
+    /** Initial values when adding (e.g. from a TMC server page). */
+    preset?: {
+        name?: string
+        host?: string
+        port?: number
+        protocol?: 'source' | 'frostbite'
+        appId?: number | null
+        serverId?: number | null
+    }
     onCancel: () => void
-    onAdded: (id: number) => Promise<void>
+    onSaved: (id: number) => Promise<void> | void
 }) {
-    const [name, setName] = useState('')
-    const [host, setHost] = useState('')
-    const [port, setPort] = useState('27015')
-    const [protocol, setProtocol] = useState<'source' | 'frostbite'>('source')
+    const init = server ?? preset ?? {}
+    const games = useGames()
+
+    const [name, setName] = useState(init.name ?? '')
+    const [host, setHost] = useState(init.host ?? '')
+    const [port, setPort] = useState(String(init.port ?? 27015))
+    const [protocol, setProtocol] = useState<'source' | 'frostbite'>(
+        init.protocol ?? 'source'
+    )
+    const [appId, setAppId] = useState(init.appId != null ? String(init.appId) : '')
+    const [linked, setLinked] = useState(init.serverId != null)
     const [password, setPassword] = useState('')
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    const serverId = init.serverId ?? null
 
     const submit = async () => {
         setBusy(true)
         setError(null)
 
         try {
-            const id = await ipc.rconCreate({
+            const common = {
                 name: name.trim(),
                 host: host.trim(),
                 port: Number(port),
                 protocol,
-                password,
-            })
+                appId: appId ? Number(appId) : null,
+                serverId: linked ? serverId : null,
+            }
 
-            await onAdded(id)
+            if (server) {
+                await ipc.rconUpdate(server.id, common)
+                await onSaved(server.id)
+            } else {
+                const id = await ipc.rconCreate({ ...common, password })
+
+                await onSaved(id)
+            }
         } catch (err) {
             setError(messageOf(err))
         } finally {
             setBusy(false)
         }
     }
+
+    const input =
+        'mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm'
 
     return (
         <form
@@ -659,7 +805,9 @@ function AddServer({
                 void submit()
             }}
         >
-            <h2 className="text-sm font-semibold">Add a server</h2>
+            <h2 className="text-sm font-semibold">
+                {server ? 'Edit server' : 'Add a server'}
+            </h2>
 
             {error && <p className="text-xs text-danger">{error}</p>}
 
@@ -671,7 +819,49 @@ function AddServer({
                         maxLength={96}
                         placeholder="My survival server"
                         onChange={(e) => setName(e.target.value)}
-                        className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+                        className={input}
+                    />
+                </label>
+
+                <div className="text-xs">
+                    <span className="mb-1 block">Game</span>
+                    <Select
+                        label="Game this server belongs to"
+                        fullWidth
+                        value={appId}
+                        placeholder="No game"
+                        onChange={(next) => setAppId(next)}
+                        options={[
+                            { value: '', label: 'No game' },
+                            ...games.map((g) => ({
+                                value: String(g.id),
+                                label: g.name,
+                                icon: <GameIcon app={g} size="sm" />,
+                            })),
+                        ]}
+                    />
+                </div>
+
+                <label className="text-xs">
+                    Address
+                    <input
+                        value={host}
+                        placeholder="192.168.1.10"
+                        autoComplete="off"
+                        onChange={(e) => setHost(e.target.value)}
+                        className={input}
+                    />
+                </label>
+
+                <label className="text-xs">
+                    RCON port
+                    <input
+                        value={port}
+                        type="number"
+                        min={1}
+                        max={65535}
+                        onChange={(e) => setPort(e.target.value)}
+                        className={input}
                     />
                 </label>
 
@@ -689,45 +879,36 @@ function AddServer({
                         }))}
                     />
                 </div>
-
-                <label className="text-xs">
-                    Address
-                    <input
-                        value={host}
-                        placeholder="192.168.1.10"
-                        autoComplete="off"
-                        onChange={(e) => setHost(e.target.value)}
-                        className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-                    />
-                </label>
-
-                <label className="text-xs">
-                    RCON port
-                    <input
-                        value={port}
-                        type="number"
-                        min={1}
-                        max={65535}
-                        onChange={(e) => setPort(e.target.value)}
-                        className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-                    />
-                </label>
             </div>
 
-            <label className="text-xs">
-                Password
-                <input
-                    type="password"
-                    value={password}
-                    autoComplete="off"
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-                />
-                <span className="mt-1 block text-[0.7rem] text-muted">
-                    Stored encrypted on this device only. Leave it blank to add the
-                    server now and set one later.
-                </span>
-            </label>
+            {serverId !== null && (
+                <label className="flex items-center gap-2 text-xs">
+                    <input
+                        type="checkbox"
+                        checked={linked}
+                        onChange={(e) => setLinked(e.target.checked)}
+                    />
+                    Linked to its page on The Modding Community (shows a console
+                    shortcut there)
+                </label>
+            )}
+
+            {!server && (
+                <label className="text-xs">
+                    Password
+                    <input
+                        type="password"
+                        value={password}
+                        autoComplete="off"
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={input}
+                    />
+                    <span className="mt-1 block text-[0.7rem] text-muted">
+                        Stored encrypted on this device only. Leave it blank to add
+                        the server now and set one later.
+                    </span>
+                </label>
+            )}
 
             <div className="flex gap-2">
                 <button

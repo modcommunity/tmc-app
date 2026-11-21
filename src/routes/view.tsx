@@ -25,6 +25,7 @@ import { GameIcon } from '~/components/game-icon'
 import { opensExternally } from '~/lib/external'
 import Markdown from '~/components/markdown'
 import ServerPanel from '~/components/server-panel'
+import ServerRcon from '~/components/server-rcon'
 import InstallButton from '~/components/install-button'
 import QuickInstall from '~/components/quick-install'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
@@ -382,6 +383,7 @@ export default function ViewRoute() {
 
                 {/* --------------------------------------------- Live server */}
                 {summary.kind === 'server' && <ServerPanel item={summary} />}
+                {summary.kind === 'server' && <ServerRcon item={summary} />}
 
                 {playTarget && (
                     <PlayDialog
