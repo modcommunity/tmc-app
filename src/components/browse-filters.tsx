@@ -61,7 +61,7 @@ function Group({ title, active, defaultOpen, children }: GroupProps) {
                 type="button"
                 onClick={() => setOpen((o) => !o)}
                 aria-expanded={open}
-                className="flex w-full items-center gap-2 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted transition-colors hover:text-foreground"
+                className="flex w-full items-center gap-2 rounded py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             >
                 {open ? (
                     <FiChevronDown className="size-3.5 shrink-0" />
@@ -362,9 +362,16 @@ export default function BrowseFilters({
                         "deliberately showing offline servers". */}
                     <Check
                         label="Online only"
-                        checked={favorites ? get('online') === '1' : get('online') !== '0'}
+                        checked={
+                            favorites
+                                ? get('online') === '1'
+                                : get('online') !== '0'
+                        }
                         onChange={(v) =>
-                            set('online', favorites ? (v ? '1' : null) : v ? null : '0')
+                            set(
+                                'online',
+                                favorites ? (v ? '1' : null) : v ? null : '0'
+                            )
                         }
                     />
                     <Check
@@ -392,14 +399,21 @@ export default function BrowseFilters({
                             <Check
                                 key={age}
                                 label={AGE_LABELS[age]}
-                                checked={(get('ages') ?? '').split(',').includes(age)}
+                                checked={(get('ages') ?? '')
+                                    .split(',')
+                                    .includes(age)}
                                 onChange={(v) => {
-                                    const cur = (get('ages') ?? '').split(',').filter(Boolean)
+                                    const cur = (get('ages') ?? '')
+                                        .split(',')
+                                        .filter(Boolean)
                                     const next = v
                                         ? [...cur, age]
                                         : cur.filter((a) => a !== age)
 
-                                    set('ages', next.length > 0 ? next.join(',') : null)
+                                    set(
+                                        'ages',
+                                        next.length > 0 ? next.join(',') : null
+                                    )
                                 }}
                             />
                         ))}

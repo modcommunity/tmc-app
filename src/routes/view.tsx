@@ -31,6 +31,7 @@ import { GameIcon } from '~/components/game-icon'
 import { opensExternally } from '~/lib/external'
 import { normalizeWebUrl } from '~/lib/api/web-link'
 import Markdown from '~/components/markdown'
+import FavoriteStar from '~/components/favorite-star'
 import ServerPanel from '~/components/server-panel'
 import ServerRcon from '~/components/server-rcon'
 import MonitorButton from '~/components/monitor-button'
@@ -348,6 +349,12 @@ export default function ViewRoute() {
                                 }}
                             />
                         )}
+
+                    {summary.kind === 'server' && (
+                        <span className="inline-flex items-center rounded-lg border border-border bg-surface px-1.5">
+                            <FavoriteStar item={summary} className="p-2" />
+                        </span>
+                    )}
 
                     {/*
                         Subscribe first: it is what the app is FOR, and it is

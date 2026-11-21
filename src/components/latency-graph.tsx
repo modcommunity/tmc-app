@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react'
+import { useId, useMemo, useState } from 'react'
 
 import type { LatencySeriesT } from '~/lib/ipc/schemas'
 
@@ -300,6 +300,8 @@ export function LatencyChart({
     height?: number
 }) {
     const gradientId = useId()
+    // The sample under the pointer or keyboard focus, for the read-out.
+    const [hover, setHover] = useState<number | null>(null)
 
     const { points, top } = useMemo(
         () => layout(series?.samples ?? []),
@@ -331,11 +333,27 @@ export function LatencyChart({
             ? `${toPath(longest)} L ${longest[longest.length - 1]!.x.toFixed(2)} 100 L ${longest[0]!.x.toFixed(2)} 100 Z`
             : ''
 
+    const count = series.samples.length
+    const hoverPoint = hover != null ? points[hover] : undefined
+    const hoverSample = hover != null ? series.samples[hover] : undefined
+    const at = (clientX: number, box: DOMRect) =>
+        Math.max(
+            0,
+            Math.min(
+                count - 1,
+                Math.round(((clientX - box.left) / box.width) * (count - 1))
+            )
+        )
+
     return (
         <figure className="flex flex-col gap-2">
             <div
                 className="relative overflow-hidden rounded-lg border border-border bg-surface"
                 style={{ height }}
+                onPointerMove={(e) =>
+                    setHover(at(e.clientX, e.currentTarget.getBoundingClientRect()))
+                }
+                onPointerLeave={() => setHover(null)}
             >
                 <svg
                     viewBox="0 0 100 100"
@@ -409,9 +427,57 @@ export function LatencyChart({
                     ))}
                 </svg>
 
-                <span className="absolute left-2 top-1 text-[0.6rem] text-muted">
+                {/* Axis labels sit on the gridlines they name. */}
+                <span className="pointer-events-none absolute left-2 top-1 text-[0.6rem] tabular-nums text-muted">
                     {top} ms
                 </span>
+                <span
+                    className="pointer-events-none absolute left-2 -translate-y-full text-[0.6rem] tabular-nums text-muted"
+                    style={{ top: '50%' }}
+                >
+                    {Math.round(top / 2)}
+                </span>
+                <span className="pointer-events-none absolute bottom-1 left-2 text-[0.6rem] tabular-nums text-muted">
+                    0
+                </span>
+
+                {hoverPoint && hoverSample && (
+                    <>
+                        <div
+                            className="pointer-events-none absolute inset-y-0 w-px bg-foreground/40"
+                            style={{ left: `${hoverPoint.x}%` }}
+                        />
+                        <div
+                            role="status"
+                            className="pointer-events-none absolute top-1 z-10 whitespace-nowrap rounded-md border border-border bg-surface-secondary px-2 py-1 text-xs shadow-md"
+                            style={
+                                hoverPoint.x > 60
+                                    ? {
+                                          right: `${100 - hoverPoint.x}%`,
+                                          marginRight: 8,
+                                      }
+                                    : { left: `${hoverPoint.x}%`, marginLeft: 8 }
+                            }
+                        >
+                            <span
+                                className={`font-semibold tabular-nums ${
+                                    hoverSample.rttMs == null
+                                        ? 'text-lat-dead'
+                                        : latencyTone(hoverSample.rttMs).text
+                                }`}
+                            >
+                                {hoverSample.rttMs == null
+                                    ? 'No answer'
+                                    : `${hoverSample.rttMs}ms`}
+                            </span>
+                            <span className="ml-1.5 text-muted">
+                                {hover === count - 1
+                                    ? 'latest'
+                                    : `${count - 1 - (hover ?? 0)} checks ago`}
+                            </span>
+                        </div>
+                    </>
+                )}
             </div>
 
             <figcaption className="grid grid-cols-4 gap-2 text-center">

@@ -214,7 +214,15 @@ export default function BrowseRoute() {
     )
         ? (rawSort as BrowseSortT)
         : defaultSort
-    const sortDir: 'asc' | 'desc' = search.get('dir') === 'asc' ? 'asc' : 'desc'
+    // No `dir` means the column's natural direction: names and maps A to Z,
+    // every number most-first.
+    const rawDir = search.get('dir')
+    const sortDir: 'asc' | 'desc' =
+        rawDir === 'asc' || rawDir === 'desc'
+            ? rawDir
+            : sort === 'name' || sort === 'map'
+              ? 'asc'
+              : 'desc'
     const byPing = kind === 'server' && search.get('ping') === '1'
 
     /*
@@ -540,8 +548,43 @@ export default function BrowseRoute() {
                 : [],
         [favOnly, favorites, debounced, idList, flag, search]
     )
+    const sortedFavs = useMemo(() => {
+        if (!favOnly) return favRows
+
+        const key = (i: ContentSummaryT): number | string => {
+            const sv = i.server
+
+            switch (sort) {
+                case 'name':
+                    return i.name.toLowerCase()
+                case 'map':
+                    return (sv?.map ?? '').toLowerCase()
+                case 'avgUsers':
+                    return sv?.avgUsers ?? 0
+                case 'maxUsers':
+                    return sv?.maxUsers ?? 0
+                case 'curUsers':
+                case 'players':
+                    return sv?.curUsers ?? 0
+                default:
+                    // Newest-first is the stored order (already reversed).
+                    return 0
+            }
+        }
+        const sign = sortDir === 'asc' ? 1 : -1
+
+        // A stable sort, so equal keys keep the newest-favourited-first order.
+        return [...favRows].sort((a, b) => {
+            const l = key(a)
+            const r = key(b)
+
+            if (l === r) return 0
+
+            return (l < r ? -1 : 1) * sign
+        })
+    }, [favOnly, favRows, sort, sortDir])
     const fetched = favOnly
-        ? favRows
+        ? sortedFavs
         : (listing.data?.pages.flatMap((page) => page.items) ?? [])
     const total = favOnly ? favRows.length : (listing.data?.pages[0]?.total ?? null)
 
@@ -605,7 +648,13 @@ export default function BrowseRoute() {
                     label="Sort"
                     fullWidth
                     value={displaySort(sort)}
-                    onChange={(next) => setParam('sort', next)}
+                    onChange={(next) => {
+                        const params = new URLSearchParams(search)
+
+                        params.set('sort', next)
+                        params.delete('dir')
+                        setSearch(params, { replace: true })
+                    }}
                     options={sortsFor(kind).map((value) => ({
                         value,
                         label: SORT_LABELS[value],
