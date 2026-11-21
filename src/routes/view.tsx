@@ -27,6 +27,7 @@ import { normalizeWebUrl } from '~/lib/api/web-link'
 import Markdown from '~/components/markdown'
 import ServerPanel from '~/components/server-panel'
 import ServerRcon from '~/components/server-rcon'
+import MonitorButton from '~/components/monitor-button'
 import InstallButton from '~/components/install-button'
 import QuickInstall from '~/components/quick-install'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
@@ -315,6 +316,19 @@ export default function ViewRoute() {
                             </span>
                         </Button>
                     )}
+
+                    {summary.kind === 'server' &&
+                        summary.server?.host &&
+                        summary.server.port && (
+                            <MonitorButton
+                                variant="full"
+                                target={{
+                                    kind: 'server',
+                                    id: summary.id,
+                                    name: summary.name,
+                                }}
+                            />
+                        )}
 
                     {/*
                         Subscribe first: it is what the app is FOR, and it is

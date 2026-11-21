@@ -8,6 +8,7 @@ import { requestFor, useLiveServer } from '~/lib/hooks/use-live-query'
 import { opensExternally, openExternally } from '~/lib/external'
 import { useSettings } from '~/lib/settings/provider'
 import FavoriteStar from './favorite-star'
+import MonitorButton from './monitor-button'
 import { LiveLatency, LiveLatencyStrip, LivePlayers } from './server-live'
 
 /**
@@ -251,6 +252,13 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
                     item={item}
                     className="absolute right-2 top-1.5 bg-background/80 backdrop-blur"
                 />
+                {item.server?.host && item.server.port ? (
+                    <MonitorButton
+                        variant="icon"
+                        target={{ kind: 'server', id: item.id, name: item.name }}
+                        className="absolute right-11 top-1.5"
+                    />
+                ) : null}
             </div>
         )
 

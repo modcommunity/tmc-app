@@ -53,7 +53,7 @@ const PROTOCOLS = [
 ] as const
 
 /** Every game in the catalogue, for filing a server under one. Shares the facets cache. */
-function useGames() {
+export function useGames() {
     const facets = useQuery({
         queryKey: ['facets', 'mod'],
         queryFn: () => api.facets('mod'),
@@ -250,7 +250,7 @@ type Line = {
     pending?: boolean
 }
 
-function Console({
+export function Console({
     server,
     onEdit,
     onChanged,

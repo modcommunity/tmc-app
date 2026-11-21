@@ -2,7 +2,7 @@
     "$schema": "../gen/schemas/desktop-schema.json",
     "identifier": "default",
     "description": "The main window. Deliberately minimal: every privileged operation goes through this crate's own commands, which enforce their own policy, rather than through a Tauri plugin the webview can call directly.",
-    "windows": ["main"],
+    "windows": ["main", "monitor-*"],
     "permissions": [
         "core:default",
         "core:window:allow-start-dragging",
@@ -11,6 +11,14 @@
         "core:window:allow-toggle-maximize",
         "core:window:allow-is-maximized",
         "core:window:allow-close",
+        "core:window:allow-set-focus",
+        "core:window:allow-unminimize",
+        "core:window:allow-show",
+        "core:window:allow-set-title",
+        "core:window:allow-create",
+        "core:webview:allow-create-webview-window",
+        "core:event:allow-emit-to",
+        "core:event:allow-listen",
 
         "os:allow-os-type",
         "os:allow-platform",

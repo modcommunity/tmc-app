@@ -164,7 +164,52 @@ class ErrorBoundary extends Component<
     }
 }
 
+/**
+ * A monitor window is a second document with its own JS context. It gets a
+ * lean tree: no library sync, downloads or drop handling, which belong to the
+ * main window and would otherwise run twice.
+ */
+const monitorRouter = createHashRouter([
+    {
+        path: '/monitor/server/:id',
+        lazy: () => import('~/routes/monitor').then((m) => ({ Component: m.default })),
+    },
+    {
+        path: '/monitor/addr',
+        lazy: () => import('~/routes/monitor').then((m) => ({ Component: m.default })),
+    },
+    { path: '*', element: <Navigate to="/" replace /> },
+])
+
+const isMonitorWindow = window.location.hash.startsWith('#/monitor')
+
+// The main window obeys a monitor window's "open the server page" request.
+if (!isMonitorWindow && '__TAURI_INTERNALS__' in window) {
+    void import('@tauri-apps/api/event').then(({ listen }) =>
+        listen<{ path: string }>('monitor:navigate', (e) => {
+            if (typeof e.payload?.path === 'string' && e.payload.path.startsWith('/'))
+                void router.navigate(e.payload.path)
+        })
+    )
+}
+
+function MonitorApp() {
+    return (
+        <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+                <AuthProvider>
+                    <SettingsProvider>
+                        <RouterProvider router={monitorRouter} />
+                    </SettingsProvider>
+                </AuthProvider>
+            </QueryClientProvider>
+        </ErrorBoundary>
+    )
+}
+
 export default function App() {
+    if (isMonitorWindow) return <MonitorApp />
+
     return (
         <ErrorBoundary>
             <QueryClientProvider client={queryClient}>

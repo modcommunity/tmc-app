@@ -1,3 +1,4 @@
+import MonitorButton from './monitor-button'
 import { useEffect, useRef, useState } from 'react'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
 import { useQuery } from '@tanstack/react-query'
@@ -488,6 +489,12 @@ function ServerRow({
                 </td>
 
                 <td className="whitespace-nowrap px-2 py-2 pr-3 text-right align-middle">
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    {item.server?.host && item.server.port ? (
+                        <MonitorButton
+                            target={{ kind: 'server', id: item.id, name: item.name }}
+                        />
+                    ) : null}
                     {joinable && (
                         <button
                             type="button"
@@ -501,11 +508,12 @@ function ServerRow({
                                 e.stopPropagation()
                                 onJoin(item, true)
                             }}
-                            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+                            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                         >
-                            <FiPlay className="size-3" /> Join
+                            <FiPlay className="size-3.5" /> Join
                         </button>
                     )}
+                  </div>
                 </td>
             </tr>
 
