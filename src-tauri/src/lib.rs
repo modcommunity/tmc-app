@@ -22,8 +22,48 @@ fn clear_cache(paths: &paths::AppPaths) {
     }
 }
 
+/// Where the panic hook writes. Set once the paths are known; a panic before
+/// that still reaches stderr through tracing.
+static CRASH_LOG: std::sync::OnceLock<(std::path::PathBuf, String)> = std::sync::OnceLock::new();
+
+fn install_panic_hook() {
+    let previous = std::panic::take_hook();
+
+    std::panic::set_hook(Box::new(move |info| {
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+            .unwrap_or_else(|| "unknown".to_string());
+        let message = match info.payload().downcast_ref::<&str>() {
+            Some(s) => (*s).to_string(),
+            None => info
+                .payload()
+                .downcast_ref::<String>()
+                .cloned()
+                .unwrap_or_else(|| "non-string panic payload".to_string()),
+        };
+
+        tracing::error!("panic at {location}: {message}");
+
+        if let Some((path, version)) = CRASH_LOG.get() {
+            let report = tmc_core::crash::format_report(
+                version,
+                &tmc_core::logging::now_rfc3339(),
+                &location,
+                &message,
+            );
+
+            let _ = tmc_core::crash::append(path, &report);
+        }
+
+        previous(info);
+    }));
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    install_panic_hook();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -40,7 +80,26 @@ pub fn run() {
      * folder-picker` over `commands::fs`, which looks the same everywhere; see
      * that module's header for what listing directories from the webview costs.
      */
-    let builder = tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    /*
+     * ONE instance. A second launch (a `gs://` link clicked while the app is
+     * open, or a double-click on the icon) hands its arguments to the running
+     * window and exits instead of opening a second process that would fight the
+     * first over the library database and the download queue. Registered first,
+     * as the plugin requires. The `deep-link` feature forwards the URL to the
+     * deep-link handler below.
+     */
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.unminimize();
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }));
+
+    let builder = builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init());
 
@@ -92,6 +151,8 @@ pub fn run() {
 
             let state = AppState::build(&handle, version)
                 .map_err(|e| format!("could not start: {}", e.detail()))?;
+
+            let _ = CRASH_LOG.set((state.paths.logs.join("crash.log"), state.version.clone()));
 
             clear_cache(&state.paths);
             commands::stores::startup_sync(&state);

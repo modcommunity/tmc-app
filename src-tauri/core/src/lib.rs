@@ -19,6 +19,7 @@ pub mod auth;
 pub mod avatar;
 pub mod canon;
 pub mod console;
+pub mod crash;
 pub mod crypto;
 pub mod deeplink;
 pub mod deploy;
