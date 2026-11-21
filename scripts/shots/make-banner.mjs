@@ -96,7 +96,9 @@ async function shots() {
     mkdirSync(join(docs, 'screenshots'), { recursive: true })
     for (const [slot, file] of SHOTS) {
         const out = join(docs, 'screenshots', `${file}.webp`)
-        await sharp(join(raw, `${slot}-dark.png`)).resize({ width: 1200 }).webp({ quality: 80, effort: 6 }).toFile(out)
+        // The monitor shot is a real capture of a live server, kept in art/.
+        const src = slot === 'monitor' ? join(here, 'art', 'server-monitor-real.png') : join(raw, `${slot}-dark.png`)
+        await sharp(src).resize({ width: 1200 }).webp({ quality: 80, effort: 6 }).toFile(out)
         console.log(`docs/screenshots/${file}.webp`)
     }
 }
