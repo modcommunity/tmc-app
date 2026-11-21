@@ -66,7 +66,7 @@ export function GameIcon({
                  * read every row twice.
                  */
                 aria-hidden
-                className={`${box} border border-border object-cover`}
+                className={`${box} object-cover`}
             />
         )
     }
