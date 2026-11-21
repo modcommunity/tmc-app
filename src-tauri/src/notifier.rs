@@ -466,8 +466,11 @@ pub fn toast_dismiss(window: Window) {
 
 /// For tests and the "send a test notification" button: show a card without
 /// the network.
+///
+/// `async` on purpose: Tauri runs a synchronous command on the main thread, and
+/// building a window from there deadlocks on Windows, so the button did nothing.
 #[tauri::command]
-pub fn notification_test(app: AppHandle) {
+pub async fn notification_test(app: AppHandle) {
     show_card(
         &app,
         Notice {
