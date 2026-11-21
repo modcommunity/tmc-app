@@ -75,7 +75,7 @@ const rowBase =
 const rowOn = 'gs-rail-on'
 // A parent of the active child: visible without competing with the child.
 const rowSoft = 'bg-accent/15 text-foreground'
-const rowOff = 'text-muted hover:bg-surface-hover hover:text-foreground'
+const rowOff = 'text-muted hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent'
 
 function DownloadsBadge() {
     const downloads = useDownloads()

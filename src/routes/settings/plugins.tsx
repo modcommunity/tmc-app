@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Skeleton } from '~/components/skeleton'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FiAlertTriangle, FiShield } from 'react-icons/fi'
 import { Button } from '@modcommunity/shared'
@@ -280,7 +281,10 @@ export default function PluginsRoute() {
             </div>
 
             {error && (
-                <p role="alert" className="rounded-lg border border-danger p-3 text-xs text-danger">
+                <p
+                    role="alert"
+                    className="rounded-lg border border-danger p-3 text-xs text-danger"
+                >
                     {error}
                 </p>
             )}
@@ -342,7 +346,7 @@ export default function PluginsRoute() {
             )}
 
             {plugins.isPending ? (
-                <p className="text-sm text-muted">Loading…</p>
+                <Skeleton className="h-24 w-full" />
             ) : plugins.isError && !plugins.data ? (
                 <p role="alert" className="py-8 text-center text-sm text-danger">
                     Could not load the plugins.{' '}

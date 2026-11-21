@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Skeleton } from '~/components/skeleton'
 import { useQuery } from '@tanstack/react-query'
 import { FiAlertTriangle, FiCheck, FiFolder, FiSearch, FiX } from 'react-icons/fi'
 
@@ -58,7 +59,7 @@ export default function GamesRoute() {
         staleTime: 10 * 60 * 1000,
     })
 
-    if (!app) return <p className="text-sm text-muted">Loading…</p>
+    if (!app) return <Skeleton className="h-40 w-full" />
 
     const choose = async (appId: number, name: string) => {
         const dir = await pick({

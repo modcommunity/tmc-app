@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { SkeletonGrid } from '~/components/skeleton'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
@@ -462,7 +463,7 @@ export default function AppsRoute() {
 
             <div className="flex-1 overflow-y-auto p-4">
                 {listing.isPending ? (
-                    <p className="text-xs text-muted">Loading the catalogue…</p>
+                    <SkeletonGrid count={9} />
                 ) : listing.isError ? (
                     /*
                      * The reason, not just the fact. This screen is the front

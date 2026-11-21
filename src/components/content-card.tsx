@@ -80,7 +80,7 @@ export default function ContentCard({ item }: { item: ContentSummaryT }) {
     const external = opensExternally(item.kind)
 
     const shell =
-        'group flex flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition-colors hover:border-accent'
+        'group flex flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition-colors hover:-translate-y-0.5 hover:border-accent hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
     /*
      * The body is built ONCE and handed to whichever wrapper applies. Writing

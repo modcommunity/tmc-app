@@ -2,6 +2,7 @@ The GameSpice App's releases, newest first. A version here is the one in `packag
 
 ## Unreleased
 
+- Polish: Apps catalogue and Settings pages show skeleton placeholders while loading; content cards lift and show a focus ring on hover/keyboard focus; rail links show a focus ring.
 - Server browser, round 2: the Favourites view sorts locally by the column headers and the sort dropdown; a sort without a direction uses its natural one (names and maps A to Z, numbers most-first); the latency chart has axis labels and a hover read-out; the server page has a Favourite button.
 - Accessibility and sandboxes: one shared dialog behaviour (focus moves in, Tab stays inside, Escape closes, focus returns to the opener) now backs the store item dialog, the play dialog, the launch confirmation, quick play, report and folder picker. Sandboxes: failed Update, Check again, Add missing and Delete actions now show the error instead of failing silently; Delete shows progress; a failed list load has Retry; the selected sandbox is marked for screen readers, and a stale sandbox link says so.
 

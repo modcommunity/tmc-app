@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Skeleton } from '~/components/skeleton'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@modcommunity/shared'
 
@@ -101,7 +102,7 @@ export default function LoggingRoute() {
             )}
 
             {entries.isPending ? (
-                <p className="text-sm text-muted">Loading…</p>
+                <Skeleton className="h-40 w-full" />
             ) : entries.isError && !entries.data ? (
                 <p role="alert" className="py-8 text-center text-sm text-danger">
                     Could not read the log.{' '}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Skeleton } from '~/components/skeleton'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@modcommunity/shared'
 
@@ -149,7 +150,7 @@ export default function AppSettingsRoute() {
         staleTime: 30 * 1000,
     })
 
-    if (!app) return <p className="text-sm text-muted">Loading…</p>
+    if (!app) return <Skeleton className="h-40 w-full" />
 
     const themeOptions = [
         { value: 'system', label: 'Match the system' },
@@ -518,12 +519,9 @@ export default function AppSettingsRoute() {
                     <div className="flex items-center gap-3 py-1">
                         <GsLogo size={40} id="about" className="shrink-0" />
                         <div>
-                            <p className="text-sm font-semibold">
-                                GameSpice App
-                            </p>
+                            <p className="text-sm font-semibold">GameSpice App</p>
                             <p className="text-xs text-muted">
-                                Games, mods, sandboxes and servers, powered by
-                                TMC
+                                Games, mods, sandboxes and servers, powered by TMC
                             </p>
                         </div>
                     </div>
