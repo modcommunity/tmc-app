@@ -1,5 +1,9 @@
 The GameSpice App's releases, newest first. A version here is the one in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`; the release workflow refuses a tag that disagrees with `tauri.conf.json`.
 
+## Unreleased
+
+- **Workshop browse redesign**: pack cards with banner image (lazy, kind-coloured gradient fallback), kind/game badges, author, subscriber count, version/size/updated chips and a runs-code badge; state-aware Subscribe button with optimistic feedback; debounced search with icon, active-filter chips, skeleton grid, infinite scroll and clear empty/error states. The Subscribed and My packs tabs use the same cards.
+
 ## 0.4.1
 
 - **Play buttons**: left-click on Quick play / Play / Play solo now starts the installed native build with no dialog, falling back to the web build with a visible warning if native is unavailable. Right-click opens the advanced options (native, install, web, sandbox, connect).
