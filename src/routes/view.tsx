@@ -23,6 +23,7 @@ import { ipc } from '~/lib/ipc/commands'
 import { messageOf } from '~/lib/ipc'
 import { GameIcon } from '~/components/game-icon'
 import { opensExternally } from '~/lib/external'
+import { normalizeWebUrl } from '~/lib/api/web-link'
 import Markdown from '~/components/markdown'
 import ServerPanel from '~/components/server-panel'
 import ServerRcon from '~/components/server-rcon'
@@ -372,7 +373,7 @@ export default function ViewRoute() {
 
                     <Button
                         btnType={external ? 'primary' : 'secondary'}
-                        onClick={() => void openUrl(summary.webUrl)}
+                        onClick={() => void openUrl(normalizeWebUrl(summary))}
                     >
                         <span className="flex items-center gap-2">
                             <FiExternalLink className="size-4" />
@@ -429,7 +430,12 @@ export default function ViewRoute() {
                 />
 
                 {external ? (
-                    <ExternalBody summary={summary} />
+                    <ExternalBody
+                        summary={{
+                            id: summary.id,
+                            webUrl: normalizeWebUrl(summary),
+                        }}
+                    />
                 ) : (
                     content && (
                         <section className="selectable">

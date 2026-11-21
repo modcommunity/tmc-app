@@ -1,6 +1,7 @@
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 import type { ContentKindT } from '~/lib/api/contract'
+import { normalizeWebUrl } from '~/lib/api/web-link'
 
 /**
  * Content kinds the app hands to the system browser instead of rendering.
@@ -36,6 +37,16 @@ export function opensExternally(kind: ContentKindT): boolean {
  * custom scheme registered by something else on the machine, however the URL
  * got into the payload.
  */
-export async function openExternally(item: { webUrl: string }): Promise<void> {
-    await openUrl(item.webUrl)
+export async function openExternally(item: {
+    webUrl: string
+    kind?: ContentKindT
+    id?: string | number
+    url?: string | null
+    app?: { id: number; url?: string | null } | null
+}): Promise<void> {
+    await openUrl(
+        item.kind && item.id
+            ? normalizeWebUrl({ ...item, kind: item.kind, id: String(item.id) })
+            : item.webUrl
+    )
 }
