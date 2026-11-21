@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import PlayDialog, { type PlayTargetT } from '~/components/play-dialog'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { api } from '~/lib/api/client'
 import {
     FiChevronDown,
     FiChevronRight,
@@ -165,6 +167,36 @@ export default function ServerTable({
     const sortable = { sort, dir: sortDir, onSort }
     const [playTarget, setPlayTarget] = useState<PlayTargetT | null>(null)
 
+    /*
+     * Which games can actually be joined. The row only knows the game's name
+     * and icon, so the play vocabulary (`play.modes`) is fetched once for every
+     * game on the page. A server's own connect link or open platforms count
+     * too; a server that closed both web and desktop can't be joined at all.
+     */
+    const appIds = [
+        ...new Set(items.flatMap((i) => (i.app ? [i.app.id] : []))),
+    ].sort((a, b) => a - b)
+    const games = useQuery({
+        queryKey: ['apps', { ids: appIds, join: true }],
+        queryFn: () => api.apps({ ids: appIds, limit: appIds.length }),
+        enabled: appIds.length > 0,
+        staleTime: 5 * 60 * 1000,
+    })
+    const playable = new Set(
+        (games.data?.apps ?? [])
+            .filter((a) => (a.play?.modes.length ?? 0) > 0)
+            .map((a) => a.id)
+    )
+    const canJoin = (item: ContentSummaryT) => {
+        const sv = item.server
+
+        if (!item.app || !sv) return false
+        if (sv.platforms.web === false && sv.platforms.desktop === false)
+            return false
+
+        return !!sv.connectUrl || playable.has(item.app.id)
+    }
+
     const join = (item: ContentSummaryT, advanced: boolean) => {
         if (!item.app) return
 
@@ -258,6 +290,7 @@ export default function ServerTable({
                             expanded={expanded.has(item.id)}
                             onToggle={() => toggle(item.id)}
                             onJoin={join}
+                            joinable={canJoin(item)}
                         />
                     ))}
                 </tbody>
@@ -277,11 +310,13 @@ function ServerRow({
     expanded,
     onToggle,
     onJoin,
+    joinable,
 }: {
     item: ContentSummaryT
     expanded: boolean
     onToggle: () => void
     onJoin: (item: ContentSummaryT, advanced: boolean) => void
+    joinable: boolean
 }) {
     const navigate = useNavigate()
 
@@ -453,7 +488,7 @@ function ServerRow({
                 </td>
 
                 <td className="whitespace-nowrap px-2 py-2 pr-3 text-right align-middle">
-                    {item.app && (
+                    {joinable && (
                         <button
                             type="button"
                             title="Join — right-click for advanced options"

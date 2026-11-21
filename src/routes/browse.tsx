@@ -428,31 +428,70 @@ export default function BrowseRoute() {
         setSearch(next, { replace: true })
     }, [search, setSearch])
 
-    // Sentinel-driven paging, so the list loads before the user hits the end.
+    /*
+     * Sentinel-driven paging, so the list loads before the user hits the end.
+     *
+     * Two things made this stall when scrolling fast:
+     *   - the observer's root was the viewport, so the 600px margin could not
+     *     reach past the page's own scroll container and the next page was
+     *     only requested once the sentinel was literally on screen;
+     *   - an observer only reports CHANGES, so after a page landed with the
+     *     sentinel still near the edge (or after a failed fetch) nothing ever
+     *     asked again.
+     * So: observe against the real scroll container with a generous margin,
+     * and also re-check on every scroll event and after each page settles.
+     */
     const sentinel = useRef<HTMLDivElement>(null)
+    const [pageError, setPageError] = useState(false)
 
     useEffect(() => {
         const node = sentinel.current
 
         if (!node) return
 
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (
-                    entries.some((e) => e.isIntersecting) &&
-                    listing.hasNextPage &&
-                    !listing.isFetchingNextPage
-                ) {
-                    void listing.fetchNextPage()
-                }
-            },
-            { rootMargin: '600px' }
-        )
+        let root: HTMLElement | null = node.parentElement
+
+        while (root) {
+            const oy = getComputedStyle(root).overflowY
+
+            if (oy === 'auto' || oy === 'scroll') break
+
+            root = root.parentElement
+        }
+
+        const near = () => {
+            const box = node.getBoundingClientRect()
+            const edge = root
+                ? root.getBoundingClientRect().bottom
+                : window.innerHeight
+
+            return box.top < edge + 1500
+        }
+
+        const check = () => {
+            if (pageError || !near()) return
+            if (!listing.hasNextPage || listing.isFetchingNextPage) return
+
+            listing.fetchNextPage().then(
+                (r) => setPageError(r.isError),
+                () => setPageError(true)
+            )
+        }
+
+        const observer = new IntersectionObserver(check, {
+            root,
+            rootMargin: '1500px',
+        })
 
         observer.observe(node)
+        ;(root ?? window).addEventListener('scroll', check, { passive: true })
+        check()
 
-        return () => observer.disconnect()
-    }, [listing])
+        return () => {
+            observer.disconnect()
+            ;(root ?? window).removeEventListener('scroll', check)
+        }
+    }, [listing, pageError])
 
     const favRows = useMemo(
         () =>
@@ -810,6 +849,21 @@ export default function BrowseRoute() {
                         <p className="py-4 text-center text-xs text-muted">
                             Loading more…
                         </p>
+                    )}
+
+                    {pageError && listing.hasNextPage && (
+                        <div className="flex justify-center py-4">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPageError(false)
+                                    void listing.fetchNextPage()
+                                }}
+                                className="rounded-md border border-border px-3 py-1 text-xs hover:bg-surface-hover"
+                            >
+                                Couldn&apos;t load more — retry
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
